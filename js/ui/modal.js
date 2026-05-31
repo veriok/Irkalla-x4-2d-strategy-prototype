@@ -83,9 +83,14 @@ export function showCombatReportModal(reportId) {
     decisive_attacker: '⚔ Decisive Attacker Victory',
     attacker:          '⚔ Attacker Victory',
     defender:          '🛡 Defender Victory',
+    inconclusive:      '⚖ Inconclusive Battle',
   }[report.outcome] ?? report.outcome;
 
-  const outcomeColor = report.outcome === 'defender' ? '#5090a0' : '#c06040';
+  const outcomeColor = report.outcome === 'defender'
+    ? '#5090a0'
+    : report.outcome === 'inconclusive'
+      ? '#c8a030'
+      : '#c06040';
 
   const body = document.createElement('div');
   body.className = 'combat-report-body';

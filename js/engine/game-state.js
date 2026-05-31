@@ -22,7 +22,14 @@ import { FACTIONS, FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
 import { createProvince } from '../models/province.js';
-import { createArmy, armyTotalCount } from '../models/army.js';
+import {
+  createArmy,
+  armyTotalCount,
+  transferActiveUnits,
+  transferWoundedUnits,
+  recalcArmyMoves,
+  markArmyMoved,
+} from '../models/army.js';
 
 // ─── State singleton ──────────────────────────────────────
 export const state = {
@@ -283,7 +290,8 @@ export function moveArmy(armyId, targetProvinceId) {
 
   // Link to new province
   army.provinceId = targetProvinceId;
-  army.movesLeft--;
+  army.movesLeft = Math.max(0, army.movesLeft - 1);
+  markArmyMoved(army);
   const newProv = getProvince(targetProvinceId);
   if (newProv && !newProv.armyIds.includes(armyId)) newProv.armyIds.push(armyId);
 }
@@ -302,18 +310,14 @@ export function mergeArmies(keepArmyId, absorbArmyId) {
   const combinedSize = armyTotalCount(keepArmy) + armyTotalCount(absorbArmy);
   if (combinedSize > cap) return false;
 
-  // Merge unit stacks
-  for (const { typeId, count } of absorbArmy.units) {
-    const existing = keepArmy.units.find(u => u.typeId === typeId);
-    if (existing) existing.count += count;
-    else keepArmy.units.push({ typeId, count });
+  for (const { typeId, count } of [...absorbArmy.units]) {
+    if (count > 0) transferActiveUnits(absorbArmy, keepArmy, typeId, count, UNIT_MAP);
   }
-  // Merge wounded stacks
-  for (const { typeId, count } of (absorbArmy.wounded ?? [])) {
-    const existing = (keepArmy.wounded ?? []).find(u => u.typeId === typeId);
-    if (existing) existing.count += count;
-    else { keepArmy.wounded = keepArmy.wounded ?? []; keepArmy.wounded.push({ typeId, count }); }
+  for (const { typeId, count } of [...(absorbArmy.wounded ?? [])]) {
+    if (count > 0) transferWoundedUnits(absorbArmy, keepArmy, typeId, count, UNIT_MAP);
   }
+
+  recalcArmyMoves(keepArmy, UNIT_MAP);
 
   removeArmy(absorbArmyId);
   return true;
@@ -328,7 +332,7 @@ export function splitArmy(armyId, splitUnits) {
   const army = state.armies.get(armyId);
   if (!army) return null;
 
-  // Validate: enough units available
+  // Validate: enough active units available
   for (const { typeId, count } of splitUnits) {
     const stack = army.units.find(u => u.typeId === typeId);
     if (!stack || stack.count < count) return null;
@@ -339,17 +343,16 @@ export function splitArmy(armyId, splitUnits) {
   if (totalSplit >= totalArmy) return null;
   if (totalSplit < 1) return null;
 
-  // Deduct from original
-  for (const { typeId, count } of splitUnits) {
-    const stack = army.units.find(u => u.typeId === typeId);
-    stack.count -= count;
-  }
-  army.units = army.units.filter(u => u.count > 0);
-
   // Create new army in the same province (can't move this turn)
-  const newArmy = createArmy(army.factionId, army.provinceId, splitUnits);
+  const newArmy = createArmy(army.factionId, army.provinceId, []);
+  for (const { typeId, count } of splitUnits) {
+    const ok = transferActiveUnits(army, newArmy, typeId, count, UNIT_MAP);
+    if (!ok) return null;
+  }
   newArmy.movesLeft = 0;
   placeArmy(newArmy);
+  recalcArmyMoves(army, UNIT_MAP);
+  recalcArmyMoves(newArmy, UNIT_MAP);
   return newArmy;
 }
 
@@ -372,13 +375,9 @@ export function transferUnit(fromArmyId, toArmyId, typeId, count = 1) {
   const totalTo = armyTotalCount(to);
   if (totalTo + count > cap) return false;
 
-  // Transfer
-  fromStack.count -= count;
-  from.units = from.units.filter(u => u.count > 0);
-
-  const toStack = to.units.find(u => u.typeId === typeId);
-  if (toStack) toStack.count += count;
-  else to.units.push({ typeId, count });
+  // Transfer active units with HP preserved
+  const ok = transferActiveUnits(from, to, typeId, count, UNIT_MAP);
+  if (!ok) return false;
 
   // If the source army is now empty, remove it
   const remainingUnits = from.units.reduce((s, u) => s + u.count, 0)

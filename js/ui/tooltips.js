@@ -7,6 +7,7 @@
  */
 
 import { FACTIONS } from '../data/factions-data.js';
+import { TRAIT_MAP } from '../data/traits-data.js';
 import { createNativePreviewCard } from './card-renderer.js';
 
 // Build a flat map of all resource definitions for emoji / name lookups
@@ -81,16 +82,33 @@ export function showUnitTooltip(uDef, factionDef, anchorEl) {
   attack.textContent = `Attack: ${uDef.attack ?? 0}`;
   const defense = document.createElement('div');
   defense.textContent = `Defense: ${uDef.defense ?? 0}`;
+  const hp = document.createElement('div');
+  hp.textContent = `HP: ${uDef.maxHp ?? 10}`;
+  const movement = document.createElement('div');
+  movement.textContent = `Movement: ${uDef.movement ?? 1}`;
+  const upkeep = document.createElement('div');
+  upkeep.textContent = `Upkeep: ${uDef.upkeepGold ?? 0} gold/turn`;
   stats.appendChild(attack);
   stats.appendChild(defense);
-
-  const special = _formatSpecial(uDef.specialEffect);
-  if (special) {
-    const specialLine = document.createElement('div');
-    specialLine.textContent = special;
-    stats.appendChild(specialLine);
-  }
+  stats.appendChild(hp);
+  stats.appendChild(movement);
+  stats.appendChild(upkeep);
   unitTooltipEl.appendChild(stats);
+
+  const traits = _resolveTraits(uDef.traitIds ?? []);
+  if (traits.length > 0) {
+    const traitWrap = document.createElement('div');
+    traitWrap.className = 'unit-tooltip__stats';
+    const title = document.createElement('div');
+    title.textContent = 'Traits:';
+    traitWrap.appendChild(title);
+    for (const trait of traits) {
+      const line = document.createElement('div');
+      line.textContent = `- ${trait.name}: ${trait.description}`;
+      traitWrap.appendChild(line);
+    }
+    unitTooltipEl.appendChild(traitWrap);
+  }
 
   const flavor = document.createElement('div');
   flavor.className = 'unit-tooltip__flavor';
@@ -191,10 +209,8 @@ function _buildHtml(bDef) {
   `.trim();
 }
 
-function _formatSpecial(specialEffect) {
-  if (!specialEffect) return '';
-  if (specialEffect.type === 'army_attack_bonus') {
-    return `Special: +${specialEffect.amount} attack to other units in this army`;
-  }
-  return `Special: ${specialEffect.type}`;
+function _resolveTraits(traitIds) {
+  return traitIds
+    .map(id => TRAIT_MAP[id])
+    .filter(Boolean);
 }

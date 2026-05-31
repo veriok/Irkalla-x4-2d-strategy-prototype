@@ -9,12 +9,47 @@
  * buildTurns:  turns in production queue
  * stackSize:   how many units are recruited per queue entry
  * factionId:   which faction can recruit this unit
+ * tier:        combat/economy tier (1..3)
+ * maxHp:       hit points per individual soldier
+ * movement:    moves per turn (army uses slowest unit)
+ * upkeepGold:  upkeep paid each turn after income
+ * traitIds:    trait ids from traits-data.js
+ * isMilitia:   true for province militia profiles (not recruitable)
  * emoji:       icon shown on army chip and map
  * requiredBuilding: building id that must exist in the location to recruit
  *                   (null = always available if you own the province)
  */
 
-export const UNITS = [
+const UNIT_DEFAULTS = {
+  movement: 1,
+  upkeepGold: 0,
+  cost: {},
+  buildTurns: 1,
+  stackSize: 1,
+  requiredBuilding: null,
+  traitIds: [],
+  isMilitia: false,
+};
+
+function _normalizeUnit(u) {
+  const merged = {
+    ...UNIT_DEFAULTS,
+    ...u,
+    cost: u.cost ?? UNIT_DEFAULTS.cost,
+  };
+
+  if (merged.isMilitia) {
+    merged.upkeepGold = u.upkeepGold ?? 0;
+    merged.cost = u.cost ?? {};
+    merged.buildTurns = u.buildTurns ?? 0;
+    merged.stackSize = u.stackSize ?? 1;
+    merged.movement = u.movement ?? 1;
+  }
+
+  return merged;
+}
+
+const UNIT_DEFS = [
 
   // ─────────────────────────────────────────────────────────
   // DWARVES — Undead Babylonian Dwarves
@@ -26,11 +61,15 @@ export const UNITS = [
     emoji: '💀',
     cardSpriteImg: 'assets/cards/units/dwarf_undead_levy.png',
     description: 'Shambling undead conscripts. Expendable but numerous.',
-    attack: 4,
-    defense: 3,
-    cost: { gold: 20, soul_essence: 5 },
+    attack: 5,
+    defense: 5,
+    tier: 1,
+    maxHp: 10,
+    movement: 1,
+    upkeepGold: 1,
+    cost: { gold: 45, soul_essence: 8 },
     buildTurns: 1,
-    stackSize: 3,
+    stackSize: 2,
     requiredBuilding: null,
   },
   {
@@ -40,9 +79,13 @@ export const UNITS = [
     emoji: '🤖',
     cardSpriteImg: 'assets/cards/units/dwarf_iron_golem.png',
     description: 'A powerful war-golem forged in the ziggurat fires. Slow but devastating.',
-    attack: 12,
-    defense: 10,
-    cost: { gold: 60, forge_iron: 15, soul_essence: 10 },
+    attack: 7,
+    defense: 11,
+    tier: 3,
+    maxHp: 20,
+    movement: 1,
+    upkeepGold: 3,
+    cost: { gold: 50, forge_iron: 16, soul_essence: 10 },
     buildTurns: 3,
     stackSize: 1,
     requiredBuilding: 'necropolis_1',
@@ -54,11 +97,15 @@ export const UNITS = [
     emoji: '⚔️',
     cardSpriteImg: 'assets/cards/units/dwarf_deathguard.png',
     description: 'Elite undead warriors clad in dark iron plate. The personal guard of the Forge-King.',
-    attack: 9,
-    defense: 12,
-    cost: { gold: 50, forge_iron: 10, soul_essence: 8 },
+    attack: 6,
+    defense: 8,
+    tier: 2,
+    maxHp: 14,
+    movement: 1,
+    upkeepGold: 2,
+    cost: { gold: 40, forge_iron: 8, soul_essence: 6 },
     buildTurns: 2,
-    stackSize: 2,
+    stackSize: 1,
     requiredBuilding: 'necropolis_2',
   },
 
@@ -68,43 +115,55 @@ export const UNITS = [
   {
     id: 'elf_hoplite',
     factionId: 'elves',
-    name: 'Hoplite',
+    name: 'Elven Hoplite',
     emoji: '🛡️',
     cardSpriteImg: 'assets/cards/units/elf_hoplite.png',
     description: 'Disciplined spear-and-shield infantry. The backbone of elven city-state armies.',
-    attack: 6,
-    defense: 8,
-    cost: { gold: 30, timber: 3 },
+    attack: 4,
+    defense: 6,
+    tier: 1,
+    maxHp: 10,
+    movement: 1,
+    upkeepGold: 1,
+    cost: { gold: 30, timber: 4 },
     buildTurns: 1,
-    stackSize: 2,
+    stackSize: 1,
     requiredBuilding: null,
   },
   {
     id: 'elf_sea_raider',
     factionId: 'elves',
-    name: 'Sea Raider',
+    name: 'Elven Sea Raider',
     emoji: '⚡',
     cardSpriteImg: 'assets/cards/units/elf_sea_raider.png',
     description: 'Swift elven marines. Fast movers on coastal provinces.',
     attack: 8,
     defense: 4,
-    cost: { gold: 35, timber: 5 },
+    tier: 2,
+    maxHp: 14,
+    movement: 2,
+    upkeepGold: 2,
+    cost: { gold: 40, timber: 6 },
     buildTurns: 1,
-    stackSize: 2,
+    stackSize: 1,
     requiredBuilding: 'shipyard_1',
   },
   {
     id: 'elf_philosopher_guard',
     factionId: 'elves',
-    name: 'Philosopher Guard',
+    name: 'Elven Philosopher Guard',
     emoji: '🌿',
     cardSpriteImg: 'assets/cards/units/elf_philosopher_guard.png',
     description: 'Warrior-scholars imbued with arcane knowledge. High attack and defense.',
-    attack: 10,
+    attack: 9,
     defense: 9,
-    cost: { gold: 60, philosophy: 12 },
+    tier: 3,
+    maxHp: 18,
+    movement: 1,
+    upkeepGold: 3,
+    cost: { gold: 50, philosophy: 12 },
     buildTurns: 2,
-    stackSize: 2,
+    stackSize: 1,
     requiredBuilding: 'academy_2',
   },
 
@@ -118,11 +177,15 @@ export const UNITS = [
     emoji: '🦎',
     cardSpriteImg: 'assets/cards/units/lizard_skink.png',
     description: 'Light lizardmen skirmishers. Fast and cheap.',
-    attack: 4,
-    defense: 3,
-    cost: { gold: 20, grain: 3 },
+    attack: 6,
+    defense: 4,
+    tier: 1,
+    maxHp: 10,
+    movement: 1,
+    upkeepGold: 1,
+    cost: { gold: 30, grain: 4 },
     buildTurns: 1,
-    stackSize: 3,
+    stackSize: 1,
     requiredBuilding: null,
   },
   {
@@ -132,11 +195,15 @@ export const UNITS = [
     emoji: '🐊',
     cardSpriteImg: 'assets/cards/units/lizard_crocodile.png',
     description: 'Elite heavy infantry clad in crocodile-hide armour. Feared throughout the Hegemony.',
-    attack: 11,
-    defense: 10,
-    cost: { gold: 55, grain: 8, faith: 5 },
+    attack: 7,
+    defense: 7,
+    tier: 2,
+    maxHp: 14,
+    movement: 1,
+    upkeepGold: 2,
+    cost: { gold: 40, grain: 8, faith: 4 },
     buildTurns: 2,
-    stackSize: 2,
+    stackSize: 1,
     requiredBuilding: 'granary_1',
   },
   {
@@ -147,13 +214,16 @@ export const UNITS = [
     cardSpriteImg: 'assets/cards/units/lizard_sun_priest.png',
     description: 'Battle priests who channel solar energy. Boosts army attack significantly.',
     attack: 8,
-    defense: 6,
-    cost: { gold: 50, faith: 15 },
+    defense: 7,
+    tier: 3,
+    maxHp: 16,
+    movement: 1,
+    upkeepGold: 3,
+    traitIds: ['sun_priest_aura'],
+    cost: { gold: 50, faith: 12 },
     buildTurns: 2,
     stackSize: 1,
     requiredBuilding: 'temple_1',
-    // Special: Sun Priest grants +2 attack to all other units in same army (handled in combat.js)
-    specialEffect: { type: 'army_attack_bonus', amount: 2 },
   },
 
   // ─────────────────────────────────────────────────────────
@@ -166,11 +236,15 @@ export const UNITS = [
     emoji: '🐉',
     cardSpriteImg: 'assets/cards/units/draig_warrior.png',
     description: 'Honor-bound clan warriors. Die before surrendering.',
-    attack: 6,
+    attack: 5,
     defense: 5,
-    cost: { gold: 25, honor: 3 },
+    tier: 1,
+    maxHp: 10,
+    movement: 1,
+    upkeepGold: 1,
+    cost: { gold: 30, honor: 4 },
     buildTurns: 1,
-    stackSize: 2,
+    stackSize: 1,
     requiredBuilding: null,
   },
   {
@@ -180,9 +254,13 @@ export const UNITS = [
     emoji: '🔥',
     cardSpriteImg: 'assets/cards/units/draig_dragonsworn.png',
     description: 'Warriors who have taken the Dragon Oath. Incredibly powerful in assault.',
-    attack: 14,
-    defense: 7,
-    cost: { gold: 65, honor: 15, dragon_essence: 10 },
+    attack: 10,
+    defense: 6,
+    tier: 3,
+    maxHp: 18,
+    movement: 2,
+    upkeepGold: 3,
+    cost: { gold: 50, honor: 14, dragon_essence: 8 },
     buildTurns: 3,
     stackSize: 1,
     requiredBuilding: 'dragon_shrine_1',
@@ -194,21 +272,96 @@ export const UNITS = [
     emoji: '⚔️',
     cardSpriteImg: 'assets/cards/units/draig_monk.png',
     description: 'Ascetic warrior-monks trained in the dojo arts. Balanced fighters.',
-    attack: 9,
-    defense: 10,
-    cost: { gold: 45, honor: 10 },
+    attack: 8,
+    defense: 6,
+    tier: 2,
+    maxHp: 14,
+    movement: 1,
+    upkeepGold: 2,
+    cost: { gold: 40, honor: 8 },
     buildTurns: 2,
-    stackSize: 2,
+    stackSize: 1,
     requiredBuilding: 'dojo_1',
   },
+
+  // ─────────────────────────────────────────────────────────
+  // MILITIA PROFILES (non-recruitable)
+  // ─────────────────────────────────────────────────────────
+  {
+    id: 'militia_dwarves',
+    factionId: 'dwarves',
+    name: 'Dwarven Militia',
+    emoji: '🪓',
+    cardSpriteImg: null,
+    description: 'Local defenders mustered from workshops and watchposts.',
+    attack: 3,
+    defense: 3,
+    tier: 1,
+    maxHp: 8,
+    isMilitia: true,
+  },
+  {
+    id: 'militia_elves',
+    factionId: 'elves',
+    name: 'Elven Militia',
+    emoji: '🏹',
+    cardSpriteImg: null,
+    description: 'Citizen defenders drilled for border emergencies.',
+    attack: 3,
+    defense: 3,
+    tier: 1,
+    maxHp: 8,
+    isMilitia: true,
+  },
+  {
+    id: 'militia_lizards',
+    factionId: 'lizards',
+    name: 'Lizard Militia',
+    emoji: '🗡️',
+    cardSpriteImg: null,
+    description: 'Temple levy and patrol crews raised to defend local lands.',
+    attack: 3,
+    defense: 3,
+    tier: 1,
+    maxHp: 8,
+    isMilitia: true,
+  },
+  {
+    id: 'militia_draig',
+    factionId: 'draig',
+    name: 'Draig Militia',
+    emoji: '🛡',
+    cardSpriteImg: null,
+    description: 'Clan reserve units sworn to hold local ground.',
+    attack: 3,
+    defense: 3,
+    tier: 1,
+    maxHp: 8,
+    isMilitia: true,
+  },
+  {
+    id: 'militia_neutral',
+    factionId: 'neutral',
+    name: 'Local Militia',
+    emoji: '⚔',
+    cardSpriteImg: null,
+    description: 'Unaligned local defenders with basic military training.',
+    attack: 3,
+    defense: 3,
+    tier: 1,
+    maxHp: 8,
+    isMilitia: true,
+  },
 ];
+
+export const UNITS = UNIT_DEFS.map(_normalizeUnit);
 
 /** Fast lookup by unit id */
 export const UNIT_MAP = Object.fromEntries(UNITS.map(u => [u.id, u]));
 
 /** Get unit types for a faction */
-export function getUnitsForFaction(factionId) {
-  return UNITS.filter(u => u.factionId === factionId);
+export function getUnitsForFaction(factionId, includeMilitia = false) {
+  return UNITS.filter(u => u.factionId === factionId && (includeMilitia || !u.isMilitia));
 }
 
 /** Get units recruiteable at a location given its existing buildings */
@@ -216,4 +369,15 @@ export function getRecruitableUnits(factionId, existingBuildingIds) {
   return getUnitsForFaction(factionId).filter(u =>
     u.requiredBuilding === null || existingBuildingIds.includes(u.requiredBuilding)
   );
+}
+
+export function getMilitiaUnitIdForFaction(factionId) {
+  const map = {
+    dwarves: 'militia_dwarves',
+    elves: 'militia_elves',
+    lizards: 'militia_lizards',
+    draig: 'militia_draig',
+    neutral: 'militia_neutral',
+  };
+  return map[factionId] ?? 'militia_neutral';
 }

@@ -28,7 +28,7 @@ import {
 } from '../models/location.js';
 import { enqueueProduction, dequeueProduction } from '../models/province.js';
 import { BUILDING_MAP, getBuildingsForLocation } from '../data/buildings-data.js';
-import { getRecruitableUnits, UNIT_MAP } from '../data/units-data.js';
+import { getRecruitableUnits, UNIT_MAP, getMilitiaUnitIdForFaction } from '../data/units-data.js';
 import { renderResourceBar } from './resource-bar.js';
 import { showBuildingTooltip, hideBuildingTooltip, showUnitTooltip, hideUnitTooltip } from './tooltips.js';
 import { createCard } from './card-renderer.js';
@@ -73,14 +73,28 @@ export function showProvincePanel(provinceId) {
     const max = computeMilitiaMax(prov);
     const cur = prov.militia.current;
     const pct = max > 0 ? Math.round((cur / max) * 100) : 0;
-    militiaInfoEl.querySelector('.militia-count').textContent = `${cur} / ${max} units`;
+    const militiaCountEl = militiaInfoEl.querySelector('.militia-count');
+    militiaCountEl.textContent = `${cur} / ${max} units`;
     const replenishing = prov.militia.lastCombatTurn !== null && cur < max;
     militiaInfoEl.querySelector('.militia-status').textContent = replenishing ? '(replenishing +1/turn)' : '';
     const fill = militiaInfoEl.querySelector('.militia-fill');
     fill.style.width = `${pct}%`;
     fill.style.background = pct > 66 ? '#4aaa77' : pct > 33 ? '#c8a030' : '#c04040';
+
+    const militiaUnitId = getMilitiaUnitIdForFaction(prov.ownerId ?? 'neutral');
+    const militiaDef = UNIT_MAP[militiaUnitId];
+    militiaCountEl.onmouseenter = () => {
+      if (!militiaDef) return;
+      showUnitTooltip(militiaDef, faction, militiaCountEl);
+    };
+    militiaCountEl.onmouseleave = () => hideUnitTooltip();
+    militiaCountEl.style.cursor = militiaDef ? 'help' : 'default';
+
     militiaInfoEl.hidden = false;
   } else {
+    const militiaCountEl = militiaInfoEl.querySelector('.militia-count');
+    militiaCountEl.onmouseenter = null;
+    militiaCountEl.onmouseleave = null;
     militiaInfoEl.hidden = true;
   }
 
@@ -429,7 +443,7 @@ function renderRecruitSection(prov) {
     row.innerHTML = `
       <span class="bm-icon">${uDef.emoji}</span>
       <span class="bm-name">${uDef.name}</span>
-      <span class="bm-cost">⚔${uDef.attack} 🛡${uDef.defense} · ${costStr} · ${uDef.buildTurns}t</span>
+      <span class="bm-cost">⚔${uDef.attack} 🛡${uDef.defense} ❤${uDef.maxHp ?? 10} 🐎${uDef.movement ?? 1} 💰-${uDef.upkeepGold ?? 0}/t · ${costStr} · ${uDef.buildTurns}t</span>
     `;
 
     const nameEl2 = row.querySelector('.bm-name');

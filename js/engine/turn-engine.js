@@ -19,7 +19,15 @@ import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
 import { getLocationResourceBonuses } from '../models/location.js';
 import { getBiome } from '../data/biomes-data.js';
-import { resetMoves, createArmy, armyTotalCount } from '../models/army.js';
+import {
+  resetMoves,
+  createArmy,
+  armyTotalCount,
+  addArmyUnits,
+  regenArmyHp,
+  armyUpkeepGold,
+  hasArmyMovedOrAttacked,
+} from '../models/army.js';
 import { placeArmy, getArmySupplyCap } from './game-state.js';
 import { logTurn, logBuild, logRecruit, logElimination } from '../ui/event-log.js';
 
@@ -92,7 +100,18 @@ export function computeIncomeBreakdown(factionId) {
     }
   }
 
+  const upkeep = computeFactionUpkeep(factionId);
+  if (upkeep > 0) addSource('gold', 'Unit upkeep', -upkeep);
+
   return breakdown;
+}
+
+export function computeFactionUpkeep(factionId) {
+  let total = 0;
+  for (const army of getArmiesByFaction(factionId)) {
+    total += armyUpkeepGold(army, UNIT_MAP);
+  }
+  return total;
 }
 
 /**
@@ -103,6 +122,14 @@ function collectIncome() {
     if (state.eliminated.has(faction.id)) continue;
     const income = computeIncome(faction.id);
     addResources(faction.id, income);
+  }
+}
+
+function collectUpkeep() {
+  for (const faction of FACTIONS) {
+    if (state.eliminated.has(faction.id)) continue;
+    const upkeep = computeFactionUpkeep(faction.id);
+    if (upkeep > 0) addResources(faction.id, { gold: -upkeep });
   }
 }
 
@@ -156,9 +183,7 @@ function tickProductionQueues(factionId) {
           const overflow  = uDef.stackSize - toAdd;
 
           if (toAdd > 0) {
-            const stack = army.units.find(u => u.typeId === item.id);
-            if (stack) stack.count += toAdd;
-            else army.units.push({ typeId: item.id, count: toAdd });
+            addArmyUnits(army, item.id, toAdd, UNIT_MAP);
           }
 
           // Overflow units go into a new army at the same province
@@ -226,6 +251,7 @@ export async function endTurn(onComplete) {
 
   // ── Income (after all actions) ──
   collectIncome();
+  collectUpkeep();
 
   // ── Advance turn ──
   state.turn++;
@@ -241,28 +267,13 @@ export async function endTurn(onComplete) {
     }
   }
 
-  // ── Replenish wounded units for all player + AI armies in friendly territory ──
+  // ── Replenish HP for idle armies in friendly territory ──
   for (const army of state.armies.values()) {
-    if (!army.wounded || army.wounded.length === 0) continue;
-    // Must be in own territory and not have fought this turn
+    // Must be in own territory and must not have moved or attacked this turn
     const prov = state.provinces.get(army.provinceId);
     if (!prov || prov.ownerId !== army.factionId) continue;
-    if (army.lastCombatTurn !== null && army.lastCombatTurn >= state.turn - 1) continue;
-
-    // Heal 30% of wounded per turn (rounded up, min 1)
-    const totalWounded = army.wounded.reduce((s, w) => s + w.count, 0);
-    let toHeal = Math.max(1, Math.round(totalWounded * 0.3));
-
-    for (const wStack of army.wounded) {
-      if (toHeal <= 0) break;
-      const heal = Math.min(wStack.count, toHeal);
-      wStack.count -= heal;
-      toHeal -= heal;
-      const uStack = army.units.find(u => u.typeId === wStack.typeId);
-      if (uStack) uStack.count += heal;
-      else army.units.push({ typeId: wStack.typeId, count: heal });
-    }
-    army.wounded = army.wounded.filter(w => w.count > 0);
+    if (hasArmyMovedOrAttacked(army)) continue;
+    regenArmyHp(army, UNIT_MAP, 0.2);
   }
 
   // ── Reset player army moves ──
