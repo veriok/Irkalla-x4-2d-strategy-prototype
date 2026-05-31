@@ -1,0 +1,114 @@
+/* ═══════════════════════════════════════════════════
+   SVG MAP — Province visual states
+   All state is driven by CSS classes on <path> elements.
+   The --prov-color custom property is the base fill;
+   states layer on top via filter/fill overrides.
+═══════════════════════════════════════════════════ */
+
+/* ── Base province style ── */
+#provinces path {
+  fill: var(--prov-color, #4a5a3a);
+  stroke: #0a0907;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transition: filter 0.12s, stroke 0.12s;
+}
+
+/* ── Interaction states ── */
+#provinces path:hover {
+  filter: brightness(1.35) saturate(1.2);
+  stroke: #e0c870;
+  stroke-width: 2;
+}
+#provinces path.selected {
+  stroke: #f0e060;
+  stroke-width: 2.5;
+  filter: brightness(1.4) saturate(1.3);
+}
+
+/* ── Faction ownership colors ── */
+/* Each faction defined in factions-data.js sets a CSS class .owner-{factionId}
+   The faction's color is stored in a CSS variable set via JS:
+   path.style.setProperty('--prov-color', faction.color)
+   These classes add a slightly brighter stroke for recognition. */
+#provinces path.owner-dwarves { stroke-color: #b08020; }
+#provinces path.owner-elves   { stroke-color: #204860; }
+#provinces path.owner-lizards { stroke-color: #806010; }
+#provinces path.owner-draig   { stroke-color: #601010; }
+#provinces path.owner-neutral { /* no extra stroke */ }
+
+/* Province reachable highlight (army movement) */
+#provinces path.reachable {
+  stroke: #60d060;
+  stroke-width: 2.5;
+  filter: brightness(1.2) saturate(1.1);
+  animation: reachable-pulse 1.2s ease-in-out infinite;
+}
+
+/* ── Biome base colors (fallback; map-generator sets --prov-color directly) ── */
+/* These are referenced in map-generator.js as the per-biome color values */
+
+/* ── Border layer ── */
+#borders path {
+  fill: none;
+  stroke: #0a0907;
+  stroke-width: 0.8;
+  pointer-events: none;
+}
+
+/* ── Fog of war layer ── */
+/* Fog paths mirror province paths; .fog-unexplored = full black, .fog-explored = grey overlay */
+#fog-layer path {
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+#fog-layer path.fog-unexplored {
+  fill: url(#fog-pattern);
+  opacity: 1;
+}
+#fog-layer path.fog-explored {
+  fill: url(#explored-pattern);
+  opacity: 0.7;
+}
+#fog-layer path.fog-visible {
+  fill: transparent;
+  opacity: 0;
+}
+
+/* ── Unit layer ── */
+#unit-layer text {
+  font-size: 18px;
+  dominant-baseline: central;
+  text-anchor: middle;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
+  cursor: pointer;
+  user-select: none;
+}
+#unit-layer text.army-icon {
+  pointer-events: all;
+  cursor: pointer;
+  font-size: 22px;
+}
+#unit-layer text.army-icon:hover {
+  filter: drop-shadow(0 0 6px #f0e060) drop-shadow(0 1px 2px rgba(0,0,0,0.8));
+}
+#unit-layer text.army-icon.selected {
+  filter: drop-shadow(0 0 8px #f0e060) drop-shadow(0 0 3px #a08000);
+}
+
+/* ── Label layer ── */
+#label-layer text {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 10px;
+  fill: rgba(255,245,200,0.75);
+  dominant-baseline: central;
+  text-anchor: middle;
+  pointer-events: none;
+  user-select: none;
+  text-shadow: 0 1px 2px #000;
+}
+#label-layer text.label-hidden {
+  opacity: 0;
+}

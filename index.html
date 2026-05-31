@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Irkallia</title>
+  <link rel="stylesheet" href="style/main.css" />
+  <link rel="stylesheet" href="style/map.css" />
+  <link rel="stylesheet" href="style/animations.css" />
+
+  <!-- ES module import map: d3-delaunay from CDN -->
+  <script type="importmap">
+  {
+    "imports": {
+      "d3-delaunay": "https://esm.sh/d3-delaunay@6"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════
+       TOP BAR  — resource display + turn info
+  ═══════════════════════════════════════════════════ -->
+  <header id="top-bar">
+    <div id="faction-banner">
+      <span id="faction-emoji"></span>
+      <span id="faction-name"></span>
+    </div>
+    <div id="resource-bar"><!-- filled by resource-bar.js --></div>
+    <div id="turn-display">
+      Turn <span id="turn-number">1</span>
+    </div>
+    <button id="end-turn-btn" class="btn-primary">End Turn ⏭</button>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════
+       MAIN AREA  — army panel | map | province panel
+  ═══════════════════════════════════════════════════ -->
+  <main id="game-area">
+
+    <!-- LEFT: army panel -->
+    <aside id="army-panel" class="side-panel">
+      <h2>⚔ Armies</h2>
+      <div id="army-list"><!-- filled by army-panel.js --></div>
+    </aside>
+
+    <!-- CENTER: map -->
+    <section id="map-section">
+      <svg id="map" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet"
+           xmlns="http://www.w3.org/2000/svg">
+
+        <!-- Biome/terrain texture defs -->
+        <defs>
+          <!-- Fog of war hatch pattern -->
+          <pattern id="fog-pattern" patternUnits="userSpaceOnUse" width="8" height="8">
+            <rect width="8" height="8" fill="#111" opacity="0.9"/>
+            <line x1="0" y1="0" x2="8" y2="8" stroke="#000" stroke-width="0.8"/>
+          </pattern>
+          <!-- Explored (greyed) overlay -->
+          <pattern id="explored-pattern" patternUnits="userSpaceOnUse" width="8" height="8">
+            <rect width="8" height="8" fill="#333" opacity="0.55"/>
+          </pattern>
+        </defs>
+
+        <!-- Layer 1: Province fills (map-generator.js injects <path> elements here) -->
+        <g id="provinces"></g>
+
+        <!-- Layer 2: Province borders (map-generator.js injects <path> strokes here) -->
+        <g id="borders"></g>
+
+        <!-- Layer 3: Fog of war (duplicate paths, toggled by class) -->
+        <g id="fog-layer"></g>
+
+        <!-- Layer 4: Unit/army icons -->
+        <g id="unit-layer"></g>
+
+        <!-- Layer 5: Province name labels -->
+        <g id="label-layer"></g>
+
+      </svg>
+    </section>
+
+    <!-- RIGHT: province panel -->
+    <aside id="province-panel" class="side-panel">
+      <div id="province-panel-empty">
+        <p>Click a province to inspect it.</p>
+      </div>
+      <div id="province-panel-content" hidden>
+        <div id="province-header">
+          <span id="province-biome-icon"></span>
+          <h2 id="province-name"></h2>
+          <span id="province-owner-badge"></span>
+        </div>
+        <p id="province-biome-label"></p>
+
+        <div id="province-militia-info" hidden>
+          <h3>⚔ Militia</h3>
+          <div class="militia-row">
+            <span class="militia-count"></span>
+            <span class="militia-status"></span>
+          </div>
+          <div class="militia-bar"><div class="militia-fill"></div></div>
+        </div>
+
+        <h3>Locations</h3>
+        <div id="location-list"><!-- filled by province-panel.js --></div>
+
+        <div id="production-queue-section" hidden>
+          <h3>⚙ Production Queue</h3>
+          <ol id="production-queue-list"></ol>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════
+       BOTTOM: event log
+  ═══════════════════════════════════════════════════ -->
+  <footer id="log-bar">
+    <div id="event-log"><!-- filled by event-log.js --></div>
+  </footer>
+
+  <!-- ═══════════════════════════════════════════════════
+       MODAL (game-over, confirm)
+  ═══════════════════════════════════════════════════ -->
+  <div id="modal-overlay" class="modal-overlay" hidden>
+    <div id="modal-box" class="modal-box">
+      <h2 id="modal-title"></h2>
+      <p id="modal-body"></p>
+      <div id="modal-buttons"></div>
+    </div>
+  </div>
+
+  <!-- Province hover tooltip -->
+  <div id="province-tooltip" hidden>
+    <div class="tooltip-name"></div>
+    <div class="tooltip-militia"></div>
+    <div class="militia-bar-wrap"><div class="militia-bar-fill"></div></div>
+  </div>
+
+  <!-- Entry point -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

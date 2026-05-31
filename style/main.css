@@ -1,0 +1,449 @@
+/* ═══════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-dark:      #0e0d0b;
+  --bg-panel:     #1a1814;
+  --bg-panel-alt: #211f1a;
+  --border:       #3a3630;
+  --text:         #d4c89a;
+  --text-muted:   #7a7060;
+  --text-bright:  #f0e8c0;
+  --accent:       #c8952a;
+  --accent-hover: #e0aa40;
+  --danger:       #a03020;
+  --success:      #3a8050;
+
+  --top-bar-h:    52px;
+  --log-bar-h:    110px;
+  --panel-w:      260px;
+  --font-main:    'Segoe UI', system-ui, sans-serif;
+  --font-title:   Georgia, 'Times New Roman', serif;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-dark);
+  color: var(--text);
+  font-family: var(--font-main);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* ═══════════════════════════════════════════════════
+   TOP BAR
+═══════════════════════════════════════════════════ */
+#top-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  height: var(--top-bar-h);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+#faction-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-title);
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--text-bright);
+  min-width: 180px;
+}
+#faction-emoji { font-size: 22px; }
+
+#resource-bar {
+  display: flex;
+  gap: 14px;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.resource-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 13px;
+}
+.resource-chip .r-icon { font-size: 16px; }
+.resource-chip .r-value { color: var(--text-bright); font-weight: 600; }
+.resource-chip .r-delta { color: var(--text-muted); font-size: 11px; }
+.resource-chip .r-delta.positive { color: var(--success); }
+.resource-chip .r-delta.negative { color: var(--danger); }
+
+#turn-display {
+  font-family: var(--font-title);
+  font-size: 15px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+#turn-number { color: var(--accent); font-weight: bold; font-size: 18px; }
+
+/* ═══════════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════════ */
+.btn-primary {
+  background: var(--accent);
+  color: #1a1000;
+  border: none;
+  border-radius: 4px;
+  padding: 7px 16px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:disabled {
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--bg-panel-alt);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--text-bright); }
+.btn-secondary:disabled { color: var(--text-muted); cursor: not-allowed; }
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 7px 16px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.btn-danger:hover { background: #c03828; }
+
+/* ═══════════════════════════════════════════════════
+   MAIN GAME AREA
+═══════════════════════════════════════════════════ */
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+#game-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   SIDE PANELS
+═══════════════════════════════════════════════════ */
+.side-panel {
+  width: var(--panel-w);
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#province-panel { border-right: none; border-left: 1px solid var(--border); }
+
+.side-panel h2 {
+  font-family: var(--font-title);
+  font-size: 15px;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+}
+.side-panel h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+/* ═══════════════════════════════════════════════════
+   MAP SECTION
+═══════════════════════════════════════════════════ */
+#map-section {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  background: #080806;
+  position: relative;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════════
+   PROVINCE PANEL — content
+═══════════════════════════════════════════════════ */
+#province-panel-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding-top: 40px;
+  font-style: italic;
+}
+
+#province-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+#province-biome-icon { font-size: 22px; }
+#province-name {
+  font-family: var(--font-title);
+  font-size: 16px;
+  color: var(--text-bright);
+  flex: 1;
+}
+#province-owner-badge {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  border: 1px solid currentColor;
+}
+#province-biome-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* Location cards */
+.location-card {
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px;
+  margin-bottom: 6px;
+}
+.location-card.selected { border-color: var(--accent); }
+.location-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+.location-icon { font-size: 18px; }
+.location-name { font-weight: 600; color: var(--text-bright); font-size: 13px; }
+.location-type { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+
+/* Building slots */
+.building-slots { margin-top: 6px; }
+.building-slot {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 0;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.slot-icon { font-size: 15px; width: 20px; text-align: center; }
+.slot-name { flex: 1; color: var(--text); }
+.slot-empty { color: var(--text-muted); font-style: italic; }
+.slot-btn { font-size: 11px; padding: 2px 8px; }
+
+/* Production queue */
+#production-queue-section { margin-top: 10px; }
+#production-queue-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.queue-item {
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.queue-item-icon { font-size: 15px; }
+.queue-item-name { flex: 1; }
+.queue-item-turns { color: var(--accent); font-weight: 600; white-space: nowrap; }
+.queue-item-cancel { color: var(--text-muted); cursor: pointer; font-size: 14px; }
+.queue-item-cancel:hover { color: var(--danger); }
+
+/* ═══════════════════════════════════════════════════
+   ARMY PANEL
+═══════════════════════════════════════════════════ */
+.army-card {
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.army-card:hover, .army-card.selected { border-color: var(--accent); }
+.army-card-header { display: flex; align-items: center; gap: 5px; }
+.army-faction-icon { font-size: 18px; }
+.army-location { font-size: 11px; color: var(--text-muted); }
+.army-units { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px; }
+.unit-chip {
+  font-size: 11px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+.army-move-btn { margin-top: 6px; width: 100%; }
+
+/* ═══════════════════════════════════════════════════
+   EVENT LOG
+═══════════════════════════════════════════════════ */
+#log-bar {
+  height: var(--log-bar-h);
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 6px 16px;
+}
+
+#event-log {
+  display: flex;
+  flex-direction: column-reverse; /* newest at top */
+  gap: 2px;
+}
+
+.log-entry {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 1px 0;
+  border-bottom: 1px solid transparent;
+  line-height: 1.5;
+}
+.log-entry.log-combat  { color: #c06040; }
+.log-entry.log-capture { color: #c0a030; }
+.log-entry.log-build   { color: #5090a0; }
+.log-entry.log-turn    { color: var(--text); font-weight: 600; border-bottom-color: var(--border); }
+.log-entry.log-elim    { color: #a03060; font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-overlay[hidden] { display: none; }
+
+.modal-box {
+  background: var(--bg-panel);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 32px 40px;
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 8px 48px rgba(0,0,0,0.8);
+}
+.modal-box h2 {
+  font-family: var(--font-title);
+  font-size: 24px;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.modal-box p { color: var(--text); margin-bottom: 20px; }
+#modal-buttons { display: flex; gap: 12px; justify-content: center; }
+
+/* ═══════════════════════════════════════════════════
+   FACTION PICKER
+═══════════════════════════════════════════════════ */
+.modal-wide { max-width: 640px !important; }
+
+.faction-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 auto;
+}
+.faction-card {
+  border: 2px solid var(--fc, var(--border));
+  border-radius: 8px;
+  padding: 12px;
+  text-align: left;
+  transition: background 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+}
+.faction-card:hover { background: rgba(255,255,255,0.04); box-shadow: 0 0 0 1px var(--fc, var(--border)); }
+.faction-card-emoji  { font-size: 2rem; text-align: center; display: block; margin-bottom: 6px; }
+.faction-card-name   { font-weight: 700; font-size: 14px; color: var(--fc, var(--text)); margin-bottom: 2px; }
+.faction-card-full   { font-size: 10px; color: var(--text-muted); font-style: italic; margin-bottom: 6px; }
+.faction-card-desc   { font-size: 11px; color: var(--text); margin-bottom: 6px; line-height: 1.4; }
+.faction-card-play   { font-size: 10px; color: var(--fc, var(--text-muted)); margin-bottom: 8px; line-height: 1.4; }
+.faction-card .btn-primary { width: 100%; font-size: 12px; padding: 5px 8px; }
+
+/* ═══════════════════════════════════════════════════
+   PROVINCE HOVER TOOLTIP
+═══════════════════════════════════════════════════ */
+#province-tooltip {
+  position: fixed;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 200;
+  min-width: 130px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.6);
+}
+.tooltip-name    { font-weight: 600; color: var(--text-bright); margin-bottom: 3px; }
+.tooltip-militia { font-size: 11px; color: var(--text-muted); }
+.militia-bar-wrap { margin-top: 4px; background: #2a2820; border-radius: 3px; height: 6px; overflow: hidden; }
+.militia-bar-fill { height: 100%; border-radius: 3px; transition: width 0.2s; }
+
+/* ═══════════════════════════════════════════════════
+   MILITIA — province panel
+═══════════════════════════════════════════════════ */
+#province-militia-info { margin-bottom: 10px; }
+.militia-row   { display: flex; align-items: center; gap: 8px; font-size: 12px; margin: 4px 0; }
+.militia-count { font-weight: 600; }
+.militia-status { color: var(--text-muted); font-style: italic; font-size: 11px; }
+.militia-bar   { height: 7px; background: #2a2820; border-radius: 4px; margin-top: 4px; overflow: hidden; }
+.militia-fill  { height: 100%; border-radius: 4px; transition: width 0.3s, background 0.3s; }
+
+/* ═══════════════════════════════════════════════════
+   SCROLLBARS
+═══════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-dark); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
