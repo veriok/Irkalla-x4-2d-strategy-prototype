@@ -96,7 +96,8 @@ function handleProvinceClick(provinceId) {
               // Over supply cap — just move normally
               import('../engine/combat.js').then(({ resolveCombat }) => {
                 resolveCombat(movingArmyId, provinceId);
-                _afterMove(provinceId);
+                const postMoveProvinceId = getArmy(movingArmyId)?.provinceId ?? provinceId;
+                _afterMove(postMoveProvinceId);
               });
             } else {
               _afterMove(provinceId);
@@ -106,7 +107,8 @@ function handleProvinceClick(provinceId) {
             // Cancel — just move without merging
             import('../engine/combat.js').then(({ resolveCombat }) => {
               resolveCombat(movingArmyId, provinceId);
-              _afterMove(provinceId);
+              const postMoveProvinceId = getArmy(movingArmyId)?.provinceId ?? provinceId;
+              _afterMove(postMoveProvinceId);
             });
           }
         );
@@ -117,7 +119,8 @@ function handleProvinceClick(provinceId) {
       const movingArmyId = state.movingArmyId;
       import('../engine/combat.js').then(({ resolveCombat }) => {
         const combatResult = resolveCombat(movingArmyId, provinceId);
-        _afterMove(provinceId);
+        const postMoveProvinceId = getArmy(movingArmyId)?.provinceId ?? provinceId;
+        _afterMove(postMoveProvinceId);
         if (combatResult) {
           import('../ui/event-log.js').then(({ logCombat }) => logCombat(combatResult));
         }

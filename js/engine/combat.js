@@ -17,7 +17,7 @@
 
 import { state, getArmy, getProvince, getFaction, captureProvince,
          moveArmy, removeArmy, checkElimination, addResources,
-         getArmiesInProvince, addCombatReport } from './game-state.js';
+         getArmiesInProvince, addCombatReport, getArmySupplyCap } from './game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
@@ -43,7 +43,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   const isEnemy = targetP.ownerId !== attArmy.factionId && targetP.ownerId !== 'neutral';
   const defArmies = getArmiesInProvince(targetProvinceId)
     .filter(a => a.id !== attackerArmyId && a.factionId !== attArmy.factionId);
-  const enemyDefArmy = defArmies[0] ?? null;
+  const enemyDefArmy = _pickBestDefenderArmy(defArmies);
 
   // No combat for truly undefended neutral province — just occupy
   const hasMilitia = (targetP.militia?.current ?? 0) > 0;
@@ -64,6 +64,15 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
 
   const atkStr = armyAttackStrength(attArmy, UNIT_MAP);
 
+  // Use the strongest defending army, then temporarily borrow units from reserve armies
+  // to fill its supply cap and avoid endless 1-unit defender splitting.
+  let borrowedPlan = [];
+  let borrowedDefenseBonus = 0;
+  if (enemyDefArmy && defArmies.length > 1) {
+    borrowedPlan = _planDefenderBorrow(enemyDefArmy, defArmies, UNIT_MAP, getArmySupplyCap(enemyDefArmy.factionId));
+    borrowedDefenseBonus = _applyBorrowedUnits(enemyDefArmy, borrowedPlan);
+  }
+
   // Fort bonus from defender's location buildings
   const fortBonus = targetP.locations.reduce((sum, loc) => {
     return sum + getLocationDefenseBonus(loc, BUILDING_MAP);
@@ -74,7 +83,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
 
   let defStr;
   if (enemyDefArmy) {
-    defStr = armyDefenseStrength(enemyDefArmy, UNIT_MAP) * terrainMod + fortBonus * 10 + militiaDef;
+    defStr = (armyDefenseStrength(enemyDefArmy, UNIT_MAP) + borrowedDefenseBonus) * terrainMod + fortBonus * 10 + militiaDef;
   } else {
     defStr = fortBonus * 10 + militiaDef;
   }
@@ -113,6 +122,16 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   applyLosses(attArmy, attLossFraction, state.turn);
   if (enemyDefArmy) applyLosses(enemyDefArmy, defLossFraction, state.turn);
 
+  // Borrowed reserve units fight as part of the lead defender; if defenders hold,
+  // surviving borrowed units return to their source armies. If defenders lose,
+  // all borrowed units are considered destroyed.
+  if (borrowedPlan.length > 0) {
+    if (outcome === 'defender') {
+      _returnBorrowedUnits(enemyDefArmy, borrowedPlan);
+    }
+    _removeBorrowedMarkerStacks(enemyDefArmy);
+  }
+
   // Apply militia losses
   if (targetP.militia) {
     const militiaLost = Math.round(targetP.militia.current * defLossFraction);
@@ -141,6 +160,12 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     defender:          `🛡 ${defFaction?.name ?? 'Defenders'} repel ${attFaction?.name ?? 'attacker'} at ${targetP.name}. Attacker retreats.`,
   };
 
+  const hasDefenderReserves = enemyDefArmy && defArmies.some(a => a.id !== enemyDefArmy.id && armySize(a) > 0);
+  const blockedByReserves = outcome !== 'defender' && !!hasDefenderReserves;
+  if (blockedByReserves) {
+    summaries[outcome] = `⚔ ${attFaction?.name ?? 'Attacker'} wins the clash at ${targetP.name}, but defending reserves prevent occupation. The attackers fall back.`;
+  }
+
   const result = {
     outcome,
     attackerFactionId: attArmy.factionId,
@@ -152,6 +177,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     defenderStrength:  Math.round(defStr),
     terrainBonus:      Math.round(biome.terrainDefBonus * 100),
     fortBonus:         fortBonus,
+    blockedByReserves,
     attLostTotal,
     defLostTotal,
     rounds,
@@ -167,12 +193,18 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     if (armySize(attArmy) > 0) {
       if (enemyDefArmy) removeArmy(enemyDefArmy.id);
       if (targetP.militia) targetP.militia.current = 0;
-      const prevOwner = targetP.ownerId;
-      captureProvince(targetProvinceId, attArmy.factionId);
-      moveArmy(attackerArmyId, targetProvinceId);
-      if (prevOwner !== attArmy.factionId) {
-        flashConquest(targetProvinceId);
-        logCapture(attFaction?.name ?? attArmy.factionId, targetP.name);
+      if (blockedByReserves) {
+        // Attack consumed movement, but province cannot be occupied while reserve
+        // defenders are still present.
+        attArmy.movesLeft = Math.max(0, attArmy.movesLeft - 1);
+      } else {
+        const prevOwner = targetP.ownerId;
+        captureProvince(targetProvinceId, attArmy.factionId);
+        moveArmy(attackerArmyId, targetProvinceId);
+        if (prevOwner !== attArmy.factionId) {
+          flashConquest(targetProvinceId);
+          logCapture(attFaction?.name ?? attArmy.factionId, targetP.name);
+        }
       }
     } else {
       removeArmy(attackerArmyId);
@@ -186,6 +218,11 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   if (outcome !== 'defender' && attArmy.factionId === 'draig') {
     addResources('draig', { honor: 5 });
   }
+
+  // No army may persist with only wounded units.
+  _removeIfNoHealthy(attackerArmyId);
+  if (enemyDefArmy) _removeIfNoHealthy(enemyDefArmy.id);
+  for (const d of defArmies) _removeIfNoHealthy(d.id);
 
   return result;
 }
@@ -238,11 +275,33 @@ export function estimateCombat(attackerArmyId, targetProvinceId) {
 
   const defArmies = getArmiesInProvince(targetProvinceId)
     .filter(a => a.factionId !== attArmy.factionId);
-  const enemyDefArmy = defArmies[0] ?? null;
+  const enemyDefArmy = _pickBestDefenderArmy(defArmies);
+
+  let borrowedDefenseBonus = 0;
+  if (enemyDefArmy && defArmies.length > 1) {
+    const supplyCap = getArmySupplyCap(enemyDefArmy.factionId);
+    let slotsLeft = Math.max(0, supplyCap - (armySize(enemyDefArmy) + armyWoundedCount(enemyDefArmy)));
+    const candidates = [];
+    for (const donor of defArmies) {
+      if (donor.id === enemyDefArmy.id) continue;
+      for (const stack of donor.units) {
+        const unit = UNIT_MAP[stack.typeId];
+        if (!unit || stack.count <= 0) continue;
+        candidates.push({ defense: unit.defense, count: stack.count, unitDefense: unit.defense });
+      }
+    }
+    candidates.sort((a, b) => b.defense - a.defense);
+    for (const c of candidates) {
+      if (slotsLeft <= 0) break;
+      const take = Math.min(c.count, slotsLeft);
+      borrowedDefenseBonus += take * c.unitDefense;
+      slotsLeft -= take;
+    }
+  }
 
   let defStr;
   if (enemyDefArmy) {
-    defStr = armyDefenseStrength(enemyDefArmy, UNIT_MAP) * terrainMod + fortBonus * 10 + militiaDef;
+    defStr = (armyDefenseStrength(enemyDefArmy, UNIT_MAP) + borrowedDefenseBonus) * terrainMod + fortBonus * 10 + militiaDef;
   } else {
     defStr = fortBonus * 10 + militiaDef;
   }
@@ -271,4 +330,112 @@ export function estimateCombat(attackerArmyId, targetProvinceId) {
     fortBonus,
     casualtyLevel,
   };
+}
+
+function _pickBestDefenderArmy(defArmies) {
+  if (!defArmies || defArmies.length === 0) return null;
+  return [...defArmies].sort((a, b) => {
+    const defDiff = armyDefenseStrength(b, UNIT_MAP) - armyDefenseStrength(a, UNIT_MAP);
+    if (defDiff !== 0) return defDiff;
+    return armySize(b) - armySize(a);
+  })[0];
+}
+
+function _planDefenderBorrow(primaryArmy, allDefArmies, unitMap, supplyCap) {
+  const slotsLeft = Math.max(0, supplyCap - (armySize(primaryArmy) + armyWoundedCount(primaryArmy)));
+  if (slotsLeft <= 0) return [];
+
+  const candidates = [];
+  for (const donor of allDefArmies) {
+    if (donor.id === primaryArmy.id) continue;
+    for (const stack of donor.units) {
+      const unit = unitMap[stack.typeId];
+      if (!unit || stack.count <= 0) continue;
+      candidates.push({
+        fromArmyId: donor.id,
+        typeId: stack.typeId,
+        available: stack.count,
+        unitDefense: unit.defense,
+      });
+    }
+  }
+
+  candidates.sort((a, b) => b.unitDefense - a.unitDefense);
+
+  const plan = [];
+  let need = slotsLeft;
+  for (const c of candidates) {
+    if (need <= 0) break;
+    const take = Math.min(c.available, need);
+    plan.push({ fromArmyId: c.fromArmyId, typeId: c.typeId, count: take, unitDefense: c.unitDefense });
+    need -= take;
+  }
+  return plan;
+}
+
+function _applyBorrowedUnits(leadArmy, plan) {
+  let borrowedDefenseBonus = 0;
+  if (!leadArmy) return borrowedDefenseBonus;
+
+  for (const b of plan) {
+    const donor = getArmy(b.fromArmyId);
+    if (!donor || b.count <= 0) continue;
+
+    const donorStack = donor.units.find(u => u.typeId === b.typeId);
+    if (!donorStack || donorStack.count <= 0) continue;
+
+    const taken = Math.min(donorStack.count, b.count);
+    donorStack.count -= taken;
+    donor.units = donor.units.filter(u => u.count > 0);
+    b.count = taken;
+
+    borrowedDefenseBonus += taken * b.unitDefense;
+  }
+
+  for (const b of plan) {
+    if (b.count <= 0) continue;
+    const borrowedStack = { typeId: b.typeId, count: b.count, _borrowedFromArmyId: b.fromArmyId };
+    b._initialLeadCount = b.count;
+    b._leadStackRef = borrowedStack;
+    leadArmy.units.push(borrowedStack);
+  }
+
+  return borrowedDefenseBonus;
+}
+
+function _returnBorrowedUnits(leadDefArmy, plan) {
+  if (!leadDefArmy) return;
+
+  for (const b of plan) {
+    const stack = b._leadStackRef;
+    if (!stack) continue;
+
+    const donor = getArmy(b.fromArmyId);
+    if (donor && stack.count > 0) {
+      const donorStack = donor.units.find(u => u.typeId === stack.typeId);
+      if (donorStack) donorStack.count += stack.count;
+      else donor.units.push({ typeId: stack.typeId, count: stack.count });
+    }
+
+    const borrowedLost = Math.max(0, (b._initialLeadCount ?? 0) - stack.count);
+    const borrowedWounded = Math.round(borrowedLost * 0.5);
+    if (borrowedWounded > 0 && leadDefArmy.wounded?.length) {
+      const wStack = leadDefArmy.wounded.find(w => w.typeId === stack.typeId);
+      if (wStack) {
+        wStack.count = Math.max(0, wStack.count - borrowedWounded);
+        leadDefArmy.wounded = leadDefArmy.wounded.filter(w => w.count > 0);
+      }
+    }
+  }
+}
+
+function _removeBorrowedMarkerStacks(leadDefArmy) {
+  if (!leadDefArmy) return;
+  leadDefArmy.units = leadDefArmy.units.filter(s => !s._borrowedFromArmyId);
+}
+
+function _removeIfNoHealthy(armyId) {
+  const army = getArmy(armyId);
+  if (!army) return;
+  if (armySize(army) <= 0) removeArmy(army.id);
 }
