@@ -15,6 +15,7 @@ import { armySize } from '../models/army.js';
 import { updateFogOfWar } from '../engine/fog-of-war.js';
 import { confirmModal } from './modal.js';
 import { renderArmyPanel } from './army-panel.js';
+import { renderResourceBar } from './resource-bar.js';
 
 // ─── DOM references ───────────────────────────────────────
 const provincesG = document.getElementById('provinces');
@@ -143,6 +144,7 @@ function _afterMove(provinceId) {
   renderAllProvinces();
   renderArmyIcons();
   renderArmyPanel();
+  renderResourceBar(); // province count may have changed after conquest/loss
   if (_onProvinceSelect) _onProvinceSelect(provinceId);
 }
 
@@ -164,7 +166,16 @@ function renderProvince(prov, path) {
   const faction = FACTION_MAP[prov.ownerId] ?? NEUTRAL;
   const biome   = getBiome(prov.biomeId);
 
-  const baseColor = prov.ownerId === 'neutral' ? '#6b6b6b' : faction.color;
+  // Don't reveal faction colors for provinces the player has never seen.
+  // 'explored' keeps the last-known color (fog overlay greys it); 'unexplored' stays dark.
+  let baseColor;
+  if (prov.visibility === 'unexplored') {
+    baseColor = '#2a2a2a';
+  } else if (prov.ownerId === 'neutral') {
+    baseColor = '#6b6b6b';
+  } else {
+    baseColor = faction.color;
+  }
   path.style.setProperty('--prov-color', baseColor);
 
   // Ownership class

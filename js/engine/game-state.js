@@ -249,9 +249,7 @@ export function captureProvince(provinceId, newOwnerId) {
   province.ownerId = newOwnerId;
   // Clear queued production — the previous owner's builds/units should not
   // complete for the new owner.
-  for (const loc of province.locations) {
-    loc.productionQueue = [];
-  }
+  province.productionQueue = [];
 }
 
 // ─── Army placement ───────────────────────────────────────
@@ -353,6 +351,41 @@ export function splitArmy(armyId, splitUnits) {
   newArmy.movesLeft = 0;
   placeArmy(newArmy);
   return newArmy;
+}
+
+/**
+ * Transfer `count` healthy units of `typeId` from one army to another in the same province.
+ * Source army must retain at least 1 total unit.
+ * Returns false on any validation failure.
+ */
+export function transferUnit(fromArmyId, toArmyId, typeId, count = 1) {
+  const from = state.armies.get(fromArmyId);
+  const to   = state.armies.get(toArmyId);
+  if (!from || !to) return false;
+  if (from.provinceId !== to.provinceId) return false;
+
+  const fromStack = from.units.find(u => u.typeId === typeId);
+  if (!fromStack || fromStack.count < count) return false;
+
+  // Destination supply cap check
+  const cap     = getArmySupplyCap(to.factionId);
+  const totalTo = armyTotalCount(to);
+  if (totalTo + count > cap) return false;
+
+  // Transfer
+  fromStack.count -= count;
+  from.units = from.units.filter(u => u.count > 0);
+
+  const toStack = to.units.find(u => u.typeId === typeId);
+  if (toStack) toStack.count += count;
+  else to.units.push({ typeId, count });
+
+  // If the source army is now empty, remove it
+  const remainingUnits = from.units.reduce((s, u) => s + u.count, 0)
+                       + (from.wounded ?? []).reduce((s, u) => s + u.count, 0);
+  if (remainingUnits === 0) removeArmy(fromArmyId);
+
+  return true;
 }
 
 // ─── Elimination check ────────────────────────────────────

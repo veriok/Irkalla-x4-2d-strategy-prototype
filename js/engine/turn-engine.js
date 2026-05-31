@@ -55,6 +55,47 @@ export function computeIncome(factionId) {
 }
 
 /**
+ * Compute per-turn resource income breakdown for a faction.
+ * Returns { [resourceId]: { total: number, sources: [{label, amount}] } }
+ */
+export function computeIncomeBreakdown(factionId) {
+  const breakdown = {};
+  const faction   = FACTION_MAP[factionId];
+  if (!faction) return breakdown;
+
+  function addSource(resId, label, amount) {
+    if (!breakdown[resId]) breakdown[resId] = { total: 0, sources: [] };
+    breakdown[resId].total  += amount;
+    breakdown[resId].sources.push({ label, amount });
+  }
+
+  const provinces = getProvincesByFaction(factionId);
+  if (provinces.length > 0) {
+    addSource('gold', `${provinces.length} prov. × 3💰`, provinces.length * 3);
+  }
+
+  for (const prov of provinces) {
+    const biome = getBiome(prov.biomeId);
+    for (const loc of prov.locations) {
+      if (!loc.isControllable) continue;
+      const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP);
+      for (const [res, amt] of Object.entries(bonuses)) {
+        const adjusted = Math.round(amt * biome.resourceMod);
+        if (adjusted !== 0) {
+          const buildingNames = loc.buildings
+            .map(b => BUILDING_MAP[b.buildingId]?.name)
+            .filter(Boolean)
+            .join(', ');
+          addSource(res, `${buildingNames || '?'} @ ${prov.name}`, adjusted);
+        }
+      }
+    }
+  }
+
+  return breakdown;
+}
+
+/**
  * Apply income for all factions.
  */
 function collectIncome() {
@@ -68,64 +109,78 @@ function collectIncome() {
 // ─── Production queue tick ────────────────────────────────
 
 /**
- * Tick production queues for all locations owned by a faction.
- * Completes items whose turnsRemaining reaches 0.
+ * Tick production queues for all provinces owned by a faction.
+ * Only the first item in the queue is ticked each turn.
  */
 function tickProductionQueues(factionId) {
   const provinces = getProvincesByFaction(factionId);
   const faction   = FACTION_MAP[factionId];
 
   for (const prov of provinces) {
-    for (const loc of prov.locations) {
-      if (!loc.isControllable || loc.productionQueue.length === 0) continue;
+    if (!prov.productionQueue || prov.productionQueue.length === 0) continue;
 
-      // Only tick the first item (front of queue)
-      const item = loc.productionQueue[0];
-      item.turnsRemaining--;
+    // Only tick the first item (front of queue)
+    const item = prov.productionQueue[0];
+    item.turnsRemaining--;
 
-      if (item.turnsRemaining <= 0) {
-        // Complete the item
-        loc.productionQueue.shift();
+    if (item.turnsRemaining <= 0) {
+      prov.productionQueue.shift();
 
-        if (item.type === 'building') {
-          const bDef = BUILDING_MAP[item.id];
-          if (bDef) {
-            // Remove the upgraded-from building if this is an upgrade
-            if (bDef.upgradeFromId) {
-              const idx = loc.buildings.findIndex(b => b.buildingId === bDef.upgradeFromId);
-              if (idx !== -1) loc.buildings.splice(idx, 1);
-            }
-            loc.buildings.push({ slotIndex: loc.buildings.length, buildingId: item.id });
-            if (faction) logBuild(faction.name, bDef.name, prov.name);
+      // Find the target location for this item
+      const loc = prov.locations.find(l => l.id === item.locationId);
+
+      if (item.type === 'building') {
+        const bDef = BUILDING_MAP[item.id];
+        if (bDef && loc) {
+          // Remove the upgraded-from building if this is an upgrade
+          if (bDef.upgradeFromId) {
+            const idx = loc.buildings.findIndex(b => b.buildingId === bDef.upgradeFromId);
+            if (idx !== -1) loc.buildings.splice(idx, 1);
           }
-        } else if (item.type === 'unit') {
-          const uDef = UNIT_MAP[item.id];
-          if (uDef) {
-            // Add units to the province's army (same faction); create army if none exists
-            let army = getArmiesInProvince(prov.id).find(a => a.factionId === factionId) ?? null;
-            if (!army) {
-              army = createArmy(factionId, prov.id, []);
-              placeArmy(army);
-            }
-            const cap = getArmySupplyCap(factionId);
-            const available = cap - armyTotalCount(army);
-            const toAdd     = Math.min(uDef.stackSize, Math.max(0, available));
-            const overflow  = uDef.stackSize - toAdd;
+          loc.buildings.push({ slotIndex: loc.buildings.length, buildingId: item.id });
+          if (faction) logBuild(faction.name, bDef.name, prov.name);
+        }
 
-            if (toAdd > 0) {
-              const stack = army.units.find(u => u.typeId === item.id);
-              if (stack) stack.count += toAdd;
-              else army.units.push({ typeId: item.id, count: toAdd });
-            }
-
-            // Overflow units go into a new army at the same province
-            if (overflow > 0) {
-              const overflowArmy = createArmy(factionId, prov.id, [{ typeId: item.id, count: overflow }]);
-              placeArmy(overflowArmy);
-            }
-
-            if (faction) logRecruit(faction.name, uDef.name, uDef.stackSize, prov.name);
+      } else if (item.type === 'unit') {
+        const uDef = UNIT_MAP[item.id];
+        if (uDef) {
+          // Add units to the province's army (same faction); create army if none exists
+          let army = getArmiesInProvince(prov.id).find(a => a.factionId === factionId) ?? null;
+          if (!army) {
+            army = createArmy(factionId, prov.id, []);
+            placeArmy(army);
           }
+          const cap       = getArmySupplyCap(factionId);
+          const available = cap - armyTotalCount(army);
+          const toAdd     = Math.min(uDef.stackSize, Math.max(0, available));
+          const overflow  = uDef.stackSize - toAdd;
+
+          if (toAdd > 0) {
+            const stack = army.units.find(u => u.typeId === item.id);
+            if (stack) stack.count += toAdd;
+            else army.units.push({ typeId: item.id, count: toAdd });
+          }
+
+          // Overflow units go into a new army at the same province
+          if (overflow > 0) {
+            const overflowArmy = createArmy(factionId, prov.id, [{ typeId: item.id, count: overflow }]);
+            placeArmy(overflowArmy);
+          }
+
+          if (faction) logRecruit(faction.name, uDef.name, uDef.stackSize, prov.name);
+        }
+
+      } else if (item.type === 'demolish') {
+        const bDef = BUILDING_MAP[item.id];
+        if (bDef && loc) {
+          const idx = loc.buildings.findIndex(b => b.buildingId === item.id);
+          if (idx !== -1) loc.buildings.splice(idx, 1);
+          // Refund 50% of build cost
+          const refund = Object.fromEntries(
+            Object.entries(bDef.cost).map(([r, v]) => [r, Math.floor(v / 2)])
+          );
+          addResources(factionId, refund);
+          if (faction) logBuild(faction.name, `Razed ${bDef.name}`, prov.name);
         }
       }
     }

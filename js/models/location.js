@@ -9,7 +9,7 @@ export const LOCATION_TYPES = {
   main_settlement: { name: 'Settlement', emoji: '🏛️', isControllable: true },
   village:         { name: 'Village',    emoji: '🏘️', isControllable: true },
   fort:            { name: 'Fort',       emoji: '🏯', isControllable: true },
-  ruins:           { name: 'Ruins',      emoji: '🏚️', isControllable: true },
+  ruins:           { name: 'Ruins',      emoji: '🏚️', isControllable: false },
   shrine:          { name: 'Shrine',     emoji: '🛕', isControllable: true },
   monster_den:     { name: 'Monster Den',emoji: '👹', isControllable: false },
 };
@@ -71,24 +71,4 @@ export function getAvailableBuildingSlots(location, buildingMap) {
   return location.buildingSlots + extraSlots;
 }
 
-/**
- * Add an item to the production queue if not full (max 5).
- * Returns true if added, false if queue full.
- * @param {Object} location
- * @param {{ type: 'building'|'unit', id: string, turnsRemaining: number }} item
- * @returns {boolean}
- */
-export function enqueueProduction(location, item) {
-  if (location.productionQueue.length >= 5) return false;
-  location.productionQueue.push({ ...item });
-  return true;
-}
 
-/**
- * Remove item at index from production queue.
- * @param {Object} location
- * @param {number} index
- */
-export function dequeueProduction(location, index) {
-  location.productionQueue.splice(index, 1);
-}

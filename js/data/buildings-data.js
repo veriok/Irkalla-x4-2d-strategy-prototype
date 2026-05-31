@@ -17,6 +17,7 @@
  *   prerequisites — building ids that must already be built somewhere in same location
  *   unlocksBuildings — building ids that become available in same location after built
  *   slotCost      — how many building slots this consumes (default 1)
+ *   demolishable  — whether player can queue raze/demolish for this building (default true)
  *   description   — flavour text
  */
 
@@ -36,6 +37,7 @@ const GENERIC_CHAINS = [
     bonuses: { gold: 5, growthSlots: 1 },
     prerequisites: [],
     unlocksBuildings: ['town_hall_2'],
+    demolishable: false,
     militiaBonus: 1,
     description: 'A rudimentary seat of local governance. Enables further development.',
   },
@@ -48,6 +50,7 @@ const GENERIC_CHAINS = [
     bonuses: { gold: 10, growthSlots: 1 },
     prerequisites: ['town_hall_1'],
     unlocksBuildings: ['town_hall_3'],
+    demolishable: false,
     militiaBonus: 2,
     description: 'An imposing hall that marks this settlement as a regional center.',
   },
@@ -60,6 +63,7 @@ const GENERIC_CHAINS = [
     bonuses: { gold: 20, growthSlots: 2 },
     prerequisites: ['town_hall_2'],
     unlocksBuildings: [],
+    demolishable: false,
     militiaBonus: 3,
     description: 'The seat of power. A symbol of dominance that inspires loyalty.',
   },
@@ -431,6 +435,12 @@ export function getBuildingsForLocation(factionId, locationType, existingBuildin
   return available.filter(b => {
     if (existingBuildingIds.includes(b.id)) return false;
     if (b.upgradeFromId && !existingBuildingIds.includes(b.upgradeFromId)) return false;
-    return b.prerequisites.every(pId => existingBuildingIds.includes(pId));
+    if (!b.prerequisites.every(pId => existingBuildingIds.includes(pId))) return false;
+    // Hide buildings that have been superseded (a higher tier is already installed)
+    const isSuperseded = BUILDINGS.some(
+      other => other.upgradeFromId === b.id && existingBuildingIds.includes(other.id)
+    );
+    if (isSuperseded) return false;
+    return true;
   });
 }

@@ -6,6 +6,7 @@
 
 import { state, getFaction } from '../engine/game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
+import { computeIncomeBreakdown } from '../engine/turn-engine.js';
 
 const resourceBarEl  = document.getElementById('resource-bar');
 const factionEmojiEl = document.getElementById('faction-emoji');
@@ -14,9 +15,9 @@ const turnNumberEl   = document.getElementById('turn-number');
 
 /**
  * Render the full resource bar for the player's faction.
- * @param {Object} [incomeDeltas]  optional { [resourceId]: amount } showing per-turn income
+ * Income breakdown is computed internally.
  */
-export function renderResourceBar(incomeDeltas = {}) {
+export function renderResourceBar() {
   const playerFactionId = state.playerFactionId;
   if (!playerFactionId) return;
 
@@ -32,6 +33,9 @@ export function renderResourceBar(incomeDeltas = {}) {
   // Turn counter
   turnNumberEl.textContent = state.turn;
 
+  // Income breakdown
+  const breakdown = computeIncomeBreakdown(playerFactionId);
+
   // Resource chips
   const allResources = [
     faction.resources.basic,
@@ -40,15 +44,23 @@ export function renderResourceBar(incomeDeltas = {}) {
 
   resourceBarEl.innerHTML = allResources.map(res => {
     const amount = fs.resources[res.id] ?? 0;
-    const delta  = incomeDeltas[res.id] ?? 0;
+    const info   = breakdown[res.id] ?? { total: 0, sources: [] };
+    const delta  = info.total;
     const deltaClass = delta > 0 ? 'positive' : delta < 0 ? 'negative' : '';
-    const deltaStr   = delta !== 0 ? `(${delta > 0 ? '+' : ''}${delta}/turn)` : '';
+    const deltaStr   = delta !== 0 ? `${delta > 0 ? '+' : ''}${delta}/turn` : '—';
+    const tipLines   = info.sources.length > 0
+      ? info.sources.map(s => `${s.label}: ${s.amount > 0 ? '+' : ''}${s.amount}`).join('&#10;')
+      : 'No income sources';
 
     return `<div class="resource-chip" title="${res.description}">
-      <span class="r-icon">${res.emoji}</span>
-      <span class="r-name" style="color:var(--text-muted);font-size:11px">${res.name}</span>
-      <span class="r-value">${amount}</span>
-      ${deltaStr ? `<span class="r-delta ${deltaClass}">${deltaStr}</span>` : ''}
+      <div class="r-row-top">
+        <span class="r-icon">${res.emoji}</span>
+        <span class="r-name">${res.name}</span>
+        <span class="r-value">${amount}</span>
+      </div>
+      <div class="r-row-bottom">
+        <span class="r-delta ${deltaClass}" title="${tipLines}">${deltaStr}</span>
+      </div>
     </div>`;
   }).join('');
 }

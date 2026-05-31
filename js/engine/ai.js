@@ -18,7 +18,8 @@ import { resolveCombat } from './combat.js';
 import { BUILDING_MAP, getBuildingsForLocation } from '../data/buildings-data.js';
 import { getUnitsForFaction, UNIT_MAP } from '../data/units-data.js';
 import { armyAttackStrength, armyDefenseStrength, armySize, createArmy } from '../models/army.js';
-import { getInstalledBuildingIds, enqueueProduction } from '../models/location.js';
+import { getInstalledBuildingIds } from '../models/location.js';
+import { enqueueProduction } from '../models/province.js';
 import { computeIncome } from './turn-engine.js';
 import { logMessage } from '../ui/event-log.js';
 
@@ -149,7 +150,7 @@ export async function runAI(factionId) {
 
   for (const prov of provinces) {
     for (const loc of prov.locations) {
-      if (!loc.isControllable || loc.productionQueue.length >= 5) continue;
+      if (!loc.isControllable || prov.productionQueue.length >= 5) continue;
 
       const installedIds = getInstalledBuildingIds(loc);
       const available    = getBuildingsForLocation(factionId, loc.type, installedIds);
@@ -167,9 +168,10 @@ export async function runAI(factionId) {
         for (const [res, amt] of Object.entries(bDef.cost)) {
           fs2.resources[res] = Math.max(0, (fs2.resources[res] ?? 0) - amt);
         }
-        enqueueProduction(loc, {
+        enqueueProduction(prov, {
           type:           'building',
           id:             bDef.id,
+          locationId:     loc.id,
           turnsRemaining: bDef.buildTurns,
         });
         await delay(AI_DELAY_MS);
@@ -193,9 +195,10 @@ export async function runAI(factionId) {
           for (const [res, amt] of Object.entries(uDef.cost)) {
             fs2.resources[res] = Math.max(0, (fs2.resources[res] ?? 0) - amt);
           }
-          enqueueProduction(loc, {
+          enqueueProduction(prov, {
             type:           'unit',
             id:             uDef.id,
+            locationId:     loc.id,
             turnsRemaining: uDef.buildTurns,
           });
           await delay(AI_DELAY_MS);

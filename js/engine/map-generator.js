@@ -189,7 +189,6 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
       isCapital,
       buildingSlots: 2,       // starts with 2 slots; upgrades via town_hall chain
       buildings: [],
-      productionQueue: [],
     });
   } else {
     // Non-starting: 50% chance of a small settlement, otherwise ruins/shrine/den
@@ -202,7 +201,6 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
       isCapital: false,
       buildingSlots: t === 'village' ? 2 : 1,
       buildings: [],
-      productionQueue: [],
     });
   }
 
@@ -224,7 +222,6 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
       isCapital: false,
       buildingSlots: type === 'village' ? 2 : type === 'fort' ? 1 : 1,
       buildings: [],
-      productionQueue: [],
     });
   }
 

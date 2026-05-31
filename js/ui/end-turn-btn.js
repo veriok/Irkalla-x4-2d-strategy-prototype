@@ -37,7 +37,7 @@ async function handleEndTurn() {
     updateFogOfWar();
     renderAllProvinces();
     renderArmyIcons();
-    renderResourceBar(/* TODO: pass income deltas */);
+    renderResourceBar();
 
     // Turn flash on top bar
     topBar.classList.remove('turn-flash');

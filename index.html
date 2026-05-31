@@ -94,6 +94,8 @@
         </div>
         <p id="province-biome-label"></p>
 
+        <div id="province-resource-summary" hidden></div>
+
         <div id="province-militia-info" hidden>
           <h3>⚔ Militia</h3>
           <div class="militia-row">
@@ -106,9 +108,14 @@
         <h3>Locations</h3>
         <div id="location-list"><!-- filled by province-panel.js --></div>
 
+        <div id="recruit-section" hidden>
+          <h3>⚔ Recruit Units</h3>
+          <div id="recruit-list" class="card-grid"></div>
+        </div>
+
         <div id="production-queue-section" hidden>
           <h3>⚙ Production Queue</h3>
-          <ol id="production-queue-list"></ol>
+          <div id="production-queue-list" class="card-grid--5"></div>
         </div>
       </div>
     </aside>
@@ -121,6 +128,9 @@
   <footer id="log-bar">
     <div id="event-log"><!-- filled by event-log.js --></div>
   </footer>
+
+  <!-- Building tooltip (shown on hover) -->
+  <div id="building-tooltip" class="building-tooltip" hidden></div>
 
   <!-- ═══════════════════════════════════════════════════
        MODAL (game-over, confirm)
