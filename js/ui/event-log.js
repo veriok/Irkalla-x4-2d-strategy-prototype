@@ -4,6 +4,8 @@
  * Appends log entries to the bottom bar event log.
  */
 
+import { showCombatReportModal } from './modal.js';
+
 const logEl = document.getElementById('event-log');
 const MAX_ENTRIES = 80;
 
@@ -33,7 +35,23 @@ export function logRecruit(factionName, unitName, count, provinceName) {
 }
 
 export function logCombat(result) {
-  addEntry(result.summary, 'log-combat');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry log-combat new';
+
+  if (result.reportId) {
+    const btn = document.createElement('button');
+    btn.className = 'log-combat-link';
+    btn.textContent = result.summary;
+    btn.dataset.reportId = result.reportId;
+    btn.addEventListener('click', () => showCombatReportModal(result.reportId));
+    entry.appendChild(btn);
+  } else {
+    entry.textContent = result.summary;
+  }
+
+  logEl.prepend(entry);
+  setTimeout(() => entry.classList.remove('new'), 300);
+  while (logEl.children.length > MAX_ENTRIES) logEl.removeChild(logEl.lastChild);
 }
 
 export function logCapture(attackerName, provinceName) {

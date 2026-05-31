@@ -12,14 +12,15 @@
  */
 
 import { state, addResources, getProvincesByFaction, getArmiesByFaction,
-         checkElimination, getFaction, computeMilitiaMax } from './game-state.js';
+         checkElimination, getFaction, computeMilitiaMax,
+         getArmiesInProvince } from './game-state.js';
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
 import { getLocationResourceBonuses } from '../models/location.js';
 import { getBiome } from '../data/biomes-data.js';
-import { resetMoves, createArmy } from '../models/army.js';
-import { placeArmy } from './game-state.js';
+import { resetMoves, createArmy, armyTotalCount } from '../models/army.js';
+import { placeArmy, getArmySupplyCap } from './game-state.js';
 import { logTurn, logBuild, logRecruit, logElimination } from '../ui/event-log.js';
 
 // ─── Per-faction income calculation ──────────────────────
@@ -100,18 +101,29 @@ function tickProductionQueues(factionId) {
         } else if (item.type === 'unit') {
           const uDef = UNIT_MAP[item.id];
           if (uDef) {
-            // Add units to the province's army; create army if none exists
-            let army = prov.armyId ? state.armies.get(prov.armyId) : null;
+            // Add units to the province's army (same faction); create army if none exists
+            let army = getArmiesInProvince(prov.id).find(a => a.factionId === factionId) ?? null;
             if (!army) {
               army = createArmy(factionId, prov.id, []);
               placeArmy(army);
             }
-            const stack = army.units.find(u => u.typeId === item.id);
-            if (stack) {
-              stack.count += uDef.stackSize;
-            } else {
-              army.units.push({ typeId: item.id, count: uDef.stackSize });
+            const cap = getArmySupplyCap(factionId);
+            const available = cap - armyTotalCount(army);
+            const toAdd     = Math.min(uDef.stackSize, Math.max(0, available));
+            const overflow  = uDef.stackSize - toAdd;
+
+            if (toAdd > 0) {
+              const stack = army.units.find(u => u.typeId === item.id);
+              if (stack) stack.count += toAdd;
+              else army.units.push({ typeId: item.id, count: toAdd });
             }
+
+            // Overflow units go into a new army at the same province
+            if (overflow > 0) {
+              const overflowArmy = createArmy(factionId, prov.id, [{ typeId: item.id, count: overflow }]);
+              placeArmy(overflowArmy);
+            }
+
             if (faction) logRecruit(faction.name, uDef.name, uDef.stackSize, prov.name);
           }
         }
@@ -172,6 +184,30 @@ export async function endTurn(onComplete) {
       const max = computeMilitiaMax(province);
       if (current < max) province.militia.current = current + 1;
     }
+  }
+
+  // ── Replenish wounded units for all player + AI armies in friendly territory ──
+  for (const army of state.armies.values()) {
+    if (!army.wounded || army.wounded.length === 0) continue;
+    // Must be in own territory and not have fought this turn
+    const prov = state.provinces.get(army.provinceId);
+    if (!prov || prov.ownerId !== army.factionId) continue;
+    if (army.lastCombatTurn !== null && army.lastCombatTurn >= state.turn - 1) continue;
+
+    // Heal 30% of wounded per turn (rounded up, min 1)
+    const totalWounded = army.wounded.reduce((s, w) => s + w.count, 0);
+    let toHeal = Math.max(1, Math.round(totalWounded * 0.3));
+
+    for (const wStack of army.wounded) {
+      if (toHeal <= 0) break;
+      const heal = Math.min(wStack.count, toHeal);
+      wStack.count -= heal;
+      toHeal -= heal;
+      const uStack = army.units.find(u => u.typeId === wStack.typeId);
+      if (uStack) uStack.count += heal;
+      else army.units.push({ typeId: wStack.typeId, count: heal });
+    }
+    army.wounded = army.wounded.filter(w => w.count > 0);
   }
 
   // ── Reset player army moves ──

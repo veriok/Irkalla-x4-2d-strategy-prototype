@@ -22,7 +22,7 @@ import { FACTIONS, FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
 import { createProvince } from '../models/province.js';
-import { createArmy } from '../models/army.js';
+import { createArmy, armyTotalCount } from '../models/army.js';
 
 // ─── State singleton ──────────────────────────────────────
 export const state = {
@@ -35,9 +35,10 @@ export const state = {
   eliminated:         new Set(),
   winner:             null,
 
-  factions:  new Map(),    // factionId → factionState
-  provinces: new Map(),    // provinceId → province
-  armies:    new Map(),    // armyId → army
+  factions:     new Map(),    // factionId → factionState
+  provinces:    new Map(),    // provinceId → province
+  armies:       new Map(),    // armyId → army
+  combatReports: [],          // recent combat reports (newest first, capped at 50)
 };
 
 // ─── Faction state factory ────────────────────────────────
@@ -48,10 +49,11 @@ function createFactionState(faction) {
     resources[adv.id] = 20;
   }
   return {
-    id:        faction.id,
+    id:             faction.id,
     resources,
-    isAI:      true,         // overridden for player faction during init
-    isEliminated: false,
+    isAI:           true,         // overridden for player faction during init
+    isEliminated:   false,
+    armySupplyCap:  9,            // max individual units per army (research can increase)
   };
 }
 
@@ -106,7 +108,7 @@ export function initWorld(provinceDataArr, playerFactionId) {
       const startingUnits = getStartingUnits(province.ownerId);
       const army = createArmy(province.ownerId, province.id, startingUnits);
       state.armies.set(army.id, army);
-      province.armyId = army.id;
+      province.armyIds.push(army.id);
     }
   }
 
@@ -143,6 +145,27 @@ function getStartingUnits(factionId) {
 export function getProvince(id)  { return state.provinces.get(id); }
 export function getArmy(id)      { return state.armies.get(id); }
 export function getFaction(id)   { return state.factions.get(id); }
+
+/** All armies currently stationed in a province */
+export function getArmiesInProvince(provinceId) {
+  const prov = getProvince(provinceId);
+  if (!prov) return [];
+  return prov.armyIds.map(id => state.armies.get(id)).filter(Boolean);
+}
+
+/** Supply cap for a faction (hook for future research upgrades). */
+export function getArmySupplyCap(factionId) {
+  return state.factions.get(factionId)?.armySupplyCap ?? 9;
+}
+
+/** Add a combat report (newest first, capped at 50). */
+let _nextReportId = 1;
+export function addCombatReport(report) {
+  report.reportId = `cr_${_nextReportId++}`;
+  state.combatReports.unshift(report);
+  if (state.combatReports.length > 50) state.combatReports.length = 50;
+  return report.reportId;
+}
 
 /** All provinces owned by a faction */
 export function getProvincesByFaction(factionId) {
@@ -237,7 +260,7 @@ export function captureProvince(provinceId, newOwnerId) {
 export function placeArmy(army) {
   state.armies.set(army.id, army);
   const prov = getProvince(army.provinceId);
-  if (prov) prov.armyId = army.id;
+  if (prov && !prov.armyIds.includes(army.id)) prov.armyIds.push(army.id);
 }
 
 /** Remove an army from state (after it's destroyed or merged). */
@@ -245,8 +268,10 @@ export function removeArmy(armyId) {
   const army = state.armies.get(armyId);
   if (!army) return;
   const prov = getProvince(army.provinceId);
-  if (prov && prov.armyId === armyId) prov.armyId = null;
+  if (prov) prov.armyIds = prov.armyIds.filter(id => id !== armyId);
   state.armies.delete(armyId);
+  if (state.selectedArmyId === armyId) state.selectedArmyId = null;
+  if (state.movingArmyId  === armyId) state.movingArmyId   = null;
 }
 
 /** Move army to a new province (no combat — pure relocation). */
@@ -256,13 +281,78 @@ export function moveArmy(armyId, targetProvinceId) {
 
   // Unlink from old province
   const oldProv = getProvince(army.provinceId);
-  if (oldProv && oldProv.armyId === armyId) oldProv.armyId = null;
+  if (oldProv) oldProv.armyIds = oldProv.armyIds.filter(id => id !== armyId);
 
   // Link to new province
   army.provinceId = targetProvinceId;
   army.movesLeft--;
   const newProv = getProvince(targetProvinceId);
-  if (newProv) newProv.armyId = armyId;
+  if (newProv && !newProv.armyIds.includes(armyId)) newProv.armyIds.push(armyId);
+}
+
+/**
+ * Merge absorbArmy into keepArmy (same province required).
+ * Returns false if combined unit count would exceed supply cap.
+ */
+export function mergeArmies(keepArmyId, absorbArmyId) {
+  const keepArmy   = state.armies.get(keepArmyId);
+  const absorbArmy = state.armies.get(absorbArmyId);
+  if (!keepArmy || !absorbArmy) return false;
+  if (keepArmy.provinceId !== absorbArmy.provinceId) return false;
+
+  const cap = getArmySupplyCap(keepArmy.factionId);
+  const combinedSize = armyTotalCount(keepArmy) + armyTotalCount(absorbArmy);
+  if (combinedSize > cap) return false;
+
+  // Merge unit stacks
+  for (const { typeId, count } of absorbArmy.units) {
+    const existing = keepArmy.units.find(u => u.typeId === typeId);
+    if (existing) existing.count += count;
+    else keepArmy.units.push({ typeId, count });
+  }
+  // Merge wounded stacks
+  for (const { typeId, count } of (absorbArmy.wounded ?? [])) {
+    const existing = (keepArmy.wounded ?? []).find(u => u.typeId === typeId);
+    if (existing) existing.count += count;
+    else { keepArmy.wounded = keepArmy.wounded ?? []; keepArmy.wounded.push({ typeId, count }); }
+  }
+
+  removeArmy(absorbArmyId);
+  return true;
+}
+
+/**
+ * Split army: peel off splitUnits into a new army in the same province.
+ * splitUnits is [{ typeId, count }] — must be ≤ available counts.
+ * Returns the new army, or null on validation failure.
+ */
+export function splitArmy(armyId, splitUnits) {
+  const army = state.armies.get(armyId);
+  if (!army) return null;
+
+  // Validate: enough units available
+  for (const { typeId, count } of splitUnits) {
+    const stack = army.units.find(u => u.typeId === typeId);
+    if (!stack || stack.count < count) return null;
+  }
+  // Validate: original army won't be left empty
+  const totalSplit = splitUnits.reduce((s, u) => s + u.count, 0);
+  const totalArmy  = army.units.reduce((s, u) => s + u.count, 0);
+  if (totalSplit >= totalArmy) return null;
+  if (totalSplit < 1) return null;
+
+  // Deduct from original
+  for (const { typeId, count } of splitUnits) {
+    const stack = army.units.find(u => u.typeId === typeId);
+    stack.count -= count;
+  }
+  army.units = army.units.filter(u => u.count > 0);
+
+  // Create new army in the same province (can't move this turn)
+  const newArmy = createArmy(army.factionId, army.provinceId, splitUnits);
+  newArmy.movesLeft = 0;
+  placeArmy(newArmy);
+  return newArmy;
 }
 
 // ─── Elimination check ────────────────────────────────────

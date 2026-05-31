@@ -13,12 +13,14 @@ let _nextArmyId = 1;
  */
 export function createArmy(factionId, provinceId, units = []) {
   return {
-    id:         `army_${_nextArmyId++}`,
+    id:             `army_${_nextArmyId++}`,
     factionId,
     provinceId,
-    units:      units.map(u => ({ ...u })),
-    movesLeft:  1,
-    maxMoves:   1,
+    units:          units.map(u => ({ ...u })),
+    wounded:        [],   // [{ typeId, count }] — injured units that can replenish
+    lastCombatTurn: null, // turn number of last combat (null = never fought)
+    movesLeft:      1,
+    maxMoves:       1,
   };
 }
 
@@ -68,7 +70,7 @@ export function armyDefenseStrength(army, unitMap) {
 }
 
 /**
- * Total unit count in an army.
+ * Total healthy unit count in an army (excludes wounded).
  * @param {Object} army
  * @returns {number}
  */
@@ -77,22 +79,58 @@ export function armySize(army) {
 }
 
 /**
- * Apply proportional casualties to an army (removes units when count ≤ 0).
+ * Total wounded unit count in an army.
  * @param {Object} army
- * @param {number} lossFraction  - 0..1 fraction of total units to lose
+ * @returns {number}
  */
-export function applyLosses(army, lossFraction) {
-  const totalBefore = armySize(army);
-  const toRemove = Math.round(totalBefore * lossFraction);
+export function armyWoundedCount(army) {
+  return (army.wounded ?? []).reduce((s, u) => s + u.count, 0);
+}
+
+/**
+ * Total capacity used (healthy + wounded).
+ * @param {Object} army
+ * @returns {number}
+ */
+export function armyTotalCount(army) {
+  return armySize(army) + armyWoundedCount(army);
+}
+
+/**
+ * Apply proportional casualties to an army.
+ * ~50% of losses go to wounded (can recover), ~50% are killed outright.
+ * @param {Object} army
+ * @param {number} lossFraction  - 0..1 fraction of healthy units to lose
+ * @param {number} currentTurn
+ */
+export function applyLosses(army, lossFraction, currentTurn) {
+  const toRemove = Math.round(armySize(army) * lossFraction);
   let remaining = toRemove;
 
-  // Remove proportionally from each stack
+  army.wounded = army.wounded ?? [];
+
+  // Remove proportionally from each stack; half go to wounded
   for (const stack of army.units) {
+    if (remaining <= 0) break;
     const remove = Math.min(stack.count, Math.round(stack.count * lossFraction));
+    const wounded = Math.round(remove * 0.5);
+    const killed  = remove - wounded;
+
     stack.count -= remove;
-    remaining -= remove;
+    remaining   -= remove;
+
+    if (wounded > 0) {
+      const wStack = army.wounded.find(w => w.typeId === stack.typeId);
+      if (wStack) wStack.count += wounded;
+      else army.wounded.push({ typeId: stack.typeId, count: wounded });
+    }
+    // killed units are simply removed (stack.count already reduced)
+    void killed;
   }
 
   // Clean up empty stacks
   army.units = army.units.filter(u => u.count > 0);
+
+  // Record combat turn for replenishment cooldown
+  if (currentTurn !== undefined) army.lastCombatTurn = currentTurn;
 }

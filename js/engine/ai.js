@@ -12,7 +12,7 @@
  */
 
 import { state, getProvince, getArmy, getProvincesByFaction, getArmiesByFaction,
-         moveArmy, captureProvince, placeArmy } from './game-state.js';
+         moveArmy, captureProvince, placeArmy, getArmiesInProvince } from './game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { resolveCombat } from './combat.js';
 import { BUILDING_MAP, getBuildingsForLocation } from '../data/buildings-data.js';
@@ -67,8 +67,10 @@ export async function runAI(factionId) {
 
       if (target.ownerId === 'neutral') {
         const hasMilitia = (target.militia?.current ?? 0) > 0;
+        const targetArmies = getArmiesInProvince(target.id);
+        const hasArmy = targetArmies.length > 0;
 
-        if (!target.armyId && !hasMilitia) {
+        if (!hasArmy && !hasMilitia) {
           // Truly undefended neutral — just walk in
           moveArmy(army.id, target.id);
           captureProvince(target.id, factionId);
@@ -77,7 +79,7 @@ export async function runAI(factionId) {
           break;
         }
 
-        if (!target.armyId && hasMilitia) {
+        if (!hasArmy && hasMilitia) {
           // Militia-only neutral — fight if strong enough
           const militiaDef = (target.militia?.current ?? 0) * 2;
           const atkStr = armyAttackStrength(army, UNIT_MAP);
@@ -95,8 +97,8 @@ export async function runAI(factionId) {
 
       if (target.ownerId !== 'neutral' && target.ownerId !== factionId) {
         // Attack if strong enough
-        const defArmyId = target.armyId;
-        const defArmy   = defArmyId ? getArmy(defArmyId) : null;
+        const enemyArmies = getArmiesInProvince(target.id).filter(a => a.factionId !== factionId);
+        const defArmy     = enemyArmies[0] ?? null;
 
         const atkStr = armyAttackStrength(army, UNIT_MAP);
         const defStr = defArmy ? armyDefenseStrength(defArmy, UNIT_MAP) : 0;
@@ -119,17 +121,18 @@ export async function runAI(factionId) {
       const threatened = getProvincesByFaction(factionId).filter(p => {
         return p.adjacentIds.some(adjId => {
           const adj = getProvince(adjId);
-          return adj && adj.ownerId !== factionId && adj.ownerId !== 'neutral' && adj.armyId;
+          return adj && adj.ownerId !== factionId && adj.ownerId !== 'neutral' &&
+                 getArmiesInProvince(adjId).some(a => a.factionId !== factionId);
         });
       });
 
       if (threatened.length > 0) {
-        // Move toward nearest threatened province
         const target = threatened[0];
         if (fromProv.adjacentIds.includes(target.id) && army.movesLeft > 0 &&
             army.provinceId !== target.id) {
-          // Check for existing friendly army — simple merge not implemented yet, skip if occupied
-          if (!target.armyId) {
+          // Move only if no friendly army already there
+          const friendlyThere = getArmiesInProvince(target.id).some(a => a.factionId === factionId);
+          if (!friendlyThere) {
             moveArmy(army.id, target.id);
             acted = true;
             await delay(AI_DELAY_MS);

@@ -67,9 +67,9 @@ export const FACTIONS = [
       'Lizard kings ruling over desert river valleys, granting bountiful harvest. ' +
       'Elite crocodile infantry, prominent priesthood, and devotion to the radiant Sun God.',
     emoji: '🦎',
-    color: '#A07810',              // desert gold
-    borderColor: '#806010',
-    textColor: '#d4a020',
+    color: '#C06020',              // desert terracotta
+    borderColor: '#A04810',
+    textColor: '#E08840',
     quadrantHint: 'se',
     startingProvinces: 4,
     resources: {

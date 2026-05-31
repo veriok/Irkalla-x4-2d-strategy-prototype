@@ -24,8 +24,8 @@ export function createProvince(raw) {
     // locations — already constructed by map-generator
     locations:       raw.locations,
 
-    // army in this province (armyId or null)
-    armyId:          null,
+    // armies in this province (array of armyIds)
+    armyIds:         [],
 
     // militia (local defenders — initialised by game-state.initWorld)
     militia:         { current: 0, lastCombatTurn: null },

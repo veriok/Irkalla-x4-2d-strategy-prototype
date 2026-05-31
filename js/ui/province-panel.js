@@ -157,7 +157,7 @@ function renderBuildingSlots(prov, loc, isPlayerProvince) {
     const slotEl = document.createElement('div');
     slotEl.className = 'building-slot';
 
-    if (isPlayerProvince) {
+    if (isPlayerProvince && LOCATION_TYPES[loc.type]?.isControllable) {
       const addBtn = document.createElement('button');
       addBtn.className = 'btn-secondary slot-btn';
       addBtn.textContent = '+ Build';
@@ -184,6 +184,7 @@ function openBuildMenu(prov, loc, slotsEl) {
 
   if (available.length === 0) {
     const msg = document.createElement('p');
+    msg.className = 'build-menu';
     msg.style.cssText = 'font-size:11px;color:var(--text-muted);padding:4px 0';
     msg.textContent = 'No buildings available for this location.';
     slotsEl.appendChild(msg);
