@@ -30,7 +30,8 @@ import { enqueueProduction, dequeueProduction } from '../models/province.js';
 import { BUILDING_MAP, getBuildingsForLocation } from '../data/buildings-data.js';
 import { getRecruitableUnits, UNIT_MAP } from '../data/units-data.js';
 import { renderResourceBar } from './resource-bar.js';
-import { showBuildingTooltip, hideBuildingTooltip } from './tooltips.js';
+import { showBuildingTooltip, hideBuildingTooltip, showUnitTooltip, hideUnitTooltip } from './tooltips.js';
+import { createCard } from './card-renderer.js';
 
 const emptyEl = document.getElementById('province-panel-empty');
 const contentEl = document.getElementById('province-panel-content');
@@ -159,13 +160,15 @@ function renderLocations(prov) {
     const typeMeta = LOCATION_TYPES[loc.type] ?? { name: loc.type, emoji: '?' };
     const isExpanded = _expandedLocId === loc.id;
 
-    const card = document.createElement('div');
-    card.className = `game-card game-card--location${isExpanded ? ' selected' : ''}`;
+    const card = createCard({
+      variant: 'location',
+      extraClass: isExpanded ? 'selected' : '',
+      compositeSrc: typeMeta.cardImg ?? null,
+      fallbackIcon: typeMeta.emoji,
+      fallbackName: loc.type === 'main_settlement' ? prov.name : typeMeta.name,
+      fallbackSub: '',
+    });
     card.title = typeMeta.name;
-    card.innerHTML = `
-      <div class="game-card__icon">${typeMeta.emoji}</div>
-      <div class="game-card__name">${loc.type === 'main_settlement' ? prov.name : typeMeta.name}</div>
-    `;
 
     card.addEventListener('click', () => {
       _expandedLocId = isExpanded ? null : loc.id;
@@ -218,19 +221,20 @@ function renderBuildingSlots(prov, loc, isPlayerProvince) {
     const cwa = document.createElement('div');
     cwa.className = 'card-with-action';
 
-    const card = document.createElement('div');
-    card.className = 'game-card game-card--building';
-    card.innerHTML = `
-      <div class="game-card__icon">${bDef?.emoji ?? '🏗'}</div>
-      <div class="game-card__name">${bDef?.name ?? bId}</div>
-    `;
+    const artCard = createCard({
+      variant: 'building',
+      compositeSrc: bDef?.cardImg ?? null,
+      fallbackIcon: bDef?.emoji ?? '🏗',
+      fallbackName: bDef?.name ?? bId,
+      fallbackSub: '',
+    });
 
     if (bDef) {
-      card.addEventListener('mouseenter', () => showBuildingTooltip(bDef, card));
-      card.addEventListener('mouseleave', hideBuildingTooltip);
+      artCard.addEventListener('mouseenter', () => showBuildingTooltip(bDef, artCard));
+      artCard.addEventListener('mouseleave', hideBuildingTooltip);
     }
 
-    cwa.appendChild(card);
+    cwa.appendChild(artCard);
 
     // Upgrade button — shown when an upgrade exists for this building
     if (isPlayerProvince && upgradeDef) {
@@ -428,6 +432,10 @@ function renderRecruitSection(prov) {
       <span class="bm-cost">⚔${uDef.attack} 🛡${uDef.defense} · ${costStr} · ${uDef.buildTurns}t</span>
     `;
 
+    const nameEl2 = row.querySelector('.bm-name');
+    nameEl2.addEventListener('mouseenter', () => showUnitTooltip(uDef, faction, nameEl2));
+    nameEl2.addEventListener('mouseleave', hideUnitTooltip);
+
     const btn = document.createElement('button');
     btn.className = 'card-action-btn';
     btn.textContent = 'Recruit';
@@ -465,6 +473,7 @@ function renderProductionQueue(prov) {
 
   queueSectionEl.hidden = false;
   queueListEl.innerHTML = '';
+  const faction = FACTION_MAP[state.playerFactionId];
 
   for (let i = 0; i < 5; i++) {
     const item = prov.productionQueue[i];
@@ -475,30 +484,50 @@ function renderProductionQueue(prov) {
       let name;
       let emoji;
       let cost;
+      let card;
       if (item.type === 'building') {
         const bDef = BUILDING_MAP[item.id];
         name = bDef?.name ?? item.id;
         emoji = bDef?.emoji ?? '🏗';
         cost = bDef?.cost ?? {};
+        card = createCard({
+          variant: 'building',
+          compositeSrc: bDef?.cardImg ?? null,
+          fallbackIcon: emoji,
+          fallbackName: '',
+          fallbackSub: '',
+        });
       } else if (item.type === 'unit') {
         const uDef = UNIT_MAP[item.id];
         name = uDef?.name ?? item.id;
         emoji = uDef?.emoji ?? '⚔';
         cost = uDef?.cost ?? {};
+        card = createCard({
+          variant: 'unit',
+          backgroundSrc: faction?.unitCardBgImg ?? null,
+          foregroundSrc: uDef?.cardSpriteImg ?? null,
+          fallbackIcon: emoji,
+          fallbackName: '',
+          fallbackSub: '',
+        });
       } else {
         const bDef = BUILDING_MAP[item.id];
         name = `Raze ${bDef?.name ?? item.id}`;
         emoji = '🔨';
         cost = {};
+        card = createCard({
+          variant: 'building',
+          fallbackIcon: emoji,
+          fallbackName: '',
+          fallbackSub: '',
+        });
       }
 
-      const card = document.createElement('div');
-      card.className = 'game-card';
-      card.innerHTML = `
-        <div class="game-card__icon">${emoji}</div>
-        <div class="game-card__name">${name}</div>
-        <div class="game-card__sub" style="color:var(--accent)">${item.turnsRemaining}t</div>
-      `;
+      card.title = name;
+      const turnsEl = document.createElement('div');
+      turnsEl.className = 'game-card__queue-turns';
+      turnsEl.textContent = `${item.turnsRemaining}t`;
+      card.appendChild(turnsEl);
       cwa.appendChild(card);
 
       const btn = document.createElement('button');

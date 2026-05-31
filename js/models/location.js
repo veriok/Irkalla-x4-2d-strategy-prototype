@@ -6,12 +6,42 @@
 
 /** Location type metadata */
 export const LOCATION_TYPES = {
-  main_settlement: { name: 'Settlement', emoji: '🏛️', isControllable: true },
-  village:         { name: 'Village',    emoji: '🏘️', isControllable: true },
-  fort:            { name: 'Fort',       emoji: '🏯', isControllable: true },
-  ruins:           { name: 'Ruins',      emoji: '🏚️', isControllable: false },
-  shrine:          { name: 'Shrine',     emoji: '🛕', isControllable: true },
-  monster_den:     { name: 'Monster Den',emoji: '👹', isControllable: false },
+  main_settlement: {
+    name: 'Settlement',
+    emoji: '🏛️',
+    isControllable: true,
+    cardImg: 'assets/cards/locations/main_settlement.png',
+  },
+  village: {
+    name: 'Village',
+    emoji: '🏘️',
+    isControllable: true,
+    cardImg: 'assets/cards/locations/village.png',
+  },
+  fort: {
+    name: 'Fort',
+    emoji: '🏯',
+    isControllable: true,
+    cardImg: 'assets/cards/locations/fort.png',
+  },
+  ruins: {
+    name: 'Ruins',
+    emoji: '🏚️',
+    isControllable: false,
+    cardImg: 'assets/cards/locations/ruins.png',
+  },
+  shrine: {
+    name: 'Shrine',
+    emoji: '🛕',
+    isControllable: true,
+    cardImg: 'assets/cards/locations/shrine.png',
+  },
+  monster_den: {
+    name: 'Monster Den',
+    emoji: '👹',
+    isControllable: false,
+    cardImg: 'assets/cards/locations/monster_den.png',
+  },
 };
 
 /**

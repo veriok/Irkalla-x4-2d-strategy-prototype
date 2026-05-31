@@ -30,6 +30,7 @@ const GENERIC_CHAINS = [
   // ── Settlement Growth Chain (main_settlement only) ──────
   {
     id: 'town_hall_1', name: 'Town Hall', emoji: '🏛️',
+    cardImg: 'assets/cards/buildings/town_hall_1.png',
     factionId: null,
     allowedLocTypes: ['main_settlement'],
     tier: 1, upgradeFromId: null,
@@ -43,6 +44,7 @@ const GENERIC_CHAINS = [
   },
   {
     id: 'town_hall_2', name: 'Grand Hall', emoji: '🏰',
+    cardImg: 'assets/cards/buildings/town_hall_2.png',
     factionId: null,
     allowedLocTypes: ['main_settlement'],
     tier: 2, upgradeFromId: 'town_hall_1',
@@ -56,6 +58,7 @@ const GENERIC_CHAINS = [
   },
   {
     id: 'town_hall_3', name: 'Imperial Palace', emoji: '👑',
+    cardImg: 'assets/cards/buildings/town_hall_3.png',
     factionId: null,
     allowedLocTypes: ['main_settlement'],
     tier: 3, upgradeFromId: 'town_hall_2',
@@ -71,6 +74,7 @@ const GENERIC_CHAINS = [
   // ── Market Chain (village / main_settlement) ────────────
   {
     id: 'market_1', name: 'Market', emoji: '🏪',
+    cardImg: 'assets/cards/buildings/market_1.png',
     factionId: null,
     allowedLocTypes: ['village', 'main_settlement'],
     tier: 1, upgradeFromId: null,
@@ -82,6 +86,7 @@ const GENERIC_CHAINS = [
   },
   {
     id: 'market_2', name: 'Bazaar', emoji: '🛍️',
+    cardImg: 'assets/cards/buildings/market_2.png',
     factionId: null,
     allowedLocTypes: ['village', 'main_settlement'],
     tier: 2, upgradeFromId: 'market_1',
@@ -93,6 +98,7 @@ const GENERIC_CHAINS = [
   },
   {
     id: 'market_3', name: 'Grand Emporium', emoji: '💰',
+    cardImg: 'assets/cards/buildings/market_3.png',
     factionId: null,
     allowedLocTypes: ['village', 'main_settlement'],
     tier: 3, upgradeFromId: 'market_2',
@@ -106,6 +112,7 @@ const GENERIC_CHAINS = [
   // ── Fort Chain (fort only) ──────────────────────────────
   {
     id: 'palisade', name: 'Palisade', emoji: '🪵',
+    cardImg: 'assets/cards/buildings/palisade.png',
     factionId: null,
     allowedLocTypes: ['fort'],
     tier: 1, upgradeFromId: null,
@@ -118,6 +125,7 @@ const GENERIC_CHAINS = [
   },
   {
     id: 'fortress_1', name: 'Stone Keep', emoji: '🏯',
+    cardImg: 'assets/cards/buildings/fortress_1.png',
     factionId: null,
     allowedLocTypes: ['fort'],
     tier: 2, upgradeFromId: 'palisade',
@@ -130,6 +138,7 @@ const GENERIC_CHAINS = [
   },
   {
     id: 'fortress_2', name: 'Citadel', emoji: '🏰',
+    cardImg: 'assets/cards/buildings/fortress_2.png',
     factionId: null,
     allowedLocTypes: ['fort'],
     tier: 3, upgradeFromId: 'fortress_1',
@@ -151,6 +160,7 @@ const DWARVES_CHAINS = [
   // ── Necropolis Chain (main_settlement) ──────────────────
   {
     id: 'necropolis_1', name: 'Crypt Workshop', emoji: '⚙️',
+    cardImg: 'assets/cards/buildings/necropolis_1.png',
     factionId: 'dwarves',
     allowedLocTypes: ['main_settlement'],
     tier: 1, upgradeFromId: null,
@@ -162,6 +172,7 @@ const DWARVES_CHAINS = [
   },
   {
     id: 'necropolis_2', name: 'Ziggurat Forge', emoji: '🔩',
+    cardImg: 'assets/cards/buildings/necropolis_2.png',
     factionId: 'dwarves',
     allowedLocTypes: ['main_settlement'],
     tier: 2, upgradeFromId: 'necropolis_1',
@@ -173,6 +184,7 @@ const DWARVES_CHAINS = [
   },
   {
     id: 'necropolis_3', name: 'Black Ziggurat', emoji: '🗿',
+    cardImg: 'assets/cards/buildings/necropolis_3.png',
     factionId: 'dwarves',
     allowedLocTypes: ['main_settlement'],
     tier: 3, upgradeFromId: 'necropolis_2',
@@ -186,6 +198,7 @@ const DWARVES_CHAINS = [
   // ── Bone-mine Chain (village) ────────────────────────────
   {
     id: 'bone_mine_1', name: 'Bone Pit', emoji: '💀',
+    cardImg: 'assets/cards/buildings/bone_mine_1.png',
     factionId: 'dwarves',
     allowedLocTypes: ['village'],
     tier: 1, upgradeFromId: null,
@@ -197,6 +210,7 @@ const DWARVES_CHAINS = [
   },
   {
     id: 'bone_mine_2', name: 'Ossuary Complex', emoji: '🦴',
+    cardImg: 'assets/cards/buildings/bone_mine_2.png',
     factionId: 'dwarves',
     allowedLocTypes: ['village'],
     tier: 2, upgradeFromId: 'bone_mine_1',
@@ -217,6 +231,7 @@ const ELVES_CHAINS = [
   // ── Academy Chain (main_settlement) ─────────────────────
   {
     id: 'academy_1', name: 'Symposium', emoji: '📜',
+    cardImg: 'assets/cards/buildings/academy_1.png',
     factionId: 'elves',
     allowedLocTypes: ['main_settlement'],
     tier: 1, upgradeFromId: null,
@@ -228,6 +243,7 @@ const ELVES_CHAINS = [
   },
   {
     id: 'academy_2', name: 'Academy', emoji: '🏛️',
+    cardImg: 'assets/cards/buildings/academy_2.png',
     factionId: 'elves',
     allowedLocTypes: ['main_settlement'],
     tier: 2, upgradeFromId: 'academy_1',
@@ -239,6 +255,7 @@ const ELVES_CHAINS = [
   },
   {
     id: 'academy_3', name: 'Great Library', emoji: '📚',
+    cardImg: 'assets/cards/buildings/academy_3.png',
     factionId: 'elves',
     allowedLocTypes: ['main_settlement'],
     tier: 3, upgradeFromId: 'academy_2',
@@ -252,6 +269,7 @@ const ELVES_CHAINS = [
   // ── Shipyard Chain (coastal village / coastal main_settlement) ──
   {
     id: 'shipyard_1', name: 'Boatyard', emoji: '⛵',
+    cardImg: 'assets/cards/buildings/shipyard_1.png',
     factionId: 'elves',
     allowedLocTypes: ['village', 'main_settlement'],
     tier: 1, upgradeFromId: null,
@@ -263,6 +281,7 @@ const ELVES_CHAINS = [
   },
   {
     id: 'shipyard_2', name: 'Grand Shipyard', emoji: '🚢',
+    cardImg: 'assets/cards/buildings/shipyard_2.png',
     factionId: 'elves',
     allowedLocTypes: ['village', 'main_settlement'],
     tier: 2, upgradeFromId: 'shipyard_1',
@@ -283,6 +302,7 @@ const LIZARDS_CHAINS = [
   // ── Temple Chain (main_settlement / shrine) ──────────────
   {
     id: 'temple_1', name: 'Sun Shrine', emoji: '☀️',
+    cardImg: 'assets/cards/buildings/temple_1.png',
     factionId: 'lizards',
     allowedLocTypes: ['main_settlement', 'shrine'],
     tier: 1, upgradeFromId: null,
@@ -294,6 +314,7 @@ const LIZARDS_CHAINS = [
   },
   {
     id: 'temple_2', name: 'Sun Temple', emoji: '🛕',
+    cardImg: 'assets/cards/buildings/temple_2.png',
     factionId: 'lizards',
     allowedLocTypes: ['main_settlement', 'shrine'],
     tier: 2, upgradeFromId: 'temple_1',
@@ -305,6 +326,7 @@ const LIZARDS_CHAINS = [
   },
   {
     id: 'temple_3', name: 'Great Pyramid', emoji: '🔺',
+    cardImg: 'assets/cards/buildings/temple_3.png',
     factionId: 'lizards',
     allowedLocTypes: ['main_settlement'],
     tier: 3, upgradeFromId: 'temple_2',
@@ -318,6 +340,7 @@ const LIZARDS_CHAINS = [
   // ── Granary Chain (village / plains province) ────────────
   {
     id: 'granary_1', name: 'Granary', emoji: '🌾',
+    cardImg: 'assets/cards/buildings/granary_1.png',
     factionId: 'lizards',
     allowedLocTypes: ['village', 'main_settlement'],
     tier: 1, upgradeFromId: null,
@@ -329,6 +352,7 @@ const LIZARDS_CHAINS = [
   },
   {
     id: 'granary_2', name: 'Great Storehouse', emoji: '🏗️',
+    cardImg: 'assets/cards/buildings/granary_2.png',
     factionId: 'lizards',
     allowedLocTypes: ['village', 'main_settlement'],
     tier: 2, upgradeFromId: 'granary_1',
@@ -349,6 +373,7 @@ const DRAIG_CHAINS = [
   // ── Dragon Shrine Chain (main_settlement / shrine) ───────
   {
     id: 'dragon_shrine_1', name: 'Dragon Altar', emoji: '🔥',
+    cardImg: 'assets/cards/buildings/dragon_shrine_1.png',
     factionId: 'draig',
     allowedLocTypes: ['main_settlement', 'shrine'],
     tier: 1, upgradeFromId: null,
@@ -360,6 +385,7 @@ const DRAIG_CHAINS = [
   },
   {
     id: 'dragon_shrine_2', name: 'Dragon Shrine', emoji: '🐉',
+    cardImg: 'assets/cards/buildings/dragon_shrine_2.png',
     factionId: 'draig',
     allowedLocTypes: ['main_settlement', 'shrine'],
     tier: 2, upgradeFromId: 'dragon_shrine_1',
@@ -371,6 +397,7 @@ const DRAIG_CHAINS = [
   },
   {
     id: 'dragon_shrine_3', name: 'Dragon Sanctum', emoji: '🏮',
+    cardImg: 'assets/cards/buildings/dragon_shrine_3.png',
     factionId: 'draig',
     allowedLocTypes: ['main_settlement'],
     tier: 3, upgradeFromId: 'dragon_shrine_2',
@@ -384,6 +411,7 @@ const DRAIG_CHAINS = [
   // ── Dojo Chain (fort / village) ──────────────────────────
   {
     id: 'dojo_1', name: 'Training Ground', emoji: '⚔️',
+    cardImg: 'assets/cards/buildings/dojo_1.png',
     factionId: 'draig',
     allowedLocTypes: ['fort', 'village'],
     tier: 1, upgradeFromId: null,
@@ -395,6 +423,7 @@ const DRAIG_CHAINS = [
   },
   {
     id: 'dojo_2', name: 'Dojo', emoji: '🥋',
+    cardImg: 'assets/cards/buildings/dojo_2.png',
     factionId: 'draig',
     allowedLocTypes: ['fort', 'village'],
     tier: 2, upgradeFromId: 'dojo_1',

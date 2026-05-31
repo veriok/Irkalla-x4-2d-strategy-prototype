@@ -13,6 +13,8 @@ import { UNIT_MAP } from '../data/units-data.js';
 import { armySize, armyWoundedCount, armyAttackStrength, armyDefenseStrength } from '../models/army.js';
 import { showReachableProvinces, renderArmyIcons, renderAllProvinces } from './map-view.js';
 import { showModal, hideModal } from './modal.js';
+import { createCard } from './card-renderer.js';
+import { showUnitTooltip, hideUnitTooltip } from './tooltips.js';
 
 const armyListEl = document.getElementById('army-list');
 
@@ -70,7 +72,7 @@ export function renderArmyPanel() {
     for (const { typeId, count } of army.units) {
       const uDef = UNIT_MAP[typeId];
       for (let i = 0; i < count; i++) {
-        const unitCard = _makeUnitCard(uDef, false);
+        const unitCard = _makeUnitCard(uDef, false, faction);
         if (hasSiblings) {
           // Draggable even if it would empty this army — empty army is removed on drop
           unitCard.draggable = true;
@@ -91,7 +93,7 @@ export function renderArmyPanel() {
     for (const { typeId, count } of (army.wounded ?? [])) {
       const uDef = UNIT_MAP[typeId];
       for (let i = 0; i < count; i++) {
-        unitsEl.appendChild(_makeUnitCard(uDef, true));
+        unitsEl.appendChild(_makeUnitCard(uDef, true, faction));
       }
     }
     card.appendChild(unitsEl);
@@ -195,15 +197,19 @@ export function renderArmyPanel() {
 
 // ── Unit card helper ─────────────────────────────────────────
 
-function _makeUnitCard(uDef, wounded) {
-  const c = document.createElement('div');
-  c.className = `game-card game-card--unit${wounded ? ' game-card--wounded' : ''}`;
-  c.title = uDef?.description ?? '';
-  c.innerHTML = `
-    <div class="game-card__icon">${uDef?.emoji ?? '⚔'}</div>
-    <div class="game-card__name">${uDef?.name ?? '?'}</div>
-    <div class="game-card__sub">${uDef ? `⚔${uDef.attack} 🛡${uDef.defense}` : ''}</div>
-  `;
+function _makeUnitCard(uDef, wounded, factionDef) {
+  const c = createCard({
+    variant: 'unit',
+    wounded,
+    backgroundSrc: factionDef?.unitCardBgImg ?? null,
+    foregroundSrc: uDef?.cardSpriteImg ?? null,
+    fallbackIcon: uDef?.emoji ?? '⚔',
+    fallbackName: '',
+    fallbackSub: '',
+  });
+
+  c.addEventListener('mouseenter', () => showUnitTooltip(uDef, factionDef, c));
+  c.addEventListener('mouseleave', hideUnitTooltip);
   return c;
 }
 

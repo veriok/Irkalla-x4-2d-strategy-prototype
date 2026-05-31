@@ -9,6 +9,7 @@ import { FACTION_MAP } from '../data/factions-data.js';
 import { computeIncomeBreakdown } from '../engine/turn-engine.js';
 
 const resourceBarEl  = document.getElementById('resource-bar');
+const factionFlagEl  = document.getElementById('faction-flag');
 const factionEmojiEl = document.getElementById('faction-emoji');
 const factionNameEl  = document.getElementById('faction-name');
 const turnNumberEl   = document.getElementById('turn-number');
@@ -27,8 +28,35 @@ export function renderResourceBar() {
 
   // Faction banner
   factionEmojiEl.textContent = faction.emoji;
+  factionEmojiEl.hidden = false;
   factionNameEl.textContent  = faction.name;
   factionNameEl.style.color  = faction.textColor;
+
+  if (factionFlagEl) {
+    if (faction.flagImg) {
+      factionFlagEl.hidden = true;
+      factionFlagEl.onload = () => {
+        factionFlagEl.hidden = false;
+        factionEmojiEl.hidden = true;
+      };
+      factionFlagEl.onerror = () => {
+        factionFlagEl.hidden = true;
+        factionEmojiEl.hidden = false;
+      };
+      if (factionFlagEl.dataset.currentSrc !== faction.flagImg) {
+        factionFlagEl.dataset.currentSrc = faction.flagImg;
+        factionFlagEl.src = faction.flagImg;
+      } else if (factionFlagEl.complete && factionFlagEl.naturalWidth > 0) {
+        factionFlagEl.hidden = false;
+        factionEmojiEl.hidden = true;
+      }
+    } else {
+      factionFlagEl.hidden = true;
+      factionFlagEl.dataset.currentSrc = '';
+      factionFlagEl.removeAttribute('src');
+      factionEmojiEl.hidden = false;
+    }
+  }
 
   // Turn counter
   turnNumberEl.textContent = state.turn;

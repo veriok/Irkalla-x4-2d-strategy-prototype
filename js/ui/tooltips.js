@@ -7,6 +7,7 @@
  */
 
 import { FACTIONS } from '../data/factions-data.js';
+import { createNativePreviewCard } from './card-renderer.js';
 
 // Build a flat map of all resource definitions for emoji / name lookups
 const ALL_RES = {};
@@ -16,6 +17,7 @@ for (const f of FACTIONS) {
 }
 
 const tooltipEl = document.getElementById('building-tooltip');
+const unitTooltipEl = document.getElementById('unit-tooltip');
 
 let _hideTimer = null;
 
@@ -52,10 +54,80 @@ export function hideBuildingTooltip() {
   _hideTimer = setTimeout(() => { tooltipEl.hidden = true; }, 80);
 }
 
+export function showUnitTooltip(uDef, factionDef, anchorEl) {
+  if (!unitTooltipEl || !uDef || !anchorEl) return;
+
+  clearTimeout(_hideTimer);
+  unitTooltipEl.innerHTML = '';
+
+  const title = document.createElement('div');
+  title.className = 'unit-tooltip__title';
+  title.textContent = uDef.name ?? 'Unknown Unit';
+  unitTooltipEl.appendChild(title);
+
+  const preview = createNativePreviewCard({
+    backgroundSrc: factionDef?.unitCardBgImg ?? null,
+    foregroundSrc: uDef.cardSpriteImg ?? null,
+    fallbackIcon: uDef.emoji ?? '⚔',
+    fallbackName: uDef.name ?? 'Unknown Unit',
+    fallbackSub: uDef ? `⚔${uDef.attack} 🛡${uDef.defense}` : '',
+  });
+  unitTooltipEl.appendChild(preview);
+
+  const stats = document.createElement('div');
+  stats.className = 'unit-tooltip__stats';
+
+  const attack = document.createElement('div');
+  attack.textContent = `Attack: ${uDef.attack ?? 0}`;
+  const defense = document.createElement('div');
+  defense.textContent = `Defense: ${uDef.defense ?? 0}`;
+  stats.appendChild(attack);
+  stats.appendChild(defense);
+
+  const special = _formatSpecial(uDef.specialEffect);
+  if (special) {
+    const specialLine = document.createElement('div');
+    specialLine.textContent = special;
+    stats.appendChild(specialLine);
+  }
+  unitTooltipEl.appendChild(stats);
+
+  const flavor = document.createElement('div');
+  flavor.className = 'unit-tooltip__flavor';
+  flavor.textContent = uDef.description ?? '';
+  unitTooltipEl.appendChild(flavor);
+
+  unitTooltipEl.hidden = false;
+  requestAnimationFrame(() => {
+    const rect = anchorEl.getBoundingClientRect();
+    const tw = unitTooltipEl.offsetWidth;
+    const th = unitTooltipEl.offsetHeight;
+
+    let left = rect.right + 8;
+    let top = rect.top;
+
+    if (left + tw > window.innerWidth - 8) left = rect.left - tw - 8;
+    if (top + th > window.innerHeight - 8) top = window.innerHeight - th - 8;
+    top = Math.max(8, top);
+
+    unitTooltipEl.style.left = `${left}px`;
+    unitTooltipEl.style.top = `${top}px`;
+    unitTooltipEl.classList.add('visible');
+  });
+}
+
+export function hideUnitTooltip() {
+  if (!unitTooltipEl) return;
+  unitTooltipEl.classList.remove('visible');
+  _hideTimer = setTimeout(() => { unitTooltipEl.hidden = true; }, 80);
+}
+
 // Hide on scroll anywhere in the page
 window.addEventListener('scroll', () => {
   tooltipEl?.classList.remove('visible');
   if (tooltipEl) tooltipEl.hidden = true;
+  unitTooltipEl?.classList.remove('visible');
+  if (unitTooltipEl) unitTooltipEl.hidden = true;
 }, true);
 
 // ─── HTML builder ─────────────────────────────────────────
@@ -117,4 +189,12 @@ function _buildHtml(bDef) {
       <div class="btt-row">${prereqParts.join(', ')}</div>
     </div>` : ''}
   `.trim();
+}
+
+function _formatSpecial(specialEffect) {
+  if (!specialEffect) return '';
+  if (specialEffect.type === 'army_attack_bonus') {
+    return `Special: +${specialEffect.amount} attack to other units in this army`;
+  }
+  return `Special: ${specialEffect.type}`;
 }

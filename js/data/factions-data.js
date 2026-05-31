@@ -19,6 +19,8 @@ export const FACTIONS = [
       'In search of immortality, King Naram-Azu struck a pact with the Dark God of the Forge. ' +
       'His people are undead masters of construction and golemcraft — doomed, but unbreakable.',
     emoji: '💀',
+    flagImg: 'assets/flags/dwarves.png',
+    unitCardBgImg: 'assets/cards/backgrounds/dwarves-unit-bg.png',
     color: '#8B6914',              // deep bronze-gold
     borderColor: '#b08020',
     textColor: '#d4a030',
@@ -43,6 +45,8 @@ export const FACTIONS = [
       'Sailors, explorers, thinkers, and hedonists. The city-states vary between High and Forest Elves. ' +
       'Considered two-faced by all — their charm hides a ruthless pragmatism.',
     emoji: '🌿',
+    flagImg: 'assets/flags/elves.png',
+    unitCardBgImg: 'assets/cards/backgrounds/elves-unit-bg.png',
     color: '#1E6B5B',              // deep sea-green
     borderColor: '#204860',
     textColor: '#40c890',
@@ -67,6 +71,8 @@ export const FACTIONS = [
       'Lizard kings ruling over desert river valleys, granting bountiful harvest. ' +
       'Elite crocodile infantry, prominent priesthood, and devotion to the radiant Sun God.',
     emoji: '🦎',
+    flagImg: 'assets/flags/lizards.png',
+    unitCardBgImg: 'assets/cards/backgrounds/lizards-unit-bg.png',
     color: '#C06020',              // desert terracotta
     borderColor: '#A04810',
     textColor: '#E08840',
@@ -92,6 +98,8 @@ export const FACTIONS = [
       'Honor-bound with strict social hierarchy. They prefer death to dishonor. ' +
       'Think of dragon-worshipping samurai.',
     emoji: '🐉',
+    flagImg: 'assets/flags/draig.png',
+    unitCardBgImg: 'assets/cards/backgrounds/draig-unit-bg.png',
     color: '#7A1010',              // deep dragon-red
     borderColor: '#601010',
     textColor: '#e04020',
