@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style/main.css" />
   <link rel="stylesheet" href="style/map.css" />
   <link rel="stylesheet" href="style/animations.css" />
+  <link rel="stylesheet" href="style/province-modal.css" />
 
   <!-- ES module import map: d3-delaunay from CDN -->
   <script type="importmap">
@@ -162,6 +163,42 @@
       <div class="tooltip-win-chance"></div>
       <div class="tooltip-def-bonus"></div>
       <div class="tooltip-casualties"></div>
+    </div>
+  </div>
+
+  <!-- Province Management Modal -->
+  <div id="province-modal-overlay" hidden>
+    <div id="province-modal">
+      <div id="pmod-header">
+        <div id="pmod-faction-flag">
+          <img id="pmod-flag-img" alt="" hidden />
+          <span id="pmod-flag-emoji"></span>
+        </div>
+        <div id="pmod-title-area">
+          <h2 id="pmod-province-name"></h2>
+          <div id="pmod-province-sub"></div>
+          <div id="pmod-income-chips"></div>
+          <div id="pmod-stats-row"></div>
+        </div>
+        <div id="pmod-effects">
+          <span class="pmod-effect-icon" title="No active effects" style="opacity:0.3">✨</span>
+        </div>
+        <button id="pmod-close" class="btn-secondary">✕ Close</button>
+      </div>
+      <div id="pmod-body">
+        <div id="pmod-locations">
+          <div id="pmod-loc-cards"><!-- location rows --></div>
+          <div id="pmod-building-slots" hidden><!-- unused --></div>
+        </div>
+        <div id="pmod-sidebar">
+          <div id="pmod-sidebar-title">Actions</div>
+          <div id="pmod-sidebar-actions"><!-- dynamic actions --></div>
+        </div>
+      </div>
+      <div id="pmod-queue-row">
+        <span class="pmod-queue-label">Production</span>
+        <div class="pmod-queue-slots" id="pmod-queue-slots"><!-- 6 queue slots --></div>
+      </div>
     </div>
   </div>
 

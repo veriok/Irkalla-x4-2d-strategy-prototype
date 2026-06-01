@@ -11,38 +11,71 @@ export const LOCATION_TYPES = {
     emoji: '🏛️',
     isControllable: true,
     cardImg: 'assets/cards/locations/main_settlement.png',
+    description: 'The heart of the province. Cannot be converted or razed.',
   },
   village: {
     name: 'Village',
     emoji: '🏘️',
     isControllable: true,
     cardImg: 'assets/cards/locations/village.png',
+    description: 'A farming community. Generates gold and supports basic buildings.',
   },
   fort: {
     name: 'Fort',
     emoji: '🏯',
     isControllable: true,
     cardImg: 'assets/cards/locations/fort.png',
+    description: 'A military garrison. Provides strong defense bonuses and militia.',
   },
   ruins: {
     name: 'Ruins',
     emoji: '🏚️',
     isControllable: false,
     cardImg: 'assets/cards/locations/ruins.png',
+    description: 'Crumbling remains of an old structure. Clear them to build something new.',
   },
   shrine: {
     name: 'Shrine',
     emoji: '🛕',
     isControllable: true,
     cardImg: 'assets/cards/locations/shrine.png',
+    description: 'A place of worship. Unlocks faith-based buildings and resource bonuses.',
   },
   monster_den: {
     name: 'Monster Den',
     emoji: '👹',
     isControllable: false,
     cardImg: 'assets/cards/locations/monster_den.png',
+    description: 'A lair of dangerous creatures. Send an army to clear it out.',
+  },
+  cleared_monster_den: {
+    name: 'Cleared Den',
+    emoji: '💀',
+    isControllable: false,
+    cardImg: 'assets/cards/locations/cleared_monster_den.png',
+    description: 'The creatures have been driven out. Clear the remaining debris to build here.',
+  },
+  empty: {
+    name: 'Empty Plot',
+    emoji: '🌿',
+    isControllable: false,
+    cardImg: 'assets/cards/locations/empty.png',
+    description: 'Open land ready for development. Build a village, fort, or shrine here.',
   },
 };
+
+/** Costs to build a new location on an empty plot (or convert an existing one) */
+export const LOCATION_BUILD_COSTS = {
+  village: { gold: 400 },
+  shrine:  { gold: 600 },
+  fort:    { gold: 800 },
+};
+
+/** Turns required to build/convert a location */
+export const LOCATION_BUILD_TURNS = { village: 2, shrine: 3, fort: 5 };
+
+/** Base building slots for each buildable location type */
+export const LOCATION_BASE_SLOTS = { village: 2, shrine: 1, fort: 1 };
 
 /**
  * Get all building ids currently installed (completed) in a location.

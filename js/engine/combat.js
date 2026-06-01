@@ -14,6 +14,7 @@ import {
   getArmiesInProvince,
   getArmySupplyCap,
   addCombatReport,
+  rollTreasure,
 } from './game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { UNIT_MAP, getMilitiaUnitIdForFaction } from '../data/units-data.js';
@@ -31,8 +32,9 @@ import {
 } from '../models/army.js';
 import { getLocationDefenseBonus } from '../models/location.js';
 import { flashCombat, flashConquest } from '../ui/map-view.js';
-import { logCapture } from '../ui/event-log.js';
+import { logCapture, logMessage } from '../ui/event-log.js';
 import { playerCanSee } from './game-state.js';
+import { MONSTER_UNITS, BIOME_DEN_ENCOUNTER } from '../data/monsters-data.js';
 
 const WOUND_CHANCE = 0.45;
 
@@ -629,4 +631,117 @@ export function estimateCombat(attackerArmyId, targetProvinceId) {
     fortBonus,
     casualtyLevel,
   };
+}
+
+/**
+ * Resolve a monster den combat between a player army and the den's occupants.
+ * Runs 3 rounds of simplified simultaneous combat.
+ * On attacker win: den converts to cleared_monster_den and treasure is rolled.
+ * On defender win: army takes casualties, den HP is updated but type unchanged.
+ *
+ * @param {string} armyId
+ * @param {string} locationId   - id of the monster_den location
+ * @param {string} provinceId
+ * @returns {{ outcome: 'attacker'|'defender', rounds: string[], casualties: number, treasure: Object|null }}
+ */
+export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
+  const army = getArmy(armyId);
+  const prov = getProvince(provinceId);
+  if (!army || !prov) return null;
+
+  const loc = prov.locations.find(l => l.id === locationId);
+  if (!loc || loc.type !== 'monster_den' || !loc.denEnemies) return null;
+
+  const monDef = MONSTER_UNITS[loc.denEnemies.unitId];
+  if (!monDef) return null;
+
+  _ensureHpPools(army);
+
+  const rounds = [];
+  const ROUNDS = 3;
+
+  for (let r = 1; r <= ROUNDS; r++) {
+    const armyUnits = _collectArmyUnits(army);
+    const aliveEnemies = loc.denEnemies.hp.length;
+
+    if (armyUnits.length === 0 || aliveEnemies === 0) break;
+
+    // ── Army attacks den ──────────────────────────────────────
+    let denDmgDealt = 0;
+    let denDestroyed = 0;
+    const denDmgMap = new Map();
+
+    for (const u of armyUnits) {
+      if (loc.denEnemies.hp.length === 0) break;
+      const targetIdx = Math.floor(Math.random() * loc.denEnemies.hp.length);
+      const dmg = Math.max(1, Math.round((u.attack ?? 0) + _d8() - (monDef.defense ?? 0)));
+      denDmgMap.set(targetIdx, (denDmgMap.get(targetIdx) ?? 0) + dmg);
+      denDmgDealt += dmg;
+    }
+
+    // Apply damage to den hp (sort descending index for safe splice)
+    const denHitIdxs = [...denDmgMap.keys()].sort((a, b) => b - a);
+    for (const idx of denHitIdxs) {
+      if (idx >= loc.denEnemies.hp.length) continue;
+      const dmg = denDmgMap.get(idx);
+      loc.denEnemies.hp[idx] -= dmg;
+      if (loc.denEnemies.hp[idx] <= 0) {
+        loc.denEnemies.hp.splice(idx, 1);
+        denDestroyed++;
+        // Wound chance: 45% join wounded pool
+        if (Math.random() < WOUND_CHANCE) {
+          loc.denEnemies.woundedHp.push(Math.max(1, Math.round(monDef.maxHp * 0.15)));
+        }
+      }
+    }
+
+    // ── Den attacks army ─────────────────────────────────────
+    const armyUnitsFresh = _collectArmyUnits(army);
+    let armyDmgDealt = 0;
+    let armyDestroyed = 0;
+    const armyDmgMap = new Map();
+
+    const aliveEnemiesNow = loc.denEnemies.hp.length;
+    for (let e = 0; e < aliveEnemiesNow; e++) {
+      if (armyUnitsFresh.length === 0) break;
+      const target = armyUnitsFresh[Math.floor(Math.random() * armyUnitsFresh.length)];
+      const dmg = Math.max(1, Math.round((monDef.attack ?? 0) + _d8() - (target.defense ?? 0)));
+      armyDmgMap.set(target.key, (armyDmgMap.get(target.key) ?? 0) + dmg);
+      armyDmgDealt += dmg;
+    }
+
+    const result = _applyBatchDamageToArmy(army, armyDmgMap);
+    armyDestroyed = result.destroyed;
+
+    rounds.push(`Round ${r}: Your forces dealt ${denDmgDealt} damage (${denDestroyed} enemies slain). Monsters struck back for ${armyDmgDealt} damage (${armyDestroyed} of your units lost).`);
+  }
+
+  // ── Determine outcome ─────────────────────────────────────
+  const enemiesRemaining = loc.denEnemies.hp.length + loc.denEnemies.woundedHp.length;
+  const armyRemaining    = _collectArmyUnits(army).length;
+
+  const enc = BIOME_DEN_ENCOUNTER[prov.biomeId] ?? BIOME_DEN_ENCOUNTER.default;
+  const startCount = enc.count;
+  const outcome = enemiesRemaining === 0 ? 'attacker'
+    : armyRemaining === 0 ? 'defender'
+    : loc.denEnemies.hp.length < Math.ceil(startCount / 2) ? 'attacker'
+    : 'defender';
+
+  let treasure = null;
+  if (outcome === 'attacker') {
+    loc.type = 'cleared_monster_den';
+    if (Math.random() < 0.65) {
+      treasure = rollTreasure(army.factionId, provinceId);
+    }
+    const factionDef = FACTION_MAP[army.factionId];
+    const treasureStr = treasure
+      ? ` Found treasure: ${Object.entries(treasure).map(([r, a]) => `+${a} ${r}`).join(', ')}.`
+      : '';
+    logMessage(`⚔ ${factionDef?.name ?? army.factionId} cleared the monster den in ${prov.name}!${treasureStr}`);
+  } else {
+    const factionDef = FACTION_MAP[army.factionId];
+    logMessage(`⚔ ${factionDef?.name ?? army.factionId} failed to clear the monster den in ${prov.name}.`);
+  }
+
+  return { outcome, rounds, treasure };
 }

@@ -27,7 +27,7 @@ export function createProvince(raw) {
     // armies in this province (array of armyIds)
     armyIds:         [],
 
-    // single province-level production queue (max 5 items)
+    // single province-level production queue (max 6 items)
     // each item: { type: 'building'|'unit'|'demolish', id, locationId, turnsRemaining }
     productionQueue: [],
 
@@ -46,7 +46,7 @@ export function createProvince(raw) {
 }
 
 /**
- * Add an item to the province's production queue if not full (max 5).
+ * Add an item to the province's production queue if not full (max 6).
  * Returns true if added, false if queue full.
  *
  * @param {Object} province
@@ -54,7 +54,7 @@ export function createProvince(raw) {
  * @returns {boolean}
  */
 export function enqueueProduction(province, item) {
-  if (province.productionQueue.length >= 5) return false;
+  if (province.productionQueue.length >= 6) return false;
   province.productionQueue.push({ ...item });
   return true;
 }

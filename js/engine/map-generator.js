@@ -17,6 +17,7 @@
 
 import { Delaunay } from 'd3-delaunay';
 import { getBiome } from '../data/biomes-data.js';
+import { BIOME_DEN_ENCOUNTER, MONSTER_UNITS } from '../data/monsters-data.js';
 
 // ─── Map size configurations ──────────────────────────────
 export const MAP_SIZES = {
@@ -287,7 +288,7 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
     const type = pickWeighted(rng, adjustedWeights);
     usedTypes.add(type);
     const isControllable = type !== 'monster_den';
-    locations.push({
+    const loc = {
       id: `${provinceId}_loc_${i}`,
       provinceId,
       type,
@@ -295,10 +296,24 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
       isCapital: false,
       buildingSlots: type === 'village' ? 2 : 1,
       buildings: [],
-    });
+    };
+    if (type === 'monster_den') {
+      loc.denEnemies = _makeDenEnemies(biomeId);
+    }
+    locations.push(loc);
   }
 
   return locations;
+}
+
+function _makeDenEnemies(biomeId) {
+  const enc = BIOME_DEN_ENCOUNTER[biomeId] ?? BIOME_DEN_ENCOUNTER.default;
+  const unitDef = MONSTER_UNITS[enc.unitId];
+  return {
+    unitId: enc.unitId,
+    hp: Array.from({ length: enc.count }, () => unitDef.maxHp),
+    woundedHp: [],
+  };
 }
 
 // ─── Name tracking to avoid duplicates ───────────────────

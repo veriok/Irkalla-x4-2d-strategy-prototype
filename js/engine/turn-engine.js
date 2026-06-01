@@ -17,8 +17,9 @@ import { state, addResources, getProvincesByFaction, getArmiesByFaction,
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
-import { getLocationResourceBonuses } from '../models/location.js';
+import { getLocationResourceBonuses, LOCATION_BASE_SLOTS } from '../models/location.js';
 import { getBiome } from '../data/biomes-data.js';
+import { BIOME_DEN_ENCOUNTER, MONSTER_UNITS } from '../data/monsters-data.js';
 import {
   resetMoves,
   createArmy,
@@ -207,6 +208,24 @@ function tickProductionQueues(factionId) {
           addResources(factionId, refund);
           if (faction && playerCanSee(prov.id)) logBuild(faction.name, `Razed ${bDef.name}`, prov.name);
         }
+
+      } else if (item.type === 'clear_location') {
+        if (loc) {
+          loc.type = 'empty';
+          loc.buildings = [];
+          loc.buildingSlots = 0;
+          delete loc.denEnemies;
+          if (faction && playerCanSee(prov.id)) logBuild(faction.name, 'Cleared location', prov.name);
+        }
+
+      } else if (item.type === 'build_location') {
+        if (loc) {
+          loc.type = item.locationType;
+          loc.buildings = [];
+          loc.buildingSlots = LOCATION_BASE_SLOTS[item.locationType] ?? 1;
+          loc.isControllable = true;
+          if (faction && playerCanSee(prov.id)) logBuild(faction.name, `Built ${item.locationType}`, prov.name);
+        }
       }
     }
   }
@@ -264,6 +283,35 @@ export async function endTurn(onComplete) {
     if (lastCombatTurn !== null && state.turn > lastCombatTurn) {
       const max = computeMilitiaMax(province);
       if (current < max) province.militia.current = current + 1;
+    }
+  }
+
+  // ── Regenerate monster den enemies (heal wounded, respawn 1 killed/turn) ──
+  for (const province of state.provinces.values()) {
+    for (const loc of province.locations) {
+      if (loc.type !== 'monster_den' || !loc.denEnemies) continue;
+      const enc = BIOME_DEN_ENCOUNTER[province.biomeId] ?? BIOME_DEN_ENCOUNTER.default;
+      const monDef = MONSTER_UNITS[enc.unitId];
+      if (!monDef) continue;
+      const maxCount = enc.count;
+
+      // Heal wounded (20% maxHp per turn); rejoin active when >= 50% maxHp
+      const stillWounded = [];
+      for (const wHp of loc.denEnemies.woundedHp) {
+        const healed = Math.min(wHp + monDef.maxHp * 0.2, monDef.maxHp);
+        if (healed >= monDef.maxHp * 0.5) {
+          loc.denEnemies.hp.push(healed);
+        } else {
+          stillWounded.push(healed);
+        }
+      }
+      loc.denEnemies.woundedHp = stillWounded;
+
+      // Respawn one killed unit per turn (enters as wounded at 15% hp)
+      const total = loc.denEnemies.hp.length + loc.denEnemies.woundedHp.length;
+      if (total < maxCount) {
+        loc.denEnemies.woundedHp.push(Math.max(1, Math.round(monDef.maxHp * 0.15)));
+      }
     }
   }
 

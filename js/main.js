@@ -18,6 +18,8 @@ import { renderAllProvinces, renderArmyIcons, initMapEvents,
 import { renderResourceBar }   from './ui/resource-bar.js';
 import { renderArmyPanel, registerArmyPanelCallbacks } from './ui/army-panel.js';
 import { showProvincePanel, hideProvincePanel } from './ui/province-panel.js';
+import { refreshProvinceModal } from './ui/province-modal.js';
+import { initHotkeys } from './ui/hotkeys.js';
 import { initEndTurnButton }   from './ui/end-turn-btn.js';
 import { logTurn, logMessage } from './ui/event-log.js';
 import { FACTIONS, FACTION_MAP } from './data/factions-data.js';
@@ -240,6 +242,9 @@ async function init() {
   // 12. End Turn button
   initEndTurnButton();
 
+  // 13. Hotkeys (ESC, m)
+  initHotkeys();
+
   // 13. Hook end-turn completion to refresh UI panels
   patchEndTurnCallback();
 
@@ -266,6 +271,8 @@ function patchEndTurnCallback() {
       if (state.selectedProvinceId) {
         showProvincePanel(state.selectedProvinceId);
       }
+      // Refresh province modal if open
+      refreshProvinceModal();
     }
   }, 200);
 }

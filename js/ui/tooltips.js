@@ -150,6 +150,125 @@ export function hideUnitTooltip() {
   _hideTimer = setTimeout(() => { unitTooltipEl.hidden = true; }, 80);
 }
 
+/**
+ * Show a tooltip for a location type.
+ * @param {Object} locTypeMeta  — entry from LOCATION_TYPES
+ * @param {Element} anchorEl
+ */
+export function showLocationTooltip(locTypeMeta, anchorEl) {
+  if (!tooltipEl || !locTypeMeta) return;
+  clearTimeout(_hideTimer);
+  tooltipEl.innerHTML = `
+    <div class="btt-header">${locTypeMeta.emoji ?? ''} ${locTypeMeta.name ?? ''}</div>
+    <div class="btt-desc">${locTypeMeta.description ?? ''}</div>
+  `.trim();
+  tooltipEl.hidden = false;
+  requestAnimationFrame(() => {
+    const rect = anchorEl.getBoundingClientRect();
+    const tw   = 220;
+    const th   = tooltipEl.offsetHeight;
+    let left = rect.right + 8;
+    let top  = rect.top;
+    if (left + tw > window.innerWidth  - 8) left = rect.left - tw - 8;
+    if (top  + th > window.innerHeight - 8) top  = window.innerHeight - th - 8;
+    top = Math.max(8, top);
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top  = `${top}px`;
+    tooltipEl.classList.add('visible');
+  });
+}
+
+export const hideLocationTooltip = hideBuildingTooltip;
+
+/**
+ * Show a tooltip for a biome — terrain defence bonus and resource modifier.
+ * @param {Object} biome   — entry from BIOMES
+ * @param {Element} anchorEl
+ */
+export function showBiomeTooltip(biome, anchorEl) {
+  if (!tooltipEl || !biome) return;
+  clearTimeout(_hideTimer);
+
+  const defPct  = Math.round((biome.terrainDefBonus ?? 0) * 100);
+  const resMod  = biome.resourceMod ?? 1;
+  const resDiff = Math.round((resMod - 1) * 100);
+  const resLine = resDiff > 0
+    ? `<div class="btt-row btt-bonus">▸ +${resDiff}% income from buildings</div>`
+    : resDiff < 0
+      ? `<div class="btt-row btt-cost">▸ ${resDiff}% income from buildings</div>`
+      : `<div class="btt-row" style="color:var(--text-muted)">▸ Normal income (×1.0)</div>`;
+
+  tooltipEl.innerHTML = `
+    <div class="btt-header">${biome.emoji ?? ''} ${biome.name ?? ''}</div>
+    <div class="btt-desc">${biome.description ?? ''}</div>
+    <hr class="btt-hr">
+    <div class="btt-section">
+      ${defPct > 0
+        ? `<div class="btt-row btt-bonus">▸ +${defPct}% terrain defense</div>`
+        : `<div class="btt-row" style="color:var(--text-muted)">▸ No terrain defense bonus</div>`}
+      ${resLine}
+    </div>
+  `.trim();
+
+  tooltipEl.hidden = false;
+  requestAnimationFrame(() => {
+    const rect = anchorEl.getBoundingClientRect();
+    const tw   = 220;
+    const th   = tooltipEl.offsetHeight;
+    let left = rect.right + 8;
+    let top  = rect.top;
+    if (left + tw > window.innerWidth  - 8) left = rect.left - tw - 8;
+    if (top  + th > window.innerHeight - 8) top  = window.innerHeight - th - 8;
+    top = Math.max(8, top);
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top  = `${top}px`;
+    tooltipEl.classList.add('visible');
+  });
+}
+
+export const hideBiomeTooltip = hideBuildingTooltip;
+
+/**
+ * Show an income breakdown tooltip for a single resource.
+ * @param {string}  resName   — display name e.g. "Gold"
+ * @param {string}  resEmoji  — emoji
+ * @param {{ label: string, amount: number }[]} sources
+ * @param {number}  total
+ * @param {Element} anchorEl
+ */
+export function showIncomeBreakdownTooltip(resName, resEmoji, sources, total, anchorEl) {
+  if (!tooltipEl) return;
+  clearTimeout(_hideTimer);
+
+  const lines = sources.map(s =>
+    `<div class="btt-row ${s.amount >= 0 ? 'btt-bonus' : 'btt-cost'}">▸ ${s.label}: ${s.amount >= 0 ? '+' : ''}${s.amount}</div>`
+  ).join('');
+
+  tooltipEl.innerHTML = `
+    <div class="btt-header">${resEmoji ?? ''} ${resName} Income</div>
+    <div class="btt-section">${lines || '<div class="btt-row" style="color:var(--text-muted)">No sources</div>'}</div>
+    <hr class="btt-hr">
+    <div class="btt-row"><strong>Total: +${total}/turn</strong></div>
+  `.trim();
+
+  tooltipEl.hidden = false;
+  requestAnimationFrame(() => {
+    const rect = anchorEl.getBoundingClientRect();
+    const tw   = 220;
+    const th   = tooltipEl.offsetHeight;
+    let left = rect.right + 8;
+    let top  = rect.top;
+    if (left + tw > window.innerWidth  - 8) left = rect.left - tw - 8;
+    if (top  + th > window.innerHeight - 8) top  = window.innerHeight - th - 8;
+    top = Math.max(8, top);
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top  = `${top}px`;
+    tooltipEl.classList.add('visible');
+  });
+}
+
+export const hideIncomeBreakdownTooltip = hideBuildingTooltip;
+
 // Hide on scroll anywhere in the page
 window.addEventListener('scroll', () => {
   tooltipEl?.classList.remove('visible');

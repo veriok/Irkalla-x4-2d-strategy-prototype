@@ -251,6 +251,23 @@ export function canAfford(factionId, cost) {
   return Object.entries(cost).every(([res, amt]) => (fs.resources[res] ?? 0) >= amt);
 }
 
+/**
+ * Roll a random treasure reward (30–100 gold, 50% chance of 5–15 primary resource).
+ * Adds directly to faction resources and returns the gain object for display.
+ */
+export function rollTreasure(factionId, provinceId) {
+  const gold = 30 + Math.floor(Math.random() * 71);
+  const gain = { gold };
+  if (Math.random() < 0.5) {
+    const fDef = FACTION_MAP[factionId];
+    if (fDef?.resources?.basic?.id) {
+      gain[fDef.resources.basic.id] = 5 + Math.floor(Math.random() * 11);
+    }
+  }
+  addResources(factionId, gain);
+  return gain;
+}
+
 /** Deduct resources. Returns false if cannot afford (does not deduct). */
 export function spendResources(factionId, cost) {
   if (!canAfford(factionId, cost)) return false;
