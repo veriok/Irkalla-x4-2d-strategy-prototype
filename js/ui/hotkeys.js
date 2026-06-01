@@ -7,8 +7,8 @@
  * m    — enter move mode for the currently selected army
  */
 
-import { state, startArmyMove, cancelArmyMove } from '../engine/game-state.js';
-import { renderAllProvinces, showReachableProvinces } from './map-view.js';
+import { state, startArmyMove } from '../engine/game-state.js';
+import { renderAllProvinces, showReachableProvinces, cancelArmyMoveAndClear } from './map-view.js';
 import { isModalOpen, hideProvinceModal } from './province-modal.js';
 
 export function initHotkeys() {
@@ -22,8 +22,7 @@ export function initHotkeys() {
         if (isModalOpen()) {
           hideProvinceModal();
         } else if (state.movingArmyId) {
-          cancelArmyMove();
-          renderAllProvinces();
+          cancelArmyMoveAndClear();
         }
         break;
 

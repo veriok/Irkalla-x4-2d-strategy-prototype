@@ -226,6 +226,7 @@ function renderProvince(prov, path) {
 
 function clearReachableHighlights() {
   provincesG.querySelectorAll('.reachable').forEach(el => el.classList.remove('reachable'));
+  if (_ttCombatInfo) _ttCombatInfo.hidden = true;
 }
 
 // ─── Province hover tooltip ───────────────────────────────
@@ -273,14 +274,17 @@ function showProvinceTooltip(provinceId, x, y) {
   }
 
   // ── Combat prediction (shown when army is in move mode targeting hostile) ──
-  const movingArmy = state.movingArmyId ? getArmy(state.movingArmyId) : null;
+  const movingArmyIdSnap = state.movingArmyId;  // snapshot before any async
+  const movingArmy = movingArmyIdSnap ? getArmy(movingArmyIdSnap) : null;
   const isHostile  = movingArmy &&
     (prov.ownerId !== movingArmy.factionId || getArmiesInProvince(provinceId).some(a => a.factionId !== movingArmy.factionId));
   const isAdjacent = movingArmy && getProvince(movingArmy.provinceId)?.adjacentIds.includes(provinceId);
 
   if (movingArmy && isAdjacent && isHostile && _ttCombatInfo) {
     import('../engine/combat.js').then(({ estimateCombat }) => {
-      const est = estimateCombat(state.movingArmyId, provinceId);
+      // Discard if move mode was cancelled or army changed before this resolved
+      if (state.movingArmyId !== movingArmyIdSnap) return;
+      const est = estimateCombat(movingArmyIdSnap, provinceId);
       if (!est) return;
 
       const chanceColor = est.winChancePct >= 60 ? '#4aaa77' : est.winChancePct >= 40 ? '#c8a030' : '#c04040';
@@ -412,6 +416,13 @@ function handleArmyClick(armyId) {
  */
 export function showReachableProvinces(armyId) {
   renderAllProvinces();  // redraws with reachable class based on state.movingArmyId
+}
+
+/** Cancel move mode and clear all move-related visual state (highlights + combat tooltip). */
+export function cancelArmyMoveAndClear() {
+  cancelArmyMove();
+  clearReachableHighlights();  // also hides _ttCombatInfo
+  renderAllProvinces();
 }
 
 // ─── Province combat flash ────────────────────────────────
