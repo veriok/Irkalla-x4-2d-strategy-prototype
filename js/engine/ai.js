@@ -54,7 +54,8 @@ export async function runAI(factionId) {
     const candidates = adjProvIds
       .map(id => getProvince(id))
       .filter(Boolean)
-      .filter(p => p.ownerId !== factionId);
+      .filter(p => p.ownerId !== factionId)
+      .filter(p => !p.isOcean);   // AI never moves into ocean provinces
 
     // Sort: neutral first, then enemies
     candidates.sort((a, b) => {

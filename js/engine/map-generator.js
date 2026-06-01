@@ -1,25 +1,34 @@
 /**
  * map-generator.js
  *
- * Generates a Paradox-style province map using d3-delaunay Voronoi.
- * - 24 provinces placed in faction quadrants + neutral zones
- * - Deterministic seeded RNG (mulberry32)
- * - Adjacency derived from Voronoi neighbor graph
- * - Biomes assigned by position heuristic
- * - Province names from a per-biome name list
- * - 2–6 locations per province
- * - Injects <path> and <text> elements into the SVG
+ * Generates a province map using d3-delaunay Voronoi.
+ * Supports multiple world sizes and a Pangea map type.
  *
- * Returns an array of raw province descriptor objects consumed by game-state.js
+ * - Land seed points clustered in a central ellipse (Pangea layout)
+ * - Ocean seed points placed around the perimeter
+ * - Shallow ocean: cells adjacent to land; deep ocean: everything else
+ * - Coastal land: land cells adjacent to any ocean cell
+ * - Faction biomes derived from faction identity (N/S/E/W quadrant style)
+ * - Inner decorative stroke on ocean cells via shrinkPolygon + #ocean-deco-layer
+ * - Dynamic MAP_W / MAP_H driven by worldSize parameter
+ *
+ * Returns an array of raw province descriptors consumed by game-state.js
  */
 
 import { Delaunay } from 'd3-delaunay';
-import { BIOMES, getBiome } from '../data/biomes-data.js';
-import { FACTIONS } from '../data/factions-data.js';
+import { getBiome } from '../data/biomes-data.js';
 
-// ─── Canvas size (must match SVG viewBox) ────────────────
-export const MAP_W = 1000;
-export const MAP_H = 600;
+// ─── Map size configurations ──────────────────────────────
+export const MAP_SIZES = {
+  small:  { w: 1000, h: 600,  landCount: 20, oceanCount: 12 },
+  medium: { w: 1400, h: 840,  landCount: 32, oceanCount: 14 },
+  large:  { w: 1800, h: 1080, landCount: 44, oceanCount: 18 },
+  huge:   { w: 2200, h: 1320, landCount: 60, oceanCount: 22 },
+};
+
+// ─── Current map dimensions (live bindings — updated per generateMap call) ──
+export let MAP_W = 1000;
+export let MAP_H = 600;
 
 // ─── Seeded RNG (mulberry32) ─────────────────────────────
 function mulberry32(seed) {
@@ -33,13 +42,15 @@ function mulberry32(seed) {
 
 // ─── Province names per biome ────────────────────────────
 const BIOME_NAMES = {
-  plains:    ['Amara Fields','Duskmeadow','Goldvale','Sunrift','Harrow Plain','Siltvale','Amber March'],
-  forest:    ['Thornwood','Verdant Hold','Ashgrove','Moonshadow','Ironbark','Deeproot','Willowfen'],
-  mountains: ['Ironpeak','Stormcrag','Greymount','Ashrock','Flinthorn','Duskspire','Coldpass'],
-  desert:    ['Khepret Wastes','Sunscorch','Ashsand','Bonedune','Miragefall','Aridus','Saltmere'],
-  tundra:    ['Frostveil','Coldmarch','Blizzard Reach','Icevane','Snowmantle','Grimfrost','Whitewaste'],
-  swamp:     ['Murkfen','Bogwall','Shadewater','Rotmire','Blackfen','Gloomwater','Drowning Veil'],
-  coastal:   ['Saltshorn','Stormhaven','Coral Bay','Ironshores','Wavecrest','Tidecaller','Deephaven'],
+  plains:       ['Amara Fields','Duskmeadow','Goldvale','Sunrift','Harrow Plain','Siltvale','Amber March','Verdant Lea','Goldenfen'],
+  forest:       ['Thornwood','Verdant Hold','Ashgrove','Moonshadow','Ironbark','Deeproot','Willowfen','Greywood','Briarmantle'],
+  mountains:    ['Ironpeak','Stormcrag','Greymount','Ashrock','Flinthorn','Duskspire','Coldpass','Grimstone','Shatterveil'],
+  desert:       ['Khepret Wastes','Sunscorch','Ashsand','Bonedune','Miragefall','Aridus','Saltmere','Dustfall','Blaze Reach'],
+  tundra:       ['Frostveil','Coldmarch','Blizzard Reach','Icevane','Snowmantle','Grimfrost','Whitewaste','Greyice','Bitterwind'],
+  swamp:        ['Murkfen','Bogwall','Shadewater','Rotmire','Blackfen','Gloomwater','Drowning Veil','Sloughmore','Festermire'],
+  coastal:      ['Saltshorn','Stormhaven','Coral Bay','Ironshores','Wavecrest','Tidecaller','Deephaven','Saltmist','Breakwater'],
+  shallow_ocean:['The Shallows','Grey Sound','Silver Reach','Stormshelf','Seawall','Brine Edge','The Narrows','Whitecap','Foamveil'],
+  deep_ocean:   ['The Abyss','Darkwater','The Deep','Dreadwaters','Eternal Dark','Sunken Reach','The Vastness','Black Gulf','The Void'],
 };
 
 // ─── Location type weights per biome ─────────────────────
@@ -64,92 +75,128 @@ function pickWeighted(rng, weights) {
   return keys[keys.length - 1];
 }
 
-// ─── Biome by map position ────────────────────────────────
-function biomeFromPosition(x, y, rng) {
-  const nx = x / MAP_W;   // 0..1
-  const ny = y / MAP_H;   // 0..1
-
-  // NW corner: dwarves territory → mountains/tundra
-  if (nx < 0.28 && ny < 0.45) return rng() < 0.55 ? 'mountains' : 'tundra';
-  // NE corner: elves territory → coastal/forest
-  if (nx > 0.72 && ny < 0.45) return rng() < 0.55 ? 'coastal' : 'forest';
-  // SE corner: lizards → desert/plains
-  if (nx > 0.72 && ny > 0.55) return rng() < 0.6 ? 'desert' : 'plains';
-  // SW corner: draig → forest/mountains
-  if (nx < 0.28 && ny > 0.55) return rng() < 0.5 ? 'forest' : 'mountains';
-  // Top/bottom edges: coastal
-  if (ny < 0.12 || ny > 0.88) return 'coastal';
-  // Left/right edges: coastal
-  if (nx < 0.06 || nx > 0.94) return 'coastal';
-  // Central band: mixed
-  const roll = rng();
-  if (roll < 0.22) return 'plains';
-  if (roll < 0.40) return 'forest';
-  if (roll < 0.55) return 'swamp';
-  if (roll < 0.70) return 'desert';
-  if (roll < 0.82) return 'mountains';
-  if (roll < 0.92) return 'tundra';
-  return 'coastal';
+// ─── Biome from faction identity ──────────────────────────
+function biomeForFaction(faction, rng) {
+  switch (faction) {
+    case 'dwarves': return rng() < 0.55 ? 'mountains' : 'tundra';
+    case 'elves':   return rng() < 0.55 ? 'coastal'   : 'forest';
+    case 'lizards': return rng() < 0.60 ? 'desert'    : 'plains';
+    case 'draig':   return rng() < 0.50 ? 'forest'    : 'mountains';
+    case 'neutral': {
+      const r = rng();
+      if (r < 0.22) return 'plains';
+      if (r < 0.40) return 'forest';
+      if (r < 0.55) return 'swamp';
+      if (r < 0.70) return 'desert';
+      if (r < 0.82) return 'mountains';
+      if (r < 0.92) return 'tundra';
+      return 'coastal';
+    }
+    default: return 'plains';
+  }
 }
 
-// ─── Seed points ──────────────────────────────────────────
+// ─── Pangea seed generation ───────────────────────────────
 /**
- * 24 seed points.
- * Layout: 4 faction quadrants with 5 provinces each + 4 neutral provinces
- * clustered in the center and borders.
- *
- * Quadrant hints:
- *   nw  → dwarves  (top-left)
- *   ne  → elves    (top-right)
- *   se  → lizards  (bottom-right)
- *   sw  → draig    (bottom-left)
+ * Place land seeds in a central ellipse (faction quadrants + neutral center)
+ * and ocean seeds outside the ellipse around the perimeter.
  */
-function generateSeeds(rng) {
+function generateSeeds_pangea(rng, cfg) {
+  const cx  = cfg.w / 2;
+  const cy  = cfg.h / 2;
+  const ax  = cfg.w * 0.32;   // ellipse semi-axis X
+  const ay  = cfg.h * 0.34;   // ellipse semi-axis Y
+  const PAD = 40;
+
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const jitter = (base, range) => base + (rng() - 0.5) * range;
-  const PAD = 60;  // keep points away from edges so voronoi cells aren't too thin
 
-  const seeds = [
-    // ── NW (dwarves) × 5 ──
-    { x: jitter(130, 60), y: jitter(110, 60), faction: 'dwarves', isCapital: true  },
-    { x: jitter(200, 60), y: jitter(190, 60), faction: 'dwarves', isCapital: false },
-    { x: jitter(100, 50), y: jitter(240, 60), faction: 'dwarves', isCapital: false },
-    { x: jitter(250, 50), y: jitter(100, 50), faction: 'dwarves', isCapital: false },
-    { x: jitter(160, 50), y: jitter(300, 50), faction: 'dwarves', isCapital: false },
+  // Land counts
+  const factPerFaction = Math.max(3, Math.floor(cfg.landCount / 5));
+  const neutralCount   = cfg.landCount - factPerFaction * 4;
 
-    // ── NE (elves) × 5 ──
-    { x: jitter(870, 60), y: jitter(110, 60), faction: 'elves',   isCapital: true  },
-    { x: jitter(800, 60), y: jitter(190, 60), faction: 'elves',   isCapital: false },
-    { x: jitter(900, 50), y: jitter(240, 60), faction: 'elves',   isCapital: false },
-    { x: jitter(750, 50), y: jitter(100, 50), faction: 'elves',   isCapital: false },
-    { x: jitter(840, 50), y: jitter(300, 50), faction: 'elves',   isCapital: false },
+  const seeds = [];
 
-    // ── SE (lizards) × 5 ──
-    { x: jitter(870, 60), y: jitter(490, 60), faction: 'lizards', isCapital: true  },
-    { x: jitter(800, 60), y: jitter(410, 60), faction: 'lizards', isCapital: false },
-    { x: jitter(900, 50), y: jitter(360, 60), faction: 'lizards', isCapital: false },
-    { x: jitter(750, 50), y: jitter(500, 50), faction: 'lizards', isCapital: false },
-    { x: jitter(840, 50), y: jitter(300, 50), faction: 'lizards', isCapital: false },
+  function scatter(n, fx, fy, spread, faction) {
+    for (let i = 0; i < n; i++) {
+      seeds.push({
+        x:         clamp(jitter(fx, spread), PAD, cfg.w - PAD),
+        y:         clamp(jitter(fy, spread), PAD, cfg.h - PAD),
+        faction,
+        isCapital: i === 0,
+      });
+    }
+  }
 
-    // ── SW (draig) × 5 ──
-    { x: jitter(130, 60), y: jitter(490, 60), faction: 'draig',   isCapital: true  },
-    { x: jitter(200, 60), y: jitter(410, 60), faction: 'draig',   isCapital: false },
-    { x: jitter(100, 50), y: jitter(360, 60), faction: 'draig',   isCapital: false },
-    { x: jitter(250, 50), y: jitter(500, 50), faction: 'draig',   isCapital: false },
-    { x: jitter(160, 50), y: jitter(300, 50), faction: 'draig',   isCapital: false },
+  // Four faction quadrants within the ellipse
+  scatter(factPerFaction, cx - ax * 0.50, cy - ay * 0.40, ax * 0.22, 'dwarves');  // NW
+  scatter(factPerFaction, cx + ax * 0.50, cy - ay * 0.40, ax * 0.22, 'elves');    // NE
+  scatter(factPerFaction, cx + ax * 0.50, cy + ay * 0.40, ax * 0.22, 'lizards'); // SE
+  scatter(factPerFaction, cx - ax * 0.50, cy + ay * 0.40, ax * 0.22, 'draig');   // SW
 
-    // ── Neutral × 4 (center) ──
-    { x: jitter(500, 80), y: jitter(200, 60), faction: 'neutral', isCapital: false },
-    { x: jitter(500, 80), y: jitter(400, 60), faction: 'neutral', isCapital: false },
-    { x: jitter(360, 60), y: jitter(300, 80), faction: 'neutral', isCapital: false },
-    { x: jitter(640, 60), y: jitter(300, 80), faction: 'neutral', isCapital: false },
-  ];
+  // Neutral in centre band
+  for (let i = 0; i < neutralCount; i++) {
+    const angle = (i / neutralCount) * Math.PI * 2;
+    const r     = (0.15 + rng() * 0.20) * Math.min(ax, ay);
+    seeds.push({
+      x:         clamp(cx + r * Math.cos(angle), PAD, cfg.w - PAD),
+      y:         clamp(cy + r * Math.sin(angle), PAD, cfg.h - PAD),
+      faction:   'neutral',
+      isCapital: false,
+    });
+  }
 
-  // Clamp to map bounds
-  return seeds.map(s => ({
-    ...s,
-    x: Math.max(PAD, Math.min(MAP_W - PAD, s.x)),
-    y: Math.max(PAD, Math.min(MAP_H - PAD, s.y)),
-  }));
+  // Ocean seeds outside the ellipse, distributed around 360°
+  for (let i = 0; i < cfg.oceanCount; i++) {
+    const angle = (i / cfg.oceanCount) * Math.PI * 2
+                + rng() * (Math.PI * 2 / cfg.oceanCount) * 0.6;
+    const rFrac = 1.25 + rng() * 0.65;  // 1.25× – 1.90× ellipse radius
+    const ox    = cx + ax * rFrac * Math.cos(angle);
+    const oy    = cy + ay * rFrac * Math.sin(angle);
+    seeds.push({
+      x:         clamp(ox, 8, cfg.w - 8),
+      y:         clamp(oy, 8, cfg.h - 8),
+      faction:   'ocean',
+      isCapital: false,
+    });
+  }
+
+  return seeds;
+}
+
+// ─── Polygon area (shoelace formula) ─────────────────────
+function polygonArea(polygon) {
+  let area = 0;
+  const n = polygon.length;
+  for (let i = 0; i < n; i++) {
+    const [x1, y1] = polygon[i];
+    const [x2, y2] = polygon[(i + 1) % n];
+    area += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(area) / 2;
+}
+
+// ─── Lloyd relaxation — move seeds toward cell centroids ─
+/**
+ * Runs `iterations` rounds of Lloyd relaxation to equalise cell sizes.
+ * Seeds with faction 'ocean' are excluded (kept at their original positions
+ * so the ocean ring stays at the perimeter).
+ */
+function lloydRelax(seeds, mapW, mapH, iterations = 3) {
+  let pts = seeds.map(s => [s.x, s.y]);
+  for (let iter = 0; iter < iterations; iter++) {
+    const del = Delaunay.from(pts);
+    const vor = del.voronoi([0, 0, mapW, mapH]);
+    const next = pts.map((pt, i) => {
+      if (seeds[i].faction === 'ocean') return pt;   // keep ocean seeds in place
+      const poly = vor.cellPolygon(i);
+      if (!poly) return pt;
+      return centroid(poly);
+    });
+    pts = next;
+  }
+  // Write relaxed coords back to seeds
+  return seeds.map((s, i) => ({ ...s, x: pts[i][0], y: pts[i][1] }));
 }
 
 // ─── Polygon → SVG path string ───────────────────────────
@@ -169,17 +216,46 @@ function centroid(polygon) {
   return [Math.round(x), Math.round(y)];
 }
 
-// ─── Generate locations for a province ───────────────────
-function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, rng) {
-  const locCount = isStartingProvince
-    ? 3 + Math.floor(rng() * 2)      // 3–4 for starting provinces
-    : 2 + Math.floor(rng() * 4);     // 2–5 for others (max 5 total with main)
+// ─── Shrink polygon toward centroid (inner deco stroke) ──
+function shrinkPolygon(polygon, [cx, cy], amount) {
+  return polygon.map(([x, y]) => {
+    const dx   = cx - x;
+    const dy   = cy - y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 0.1) return [x, y];
+    const t = amount / dist;
+    return [x + dx * t, y + dy * t];
+  });
+}
 
-  const weights = LOCATION_TYPE_WEIGHTS[biomeId] || LOCATION_TYPE_WEIGHTS.plains;
+// ─── Generate locations for a province ───────────────────
+/**
+ * @param {string}  provinceId
+ * @param {string}  biomeId
+ * @param {boolean} isStartingProvince
+ * @param {boolean} isCapital
+ * @param {function} rng
+ * @param {number}  area  - polygon area in SVG units² (larger → more locations)
+ */
+function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, rng, area = 0) {
+  // Scale location count with polygon area.
+  // Median province on a medium map ≈ 36 000 u². Use that as the baseline (2–3 locs).
+  // Clamp to 1–5 for non-starting, 3–5 for starting.
+  let locCount;
+  if (isStartingProvince) {
+    const base = Math.round(2 + (area / 36000) * 1.5);
+    locCount = Math.min(5, Math.max(3, base)) + (rng() < 0.5 ? 0 : 1);
+  } else {
+    const base = Math.round(1 + (area / 36000) * 2);
+    locCount = Math.min(5, Math.max(1, base));
+    // small jitter
+    if (rng() < 0.35 && locCount < 5) locCount++;
+  }
+
+  const weights  = LOCATION_TYPE_WEIGHTS[biomeId] || LOCATION_TYPE_WEIGHTS.plains;
   const locations = [];
   const usedTypes = new Set();
 
-  // First slot is always main_settlement for starting provinces; shrine/ruins otherwise
   if (isStartingProvince) {
     locations.push({
       id: `${provinceId}_loc_0`,
@@ -187,11 +263,10 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
       type: 'main_settlement',
       isControllable: true,
       isCapital,
-      buildingSlots: 2,       // starts with 2 slots; upgrades via town_hall chain
+      buildingSlots: 2,
       buildings: [],
     });
   } else {
-    // Non-starting: 50% chance of a small settlement, otherwise ruins/shrine/den
     const t = rng() < 0.5 ? 'village' : (rng() < 0.5 ? 'ruins' : 'shrine');
     locations.push({
       id: `${provinceId}_loc_0`,
@@ -204,9 +279,7 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
     });
   }
 
-  // Fill remaining slots
   for (let i = 1; i < locCount; i++) {
-    // Avoid duplicate monster_den (max 1 per province)
     const adjustedWeights = usedTypes.has('monster_den')
       ? Object.fromEntries(Object.entries(weights).filter(([k]) => k !== 'monster_den'))
       : weights;
@@ -220,7 +293,7 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
       type,
       isControllable,
       isCapital: false,
-      buildingSlots: type === 'village' ? 2 : type === 'fort' ? 1 : 1,
+      buildingSlots: type === 'village' ? 2 : 1,
       buildings: [],
     });
   }
@@ -231,8 +304,7 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
 // ─── Name tracking to avoid duplicates ───────────────────
 const usedNames = new Set();
 function pickName(rng, biomeId) {
-  const pool = BIOME_NAMES[biomeId] || BIOME_NAMES.plains;
-  // shuffle-pick until unique or exhausted
+  const pool     = BIOME_NAMES[biomeId] || BIOME_NAMES.plains;
   const shuffled = [...pool].sort(() => rng() - 0.5);
   for (const name of shuffled) {
     if (!usedNames.has(name)) {
@@ -240,7 +312,6 @@ function pickName(rng, biomeId) {
       return name;
     }
   }
-  // fallback: generate a numbered name
   const fallback = `${biomeId.charAt(0).toUpperCase() + biomeId.slice(1)} ${usedNames.size}`;
   usedNames.add(fallback);
   return fallback;
@@ -248,37 +319,53 @@ function pickName(rng, biomeId) {
 
 // ─── Main generator ──────────────────────────────────────
 /**
- * @param {number} seed  - RNG seed (deterministic)
- * @param {SVGElement} svgEl - The #map SVG element to inject into
- * @returns {Array} provinceData - Array of raw province descriptors
+ * @param {number}     seed       - RNG seed (deterministic)
+ * @param {SVGElement} svgEl      - The #map SVG element to inject into
+ * @param {string}     mapType    - 'pangea' (only supported type currently)
+ * @param {string}     worldSize  - 'small' | 'medium' | 'large' | 'huge'
+ * @returns {Array} provinceData  - Array of raw province descriptors
  */
-export function generateMap(seed, svgEl) {
+export function generateMap(seed, svgEl, mapType = 'pangea', worldSize = 'medium') {
   usedNames.clear();
-  const rng = mulberry32(seed);
 
-  const seeds = generateSeeds(rng);
+  const cfg = MAP_SIZES[worldSize] ?? MAP_SIZES.medium;
+  MAP_W = cfg.w;
+  MAP_H = cfg.h;
+
+  const rng     = mulberry32(seed);
+  const nameRng = mulberry32(seed + 1);
+
+  let seeds  = generateSeeds_pangea(rng, cfg);
+  // Equalise cell sizes via Lloyd relaxation (ocean seeds are fixed)
+  seeds      = lloydRelax(seeds, MAP_W, MAP_H, 4);
   const points = seeds.map(s => [s.x, s.y]);
-  const flatPoints = points.flat();
 
   const delaunay = Delaunay.from(points);
-  const voronoi = delaunay.voronoi([0, 0, MAP_W, MAP_H]);
+  const voronoi  = delaunay.voronoi([0, 0, MAP_W, MAP_H]);
 
+  // ── Build initial province descriptors ──────────────────
   const provinceData = [];
-  const nameRng = mulberry32(seed + 1);  // separate rng stream for names
 
   for (let i = 0; i < seeds.length; i++) {
     const polygon = voronoi.cellPolygon(i);
     if (!polygon) continue;
 
+    const s       = seeds[i];
+    const isOcean = s.faction === 'ocean';
     const pathStr = polygonToPath(polygon);
     const center  = centroid(polygon);
-    const seed_i  = seeds[i];
-    const isStarting = seed_i.faction !== 'neutral';
-    const biomeId = biomeFromPosition(seed_i.x, seed_i.y, rng);
-    const name    = pickName(nameRng, biomeId);
-    const id      = `prov_${i}`;
 
-    const locations = generateLocations(id, biomeId, isStarting, seed_i.isCapital, rng);
+    const biomeId = isOcean
+      ? 'shallow_ocean'                    // reclassified after adjacency pass
+      : biomeForFaction(s.faction, rng);
+
+    const name      = pickName(nameRng, biomeId);
+    const id        = `prov_${i}`;
+    const isStarting = !isOcean && s.faction !== 'neutral';
+
+    const locations = isOcean
+      ? []
+      : generateLocations(id, biomeId, isStarting, s.isCapital, rng, polygonArea(polygon));
 
     provinceData.push({
       id,
@@ -287,32 +374,62 @@ export function generateMap(seed, svgEl) {
       biomeId,
       svgPath: pathStr,
       centroid: center,
-      adjacentIds: [],   // filled after all provinces created (see below)
-      startingFactionId: seed_i.faction,
-      isCapital: seed_i.isCapital,
+      adjacentIds: [],
+      startingFactionId: isOcean ? 'ocean' : s.faction,
+      isCapital: isOcean ? false : s.isCapital,
       locations,
+      isOcean,
+      oceanType: isOcean ? 'shallow' : null,   // reclassified below
+      isCoastal: false,
     });
   }
 
-  // ── Compute adjacency from Voronoi neighbor graph ────────
-  for (let i = 0; i < provinceData.length; i++) {
+  // ── Compute adjacency ────────────────────────────────────
+  const n = provinceData.length;
+  for (let i = 0; i < n; i++) {
     const neighbors = [];
     for (const j of voronoi.neighbors(i)) {
-      if (j < provinceData.length) {
-        neighbors.push(provinceData[j].id);
-      }
+      if (j < n) neighbors.push(provinceData[j].id);
     }
     provinceData[i].adjacentIds = neighbors;
   }
 
-  // ── Inject <path> elements into SVG ──────────────────────
+  // ── Classify ocean as shallow / deep ────────────────────
+  const idToIndex = new Map(provinceData.map((p, i) => [p.id, i]));
+
+  for (const prov of provinceData) {
+    if (!prov.isOcean) continue;
+    const touchesLand = prov.adjacentIds.some(adjId => {
+      const adj = provinceData[idToIndex.get(adjId)];
+      return adj && !adj.isOcean;
+    });
+    prov.oceanType = touchesLand ? 'shallow' : 'deep';
+    prov.biomeId   = touchesLand ? 'shallow_ocean' : 'deep_ocean';
+    // Fix name using the correct ocean biome pool
+    prov.name = pickName(nameRng, prov.biomeId);
+  }
+
+  // ── Mark coastal land provinces ──────────────────────────
+  for (const prov of provinceData) {
+    if (prov.isOcean) continue;
+    prov.isCoastal = prov.adjacentIds.some(adjId => {
+      const adj = provinceData[idToIndex.get(adjId)];
+      return adj?.isOcean === true;
+    });
+  }
+
+  // ── Inject SVG elements ──────────────────────────────────
   const provincesG = svgEl.querySelector('#provinces');
+  const oceanDecoG = svgEl.querySelector('#ocean-deco-layer');
   const fogG       = svgEl.querySelector('#fog-layer');
   const labelG     = svgEl.querySelector('#label-layer');
 
   provincesG.innerHTML = '';
+  if (oceanDecoG) oceanDecoG.innerHTML = '';
   fogG.innerHTML       = '';
   labelG.innerHTML     = '';
+
+  svgEl.setAttribute('viewBox', `0 0 ${MAP_W} ${MAP_H}`);
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -325,23 +442,44 @@ export function generateMap(seed, svgEl) {
     path.setAttribute('data-province', prov.id);
     path.setAttribute('d', prov.svgPath);
     path.style.setProperty('--prov-color', biome.color);
+    if (prov.isOcean) {
+      path.classList.add(prov.oceanType === 'shallow' ? 'ocean-shallow' : 'ocean-deep');
+    }
     provincesG.appendChild(path);
 
-    // Fog overlay path (same shape, initially unexplored)
+    // Ocean inner deco path (no data-province → no click/hover interception)
+    if (prov.isOcean && oceanDecoG) {
+      const polygon = voronoi.cellPolygon(prov.index);
+      if (polygon) {
+        const inset    = shrinkPolygon(polygon, prov.centroid, 4);
+        const decoPath = document.createElementNS(SVG_NS, 'path');
+        decoPath.setAttribute('d', polygonToPath(inset));
+        decoPath.setAttribute('fill', 'none');
+        decoPath.setAttribute('stroke', prov.oceanType === 'shallow' ? '#4a9fd0' : '#2a5f7a');
+        decoPath.setAttribute('stroke-width', '1.5');
+        decoPath.setAttribute('pointer-events', 'none');
+        decoPath.classList.add('ocean-inner-deco');
+        oceanDecoG.appendChild(decoPath);
+      }
+    }
+
+    // Fog overlay path
     const fogPath = document.createElementNS(SVG_NS, 'path');
     fogPath.setAttribute('id', `fog_${prov.id}`);
     fogPath.setAttribute('data-province', prov.id);
     fogPath.setAttribute('d', prov.svgPath);
-    fogPath.classList.add('fog-unexplored');
+    fogPath.classList.add(prov.isOcean ? 'fog-visible' : 'fog-unexplored');
     fogG.appendChild(fogPath);
 
-    // Province label
-    const label = document.createElementNS(SVG_NS, 'text');
-    label.setAttribute('x', prov.centroid[0]);
-    label.setAttribute('y', prov.centroid[1]);
-    label.setAttribute('id', `label_${prov.id}`);
-    label.textContent = prov.name;
-    labelG.appendChild(label);
+    // Province label (skip ocean)
+    if (!prov.isOcean) {
+      const label = document.createElementNS(SVG_NS, 'text');
+      label.setAttribute('x', prov.centroid[0]);
+      label.setAttribute('y', prov.centroid[1]);
+      label.setAttribute('id', `label_${prov.id}`);
+      label.textContent = prov.name;
+      labelG.appendChild(label);
+    }
   }
 
   return provinceData;

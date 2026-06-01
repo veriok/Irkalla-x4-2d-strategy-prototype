@@ -223,7 +223,7 @@ const DWARVES_CHAINS = [
 ];
 
 // ─────────────────────────────────────────────────────────
-// ELVES — Elven Greek City States
+// ELVES — Elven City States
 // ─────────────────────────────────────────────────────────
 
 const ELVES_CHAINS = [

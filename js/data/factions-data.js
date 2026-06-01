@@ -6,15 +6,13 @@
  *   basic:    1 resource, all factions have it (gold equivalent)
  *   advanced: up to 2-3 faction-specific advanced resources
  *
- * quadrantHint: which map quadrant this faction starts in
- *   'nw' | 'ne' | 'sw' | 'se'
  */
 
 export const FACTIONS = [
   {
     id: 'dwarves',
     name: 'Kur-Malgal',           // "Realm of the Undying Forge" in faux-Babylonian
-    fullName: 'Undead Babylonian Dwarves',
+    fullName: 'Undead Dwarves',
     description:
       'In search of immortality, King Naram-Azu struck a pact with the Dark God of the Forge. ' +
       'His people are undead masters of construction and golemcraft — doomed, but unbreakable.',
@@ -24,8 +22,7 @@ export const FACTIONS = [
     color: '#8B6914',              // deep bronze-gold
     borderColor: '#b08020',
     textColor: '#d4a030',
-    quadrantHint: 'nw',
-    startingProvinces: 4,
+
     resources: {
       basic:    { id: 'gold',          name: 'Gold',         emoji: '🪙', description: 'Universal currency.' },
       advanced: [
@@ -40,7 +37,7 @@ export const FACTIONS = [
   {
     id: 'elves',
     name: 'Poleis tou Aethera',    // "City-States of the Aether" (faux-Greek)
-    fullName: 'Elven Greek City States',
+    fullName: 'Elven City States',
     description:
       'Sailors, explorers, thinkers, and hedonists. The city-states vary between High and Forest Elves. ' +
       'Considered two-faced by all — their charm hides a ruthless pragmatism.',
@@ -50,8 +47,6 @@ export const FACTIONS = [
     color: '#1E6B5B',              // deep sea-green
     borderColor: '#204860',
     textColor: '#40c890',
-    quadrantHint: 'ne',
-    startingProvinces: 4,
     resources: {
       basic:    { id: 'gold',        name: 'Gold',      emoji: '🪙', description: 'Universal currency.' },
       advanced: [
@@ -76,8 +71,6 @@ export const FACTIONS = [
     color: '#C06020',              // desert terracotta
     borderColor: '#A04810',
     textColor: '#E08840',
-    quadrantHint: 'se',
-    startingProvinces: 4,
     resources: {
       basic:    { id: 'gold',   name: 'Gold',  emoji: '🪙', description: 'Universal currency.' },
       advanced: [
@@ -92,7 +85,7 @@ export const FACTIONS = [
   {
     id: 'draig',
     name: 'Y Draig Goch',          // Welsh: "The Red Dragon"
-    fullName: 'Y Draig Goch — Dragon Worshippers',
+    fullName: 'Humans — Dragon Worshippers',
     description:
       'Humans from the north-western isles who worship red dragons. ' +
       'Honor-bound with strict social hierarchy. They prefer death to dishonor. ' +
@@ -103,8 +96,6 @@ export const FACTIONS = [
     color: '#7A1010',              // deep dragon-red
     borderColor: '#601010',
     textColor: '#e04020',
-    quadrantHint: 'sw',
-    startingProvinces: 4,
     resources: {
       basic:    { id: 'gold',           name: 'Gold',           emoji: '🪙', description: 'Universal currency.' },
       advanced: [

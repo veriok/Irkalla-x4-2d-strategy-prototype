@@ -99,8 +99,9 @@ export function initWorld(provinceDataArr, playerFactionId) {
   }
 
   // Only keep faction ownership for the single capital province; all others → neutral
+  // Ocean provinces keep their 'ocean' ownerId and are never reassigned.
   for (const province of state.provinces.values()) {
-    if (province.ownerId !== 'neutral' && !province.isCapital) {
+    if (province.ownerId !== 'neutral' && province.ownerId !== 'ocean' && !province.isCapital) {
       province.ownerId = 'neutral';
     }
   }
@@ -129,8 +130,9 @@ export function initWorld(provinceDataArr, playerFactionId) {
     }
   }
 
-  // Initialise militia for all provinces (after buildings are installed)
+  // Initialise militia for all land provinces (after buildings are installed)
   for (const province of state.provinces.values()) {
+    if (province.isOcean) continue;
     const max = computeMilitiaMax(province);
     province.militia = { current: max, lastCombatTurn: null };
   }
@@ -253,6 +255,7 @@ export function spendResources(factionId, cost) {
 export function captureProvince(provinceId, newOwnerId) {
   const province = getProvince(provinceId);
   if (!province) return;
+  if (province.isOcean) return;   // ocean cannot be captured
   province.ownerId = newOwnerId;
   // Clear queued production — the previous owner's builds/units should not
   // complete for the new owner.

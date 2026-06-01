@@ -79,6 +79,26 @@ export const BIOMES = {
     allowedLocTypes: ['main_settlement', 'village', 'fort', 'ruins', 'shrine'],
     description: 'Shores and harbors — good trade, accessible to naval forces.',
   },
+  shallow_ocean: {
+    id: 'shallow_ocean',
+    name: 'Shallow Sea',
+    emoji: '🌊',
+    color: '#1e4a6e',
+    terrainDefBonus: 0,
+    resourceMod: 0,
+    allowedLocTypes: [],
+    description: 'Shallow coastal waters — traversable by armies, but attackers suffer a -20% penalty.',
+  },
+  deep_ocean: {
+    id: 'deep_ocean',
+    name: 'Deep Ocean',
+    emoji: '🌊',
+    color: '#0a1e33',
+    terrainDefBonus: 0,
+    resourceMod: 0,
+    allowedLocTypes: [],
+    description: 'Impassable deep ocean.',
+  },
 };
 
 /** Ordered list for random selection by map-generator */

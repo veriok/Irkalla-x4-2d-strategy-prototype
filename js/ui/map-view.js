@@ -70,6 +70,13 @@ function handleProvinceClick(provinceId) {
     const army = getArmy(state.movingArmyId);
     const targetProv = getProvince(provinceId);
 
+    // Deep ocean is impassable — cancel the move order
+    if (targetProv?.isOcean && targetProv.oceanType === 'deep') {
+      cancelArmyMove();
+      clearReachableHighlights();
+      return;
+    }
+
     if (army && targetProv && army.movesLeft > 0 &&
         army.provinceId !== provinceId &&
         getProvince(army.provinceId).adjacentIds.includes(provinceId)) {
@@ -133,7 +140,7 @@ function handleProvinceClick(provinceId) {
     return;
   }
 
-  // Normal province selection
+  // Normal province selection — ocean opens a stripped panel (no militia/resources)
   selectProvince(provinceId);
   state.movingArmyId = null;
   renderAllProvinces();
@@ -162,9 +169,28 @@ export function renderAllProvinces() {
     if (!path) continue;
     renderProvince(prov, path);
   }
+  if (_minimapCallback) _minimapCallback();
 }
 
 function renderProvince(prov, path) {
+  // Ocean provinces: keep biome color, correct CSS class, reachable for shallow only
+  if (prov.isOcean) {
+    const biome = getBiome(prov.biomeId);
+    path.style.setProperty('--prov-color', biome.color);
+    path.className.baseVal = prov.oceanType === 'shallow' ? 'ocean-shallow' : 'ocean-deep';
+    if (state.movingArmyId && prov.oceanType === 'shallow') {
+      const movingArmy = getArmy(state.movingArmyId);
+      if (movingArmy) {
+        const fromProv = getProvince(movingArmy.provinceId);
+        if (fromProv && fromProv.adjacentIds.includes(prov.id) &&
+            movingArmy.movesLeft > 0 && movingArmy.provinceId !== prov.id) {
+          path.classList.add('reachable');
+        }
+      }
+    }
+    return;
+  }
+
   // Update --prov-color to faction color (or biome fallback for neutral/unexplored)
   const faction = FACTION_MAP[prov.ownerId] ?? NEUTRAL;
   const biome   = getBiome(prov.biomeId);
@@ -217,6 +243,18 @@ const _ttCasualties   = _tooltip.querySelector('.tooltip-casualties');
 function showProvinceTooltip(provinceId, x, y) {
   const prov = getProvince(provinceId);
   if (!prov || prov.visibility === 'unexplored') { _tooltip.hidden = true; return; }
+
+  // Ocean: show a minimal tooltip (name + type) and skip militia/combat info
+  if (prov.isOcean) {
+    _ttName.textContent = `${prov.name} \u2014 ${prov.oceanType === 'shallow' ? 'Shallow Sea' : 'Deep Ocean'}`;
+    if (_ttMilitia)     _ttMilitia.hidden     = true;
+    if (_ttMilitiaWrap) _ttMilitiaWrap.hidden = true;
+    if (_ttCombatInfo)  _ttCombatInfo.hidden  = true;
+    _tooltip.style.left = `${x + 14}px`;
+    _tooltip.style.top  = `${y - 32}px`;
+    _tooltip.hidden = false;
+    return;
+  }
 
   _ttName.textContent = prov.name;
 
@@ -333,6 +371,7 @@ export function renderArmyIcons() {
       });
     });
   }
+  if (_minimapCallback) _minimapCallback();
 }
 
 /** Compute per-army [dx, dy] offsets so multiple armies in one province don't overlap. */
@@ -394,3 +433,152 @@ export function flashConquest(provinceId) {
   path.classList.add('conquest-pulse');
   setTimeout(() => path.classList.remove('conquest-pulse'), 900);
 }
+
+// ─── Minimap callback ─────────────────────────────────────
+let _minimapCallback = null;
+export function setMinimapCallback(fn) { _minimapCallback = fn; }
+
+// Patch renderAllProvinces and renderArmyIcons to call minimap
+const _origRenderAllProvinces = renderAllProvinces;
+const _origRenderArmyIcons    = renderArmyIcons;
+
+// Override exported functions in-place by wrapping the call site.
+// We cannot re-assign exported `const` — instead we call callback at end of each.
+// The patching happens via _minimapCallback checks already added below.
+
+// ─── Camera / pan system ──────────────────────────────────
+const VIEWPORT_W = 1000;
+const VIEWPORT_H = 600;
+
+let _camX  = 0;
+let _camY  = 0;
+let _mapW  = 1000;
+let _mapH  = 600;
+let _mapSvgEl = null;
+
+/** Export live camera state for minimap. */
+export function getCameraState() {
+  return { x: _camX, y: _camY, vw: VIEWPORT_W, vh: VIEWPORT_H, mw: _mapW, mh: _mapH };
+}
+
+/** Teleport camera to (x, y) — used by minimap click. */
+export function setCameraPosition(x, y) {
+  _applyCamera(x, y);
+  if (_minimapCallback) _minimapCallback();
+}
+
+function _applyCamera(x, y) {
+  _camX = Math.max(0, Math.min(_mapW - VIEWPORT_W, x));
+  _camY = Math.max(0, Math.min(_mapH - VIEWPORT_H, y));
+  if (_mapSvgEl) {
+    _mapSvgEl.setAttribute('viewBox', `${_camX} ${_camY} ${VIEWPORT_W} ${VIEWPORT_H}`);
+  }
+}
+
+/**
+ * Initialise drag-to-pan and edge-pan for the map SVG.
+ * Call once after map generation with the map SVG element and its dimensions.
+ */
+export function initMapPan(svgEl, mapW, mapH) {
+  _mapSvgEl = svgEl;
+  _mapW  = mapW;
+  _mapH  = mapH;
+  _camX  = 0;
+  _camY  = 0;
+  _applyCamera(0, 0);
+
+  // ── Drag to pan ──
+  let _dragging     = false;
+  let _startClientX = 0;
+  let _startClientY = 0;
+  let _startCamX    = 0;
+  let _startCamY    = 0;
+  let _didPan       = false;
+
+  function onDragMove(e) {
+    if (!_dragging) return;
+    const dx = e.clientX - _startClientX;
+    const dy = e.clientY - _startClientY;
+    // Use true displacement so tiny jitter on normal clicks never triggers pan.
+    if (Math.hypot(dx, dy) > 6) {
+      _didPan = true;
+      const rect  = svgEl.getBoundingClientRect();
+      const svgDx = dx / rect.width  * VIEWPORT_W;
+      const svgDy = dy / rect.height * VIEWPORT_H;
+      _applyCamera(_startCamX - svgDx, _startCamY - svgDy);
+      if (_minimapCallback) _minimapCallback();
+    }
+  }
+
+  function onDragEnd() {
+    if (!_dragging) return;
+    _dragging = false;
+    document.getElementById('map-section')?.classList.remove('panning');
+    document.removeEventListener('pointermove', onDragMove);
+    document.removeEventListener('pointerup',   onDragEnd);
+    document.removeEventListener('pointercancel', onDragEnd);
+  }
+
+  svgEl.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    _dragging     = true;
+    _startClientX = e.clientX;
+    _startClientY = e.clientY;
+    _startCamX    = _camX;
+    _startCamY    = _camY;
+    _didPan       = false;
+    document.getElementById('map-section')?.classList.add('panning');
+    // Attach move/up to document (not svgEl) so drags outside the SVG still work,
+    // and — crucially — we do NOT call setPointerCapture, which would redirect the
+    // synthesised click event away from the province path and break click delegation.
+    document.addEventListener('pointermove',   onDragMove);
+    document.addEventListener('pointerup',     onDragEnd);
+    document.addEventListener('pointercancel', onDragEnd);
+  });
+
+  // Suppress click events that were actually a drag (capture phase fires before province delegation).
+  svgEl.addEventListener('click', e => {
+    if (_didPan) {
+      e.stopPropagation();
+      _didPan = false;
+    }
+  }, true);
+
+  // ── Edge pan via requestAnimationFrame ──
+  // Track on document so position updates even when mouse moves over other UI panels.
+  let _mouseClientX = -999;
+  let _mouseClientY = -999;
+  document.addEventListener('mousemove', e => {
+    _mouseClientX = e.clientX;
+    _mouseClientY = e.clientY;
+  });
+
+  function edgePanLoop() {
+    if (_mapW > VIEWPORT_W || _mapH > VIEWPORT_H) {
+      const rect  = svgEl.getBoundingClientRect();
+      const EDGE  = 40;   // px from SVG edge
+      const SPEED = 5;    // SVG units per frame
+
+      let dx = 0;
+      let dy = 0;
+
+      if (_mouseClientX >= rect.left && _mouseClientX <= rect.right &&
+          _mouseClientY >= rect.top  && _mouseClientY <= rect.bottom) {
+        const relX = _mouseClientX - rect.left;
+        const relY = _mouseClientY - rect.top;
+        if (relX < EDGE)               dx = -SPEED;
+        else if (relX > rect.width  - EDGE) dx = SPEED;
+        if (relY < EDGE)               dy = -SPEED;
+        else if (relY > rect.height - EDGE) dy = SPEED;
+      }
+
+      if (dx !== 0 || dy !== 0) {
+        _applyCamera(_camX + dx, _camY + dy);
+        if (_minimapCallback) _minimapCallback();
+      }
+    }
+    requestAnimationFrame(edgePanLoop);
+  }
+  requestAnimationFrame(edgePanLoop);
+}
+

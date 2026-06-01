@@ -377,7 +377,12 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   const fortBonus = targetP.locations.reduce((sum, loc) => sum + getLocationDefenseBonus(loc, BUILDING_MAP), 0);
   const defenderFlatBonus = Math.max(0, Math.round((biome?.terrainDefBonus ?? 0) * 10 + fortBonus * 12));
 
-  const attackerStrengthPre = Math.round(armyAttackStrength(attArmy, UNIT_MAP));
+  // Sea attack penalty: -20% when attacking FROM shallow ocean
+  const attackerOriginProv = getProvince(attArmy.provinceId);
+  const isSeaAttack = !!(attackerOriginProv?.isOcean && attackerOriginProv?.oceanType === 'shallow');
+  const seaPenalty  = isSeaAttack ? 0.8 : 1.0;
+
+  const attackerStrengthPre = Math.round(armyAttackStrength(attArmy, UNIT_MAP) * seaPenalty);
   const defenderArmyDefensePre = enemyDefArmy ? armyDefenseStrength(enemyDefArmy, UNIT_MAP) : 0;
   const defenderMilitiaDefensePre = _militiaDefense(militiaPool);
   const defenderStrengthPre = Math.round((defenderArmyDefensePre + defenderMilitiaDefensePre) * terrainMod + fortBonus * 10);
@@ -426,7 +431,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     for (const unit of attackers) {
       const target = _pickTarget(unit, defenders, attBestChance, true, defenderFlatBonus);
       if (!target) continue;
-      const dmg = _damageAgainst(unit, target, true, defenderFlatBonus, true);
+      const dmg = Math.round(_damageAgainst(unit, target, true, defenderFlatBonus, true) * seaPenalty);
       damageToDef.set(target.key, (damageToDef.get(target.key) ?? 0) + dmg);
     }
 
@@ -518,6 +523,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     defenderStrength: Math.max(0, defenderStrengthPre),
     terrainBonus: Math.round((biome?.terrainDefBonus ?? 0) * 100),
     fortBonus,
+    seaAttack: isSeaAttack,
     attLostTotal,
     defLostTotal,
     rounds: _buildCombatNarrative(_ensureMinNarrative(rounds, outcome, targetP.name)),
@@ -531,14 +537,16 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     const stillEnemyArmies = getArmiesInProvince(targetProvinceId)
       .filter(a => a.factionId !== attArmy.factionId);
     if (stillEnemyArmies.length === 0) {
-      const prevOwner = targetP.ownerId;
-      captureProvince(targetProvinceId, attArmy.factionId);
-      moveArmy(attackerArmyId, targetProvinceId);
-      if (targetP.militia) targetP.militia.current = 0;
-      if (prevOwner !== attArmy.factionId) {
-        flashConquest(targetProvinceId);
-        logCapture(attFaction?.name ?? attArmy.factionId, targetP.name);
+      if (!targetP.isOcean) {
+        const prevOwner = targetP.ownerId;
+        captureProvince(targetProvinceId, attArmy.factionId);
+        if (targetP.militia) targetP.militia.current = 0;
+        if (prevOwner !== attArmy.factionId) {
+          flashConquest(targetProvinceId);
+          logCapture(attFaction?.name ?? attArmy.factionId, targetP.name);
+        }
       }
+      moveArmy(attackerArmyId, targetProvinceId);
     } else {
       attArmy.movesLeft = Math.max(0, attArmy.movesLeft - 1);
       result.summary = `⚔ ${attFaction?.name ?? 'Attacker'} wins the clash at ${targetP.name}, but cannot occupy and falls back.`;
@@ -567,12 +575,18 @@ export function estimateCombat(attackerArmyId, targetProvinceId) {
   const terrainMod = 1 + (biome?.terrainDefBonus ?? 0);
   const fortBonus = targetP.locations.reduce((sum, loc) => sum + getLocationDefenseBonus(loc, BUILDING_MAP), 0);
 
+  // Sea attack penalty: -20% when attacking FROM shallow ocean
+  const attackerOriginProv = getProvince(attArmy.provinceId);
+  const isSeaAttack = !!(attackerOriginProv?.isOcean && attackerOriginProv?.oceanType === 'shallow');
+  const seaPenalty  = isSeaAttack ? 0.8 : 1.0;
+
   const enemyArmies = getArmiesInProvince(targetProvinceId)
     .filter(a => a.factionId !== attArmy.factionId);
   const enemyDefArmy = _pickBestDefenderArmy(enemyArmies);
   const militiaPool = _militiaPoolForProvince(targetP);
 
-  const attStr = armyAttackStrength(attArmy, UNIT_MAP) + armyDefenseStrength(attArmy, UNIT_MAP);
+  const attStr = armyAttackStrength(attArmy, UNIT_MAP) * seaPenalty
+    + armyDefenseStrength(attArmy, UNIT_MAP);
   let borrowedStrengthBonus = 0;
   if (enemyDefArmy && enemyArmies.length > 1) {
     borrowedStrengthBonus = _estimateBorrowedStrengthBonus(

@@ -10,20 +10,123 @@
  *   6. Log turn 1
  */
 
-import { generateMap } from './engine/map-generator.js';
+import { generateMap, MAP_SIZES, MAP_W, MAP_H } from './engine/map-generator.js';
 import { initWorld, state } from './engine/game-state.js';
 import { updateFogOfWar } from './engine/fog-of-war.js';
 import { renderAllProvinces, renderArmyIcons, initMapEvents,
-         registerMapCallbacks } from './ui/map-view.js';
+         registerMapCallbacks, initMapPan, setMinimapCallback } from './ui/map-view.js';
 import { renderResourceBar }   from './ui/resource-bar.js';
 import { renderArmyPanel, registerArmyPanelCallbacks } from './ui/army-panel.js';
 import { showProvincePanel, hideProvincePanel } from './ui/province-panel.js';
 import { initEndTurnButton }   from './ui/end-turn-btn.js';
 import { logTurn, logMessage } from './ui/event-log.js';
 import { FACTIONS, FACTION_MAP } from './data/factions-data.js';
+import { initMinimap, renderMinimap } from './ui/minimap.js';
 
-// ─── Config ───────────────────────────────────────────────
-const MAP_SEED = 42;   // fixed seed → deterministic map
+// ─── World gen picker ─────────────────────────────────────
+
+const MAP_TYPES = [
+  { id: 'pangea',     label: 'Pangea',     emoji: '🌍', desc: 'One large continent',   enabled: true  },
+  { id: 'continents', label: 'Continents', emoji: '🗺', desc: 'Multiple landmasses',   enabled: false },
+  { id: 'isles',      label: 'Isles',      emoji: '🏝', desc: 'Scattered islands',     enabled: false },
+  { id: 'random',     label: 'Random',     emoji: '🎲', desc: 'Surprise world type',   enabled: false },
+];
+
+function showWorldGenPicker() {
+  return new Promise(resolve => {
+    const overlay   = document.getElementById('modal-overlay');
+    const titleEl   = document.getElementById('modal-title');
+    const bodyEl    = document.getElementById('modal-body');
+    const buttonsEl = document.getElementById('modal-buttons');
+    const boxEl     = document.getElementById('modal-box');
+
+    titleEl.textContent = 'New World';
+    buttonsEl.innerHTML = '';
+    boxEl.classList.add('modal-wide');
+
+    // Random starting seed
+    const defaultSeed = Math.floor(Math.random() * 999999) + 1;
+    let selectedType  = 'pangea';
+
+    bodyEl.innerHTML = `
+      <div class="world-gen-form">
+        <div class="wg-section">
+          <div class="wg-label">World Type</div>
+          <div class="map-type-grid" id="wg-type-grid"></div>
+        </div>
+        <div class="wg-section wg-options-row">
+          <div class="wg-opt">
+            <label class="wg-label" for="wg-size">World Size</label>
+            <select id="wg-size" class="wg-select">
+              <option value="small">Small — 20 land provinces</option>
+              <option value="medium" selected>Medium — 32 land provinces</option>
+              <option value="large">Large — 44 land provinces</option>
+              <option value="huge">Huge — 60 land provinces</option>
+            </select>
+          </div>
+          <div class="wg-opt">
+            <label class="wg-label" for="wg-seed">Seed</label>
+            <div class="wg-seed-row">
+              <input id="wg-seed" class="wg-input" type="number" min="1" max="999999"
+                     value="${defaultSeed}" />
+              <button id="wg-random" class="btn-secondary" title="Random seed">🎲</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Build map-type cards
+    const grid = document.getElementById('wg-type-grid');
+    for (const mt of MAP_TYPES) {
+      const card = document.createElement('div');
+      card.className = [
+        'map-type-card',
+        mt.enabled  ? 'map-type-card--active'  : 'map-type-card--disabled',
+        mt.id === selectedType ? 'map-type-card--selected' : '',
+      ].filter(Boolean).join(' ');
+      card.dataset.id = mt.id;
+      card.innerHTML = `
+        <span class="mt-emoji">${mt.emoji}</span>
+        <div class="mt-label">${mt.label}</div>
+        <div class="mt-desc">${mt.desc}</div>
+        ${!mt.enabled ? '<div class="mt-soon">Coming soon</div>' : ''}
+      `;
+      if (mt.enabled) {
+        card.addEventListener('click', () => {
+          selectedType = mt.id;
+          for (const c of grid.querySelectorAll('.map-type-card--active')) {
+            c.classList.remove('map-type-card--selected');
+          }
+          card.classList.add('map-type-card--selected');
+        });
+      }
+      grid.appendChild(card);
+    }
+
+    // Randomise seed button
+    document.getElementById('wg-random').addEventListener('click', () => {
+      document.getElementById('wg-seed').value =
+        String(Math.floor(Math.random() * 999999) + 1);
+    });
+
+    // Generate button
+    const genBtn = document.createElement('button');
+    genBtn.className = 'btn-primary';
+    genBtn.textContent = 'Generate World ▶';
+    genBtn.addEventListener('click', () => {
+      const seedRaw  = parseInt(document.getElementById('wg-seed').value, 10);
+      const seed     = (Number.isFinite(seedRaw) && seedRaw > 0) ? seedRaw : defaultSeed;
+      const worldSize = document.getElementById('wg-size').value;
+      overlay.hidden = true;
+      boxEl.classList.remove('modal-wide');
+      resolve({ mapType: selectedType, worldSize, seed });
+    });
+    buttonsEl.appendChild(genBtn);
+
+    overlay.hidden = false;
+  });
+}
 
 // ─── Faction picker ───────────────────────────────────────
 
@@ -79,10 +182,13 @@ function showFactionPicker() {
 async function init() {
   const svgEl = document.getElementById('map');
 
-  // 1. Generate Voronoi map + inject SVG paths
+  // 1. Show world gen picker — choose map type, size, seed
+  const worldConfig = await showWorldGenPicker();
+
+  // 2. Generate Voronoi map + inject SVG paths
   let provinceData;
   try {
-    provinceData = generateMap(MAP_SEED, svgEl);
+    provinceData = generateMap(worldConfig.seed, svgEl, worldConfig.mapType, worldConfig.worldSize);
   } catch (err) {
     console.error('Map generation failed:', err);
     document.body.innerHTML = `<div style="color:#f00;padding:2rem">
@@ -91,26 +197,33 @@ async function init() {
     return;
   }
 
-  // 2. Show faction picker — wait for choice
+  // 3. Initialise camera / pan system
+  initMapPan(svgEl, MAP_W, MAP_H);
+
+  // 4. Show faction picker — wait for choice
   const playerFaction = await showFactionPicker();
 
-  // 3. Initialise game state
+  // 5. Initialise game state
   initWorld(provinceData, playerFaction);
 
-  // 4. Fog of war
+  // 6. Minimap init + wire callback
+  initMinimap(MAP_W, MAP_H);
+  setMinimapCallback(renderMinimap);
+
+  // 7. Fog of war
   updateFogOfWar();
 
-  // 5. Render map
+  // 8. Render map
   renderAllProvinces();
   renderArmyIcons();
 
-  // 6. Resource bar
+  // 9. Resource bar
   renderResourceBar();
 
-  // 7. Army panel
+  // 10. Army panel
   renderArmyPanel();
 
-  // 8. Map event callbacks
+  // 11. Map event callbacks
   registerMapCallbacks({
     onProvinceSelect: (provinceId) => {
       showProvincePanel(provinceId);
@@ -124,13 +237,13 @@ async function init() {
     onArmySelect: () => { renderArmyIcons(); },
   });
 
-  // 9. End Turn button
+  // 12. End Turn button
   initEndTurnButton();
 
-  // 10. Hook end-turn completion to refresh UI panels
+  // 13. Hook end-turn completion to refresh UI panels
   patchEndTurnCallback();
 
-  // 11. Initial log entry
+  // 14. Initial log entry
   logTurn(1);
   const chosen = FACTION_MAP[playerFaction];
   logMessage(`Welcome to Irkallia. You lead ${chosen?.name ?? playerFaction}. Good luck.`);

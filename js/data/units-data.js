@@ -116,7 +116,7 @@ const UNIT_DEFS = [
   },
 
   // ─────────────────────────────────────────────────────────
-  // ELVES — Elven Greek City States
+  // ELVES — Elven City States
   // ─────────────────────────────────────────────────────────
   {
     id: 'elf_hoplite',

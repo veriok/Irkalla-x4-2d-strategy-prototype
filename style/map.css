@@ -112,3 +112,31 @@
 #label-layer text.label-hidden {
   opacity: 0;
 }
+
+/* ── Ocean provinces ── */
+#provinces path.ocean-shallow,
+#provinces path.ocean-deep {
+  cursor: pointer;
+  transition: filter 0.12s;
+}
+#provinces path.ocean-shallow:hover,
+#provinces path.ocean-deep:hover {
+  filter: brightness(1.25);
+  stroke: #4a9fd0;
+  stroke-width: 2;
+}
+/* Deep ocean is never reachable */
+#provinces path.ocean-deep.reachable {
+  animation: none;
+  filter: none;
+  stroke: #0a0907;
+  stroke-width: 1.5;
+}
+
+/* ── Ocean inner-stroke deco paths ── */
+.ocean-inner-deco {
+  pointer-events: none;
+  fill: none;
+  stroke: rgba(100,180,230,0.2);
+  stroke-width: 1.2;
+}

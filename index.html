@@ -32,6 +32,7 @@
     <div id="turn-display">
       Turn <span id="turn-number">1</span>
     </div>
+    <button id="minimap-btn" class="btn-secondary">🗺 Map</button>
     <button id="end-turn-btn" class="btn-primary">End Turn ⏭</button>
   </header>
 
@@ -66,6 +67,9 @@
 
         <!-- Layer 1: Province fills (map-generator.js injects <path> elements here) -->
         <g id="provinces"></g>
+
+        <!-- Layer 1b: Ocean inner-line decoration (pointer-events:none, no data-province) -->
+        <g id="ocean-deco-layer"></g>
 
         <!-- Layer 2: Province borders (map-generator.js injects <path> strokes here) -->
         <g id="borders"></g>
@@ -145,9 +149,13 @@
     </div>
   </div>
 
+  <!-- Minimap overlay -->
+  <div id="minimap-wrap" hidden><canvas id="minimap-canvas"></canvas></div>
+
   <!-- Province hover tooltip -->
   <div id="province-tooltip" hidden>
     <div class="tooltip-name"></div>
+    <div class="tooltip-desc"></div>
     <div class="tooltip-militia"></div>
     <div class="militia-bar-wrap"><div class="militia-bar-fill"></div></div>
     <div class="tooltip-combat-info" hidden>

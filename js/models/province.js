@@ -37,6 +37,11 @@ export function createProvince(raw) {
     // visibility (from player's perspective, updated by fog-of-war.js)
     // 'visible' | 'explored' | 'unexplored'
     visibility:      'unexplored',
+
+    // ocean flags (set by map-generator for water provinces)
+    isOcean:         raw.isOcean   ?? false,
+    oceanType:       raw.oceanType ?? null,    // 'shallow' | 'deep' | null
+    isCoastal:       raw.isCoastal ?? false,
   };
 }
 

@@ -56,18 +56,29 @@ export function showProvincePanel(provinceId) {
     return;
   }
 
-  const biome = getBiome(prov.biomeId);
+  const biome   = getBiome(prov.biomeId);
   const faction = FACTION_MAP[prov.ownerId] ?? NEUTRAL;
 
-  emptyEl.hidden = true;
+  emptyEl.hidden   = false;   // reset — will be hidden below
   contentEl.hidden = false;
+  emptyEl.hidden   = true;
 
-  nameEl.textContent = prov.name;
-  biomeIconEl.textContent = biome.emoji;
-  biomeLabelEl.textContent = `${biome.name} · ${biome.description}`;
-  ownerBadgeEl.textContent = faction.name;
-  ownerBadgeEl.style.color = faction.textColor ?? faction.color;
+  nameEl.textContent        = prov.name;
+  biomeIconEl.textContent   = biome.emoji;
+  biomeLabelEl.textContent  = `${biome.name} · ${biome.description}`;
+  ownerBadgeEl.textContent  = faction.name;
+  ownerBadgeEl.style.color       = faction.textColor ?? faction.color;
   ownerBadgeEl.style.borderColor = faction.color;
+
+  // Ocean provinces: hide all gameplay sections
+  if (prov.isOcean) {
+    militiaInfoEl.hidden    = true;
+    resourceSummaryEl.hidden = true;
+    locationListEl.innerHTML = '';
+    if (recruitSectionEl)  recruitSectionEl.hidden  = true;
+    if (queueSectionEl)    queueSectionEl.hidden    = true;
+    return;
+  }
 
   if (prov.visibility === 'visible' && prov.militia) {
     const max = computeMilitiaMax(prov);
