@@ -10,8 +10,8 @@ import { state } from '../engine/game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { getCameraState, setCameraPosition } from './map-view.js';
 
-// Canvas dimensions (fixed; height recalculated from map aspect ratio at init)
-const CANVAS_W = 240;
+// Canvas draw width matches the province panel (--panel-w: 260px minus 2px border = 258px)
+const CANVAS_W = 258;
 
 let _canvas = null;
 let _ctx    = null;

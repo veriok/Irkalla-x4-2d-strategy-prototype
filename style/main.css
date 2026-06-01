@@ -984,21 +984,21 @@ body {
 .mt-soon   { font-size: 9px; color: var(--accent); margin-top: 4px; font-style: italic; }
 
 /* ═══════════════════════════════════════════════════
-   MINIMAP OVERLAY
+   MINIMAP — sticky top of province panel
 ═══════════════════════════════════════════════════ */
 #minimap-wrap {
-  position: fixed;
-  top: calc(var(--top-bar-h) + 8px);
-  right: 12px;
-  z-index: 50;
+  position: sticky;
+  top: 0;
+  z-index: 10;
   background: var(--bg-panel);
-  border: 2px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 4px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+  /* pull out into the panel's padding so it spans edge-to-edge */
+  margin: -12px -12px 8px;
 }
 #minimap-wrap[hidden] { display: none; }
-#minimap-canvas { display: block; border-radius: 3px; cursor: crosshair; }
+#minimap-canvas { display: block; width: 100%; border-radius: 3px; cursor: crosshair; }
 
 /* Map section pan cursors */
 #map-section        { cursor: grab; }

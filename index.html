@@ -89,6 +89,8 @@
 
     <!-- RIGHT: province panel -->
     <aside id="province-panel" class="side-panel">
+      <!-- Minimap — sticky top, shown/hidden by button in header -->
+      <div id="minimap-wrap" hidden><canvas id="minimap-canvas"></canvas></div>
       <div id="province-panel-empty">
         <p>Click a province to inspect it.</p>
       </div>
@@ -149,9 +151,6 @@
       <div id="modal-buttons"></div>
     </div>
   </div>
-
-  <!-- Minimap overlay -->
-  <div id="minimap-wrap" hidden><canvas id="minimap-canvas"></canvas></div>
 
   <!-- Province hover tooltip -->
   <div id="province-tooltip" hidden>
