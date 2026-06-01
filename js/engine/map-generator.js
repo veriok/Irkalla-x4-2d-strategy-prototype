@@ -78,12 +78,13 @@ function pickWeighted(rng, weights) {
 }
 
 // ─── Biome from faction identity ──────────────────────────
-function biomeForFaction(faction, rng) {
+// Capitals always get the faction's canonical biome; non-capitals use a weighted spread.
+function biomeForFaction(faction, rng, isCapital = false) {
   switch (faction) {
-    case 'dwarves': return rng() < 0.55 ? 'mountains' : 'tundra';
-    case 'elves':   return rng() < 0.55 ? 'coastal'   : 'forest';
-    case 'lizards': return rng() < 0.60 ? 'desert'    : 'plains';
-    case 'draig':   return rng() < 0.50 ? 'forest'    : 'mountains';
+    case 'dwarves': return isCapital ? 'mountains' : (rng() < 0.65 ? 'mountains' : 'tundra');
+    case 'elves':   return isCapital ? 'coastal'   : (rng() < 0.55 ? 'coastal'   : 'forest');
+    case 'lizards': return isCapital ? 'desert'    : (rng() < 0.65 ? 'desert'    : 'plains');
+    case 'draig':   return isCapital ? 'tundra'    : (rng() < 0.55 ? 'tundra'    : 'forest');
     case 'neutral': {
       const r = rng();
       if (r < 0.22) return 'plains';
@@ -373,7 +374,7 @@ export function generateMap(seed, svgEl, mapType = 'pangea', worldSize = 'medium
 
     const biomeId = isOcean
       ? 'shallow_ocean'                    // reclassified after adjacency pass
-      : biomeForFaction(s.faction, rng);
+      : biomeForFaction(s.faction, rng, s.isCapital);
 
     const name      = pickName(nameRng, biomeId);
     const id        = `prov_${i}`;
@@ -432,6 +433,46 @@ export function generateMap(seed, svgEl, mapType = 'pangea', worldSize = 'medium
       const adj = provinceData[idToIndex.get(adjId)];
       return adj?.isOcean === true;
     });
+  }
+
+  // ── Ensure elf capital is on an actual ocean-adjacent province ──
+  // If the capital seed landed inland, relocate it to the nearest coastal province
+  // (preferring other elf provinces first, then neutral ones).
+  {
+    const elfCap = provinceData.find(p => p.startingFactionId === 'elves' && p.isCapital);
+    if (elfCap && !elfCap.isCoastal) {
+      const [ecx, ecy] = elfCap.centroid;
+      const dist2 = p => (p.centroid[0] - ecx) ** 2 + (p.centroid[1] - ecy) ** 2;
+
+      const candidate =
+        provinceData.filter(p => p.startingFactionId === 'elves' && !p.isCapital && p.isCoastal)
+                    .sort((a, b) => dist2(a) - dist2(b))[0] ??
+        provinceData.filter(p => p.startingFactionId === 'neutral' && p.isCoastal)
+                    .sort((a, b) => dist2(a) - dist2(b))[0];
+
+      if (candidate) {
+        // Move capital flag to the coastal province
+        elfCap.isCapital            = false;
+        candidate.isCapital         = true;
+        candidate.startingFactionId = 'elves';
+
+        // Old capital falls back to forest (inland elf territory)
+        elfCap.biomeId   = 'forest';
+        elfCap.name      = pickName(nameRng, 'forest');
+        elfCap.locations = generateLocations(
+          elfCap.id, 'forest', true, false, rng,
+          polygonArea(voronoi.cellPolygon(elfCap.index))
+        );
+
+        // New capital gets proper coastal biome + capital locations
+        candidate.biomeId   = 'coastal';
+        candidate.name      = pickName(nameRng, 'coastal');
+        candidate.locations = generateLocations(
+          candidate.id, 'coastal', true, true, rng,
+          polygonArea(voronoi.cellPolygon(candidate.index))
+        );
+      }
+    }
   }
 
   // ── Inject SVG elements ──────────────────────────────────

@@ -14,8 +14,8 @@ export const BIOMES = {
     name: 'Plains',
     emoji: '🌾',
     color: '#6a8a3a',
-    terrainDefBonus: 0,
-    resourceMod: 1.2,      // fertile, good income
+    terrainDefBonus: -0.15,
+    resourceMod: 1.15,      // fertile, good income
     allowedLocTypes: ['main_settlement', 'village', 'fort', 'ruins', 'shrine'],
     description: 'Open grasslands — easy to traverse, rich in farmland.',
   },
@@ -24,7 +24,7 @@ export const BIOMES = {
     name: 'Forest',
     emoji: '🌲',
     color: '#2e6a28',
-    terrainDefBonus: 0.15, // forest cover helps defenders
+    terrainDefBonus: 0.10, // forest cover helps defenders
     resourceMod: 0.9,
     allowedLocTypes: ['main_settlement', 'village', 'fort', 'shrine', 'monster_den'],
     description: 'Dense woodland — defenders gain cover. Rich in timber.',
@@ -34,8 +34,8 @@ export const BIOMES = {
     name: 'Mountains',
     emoji: '⛰️',
     color: '#7a6a58',
-    terrainDefBonus: 0.30, // strong defensive terrain
-    resourceMod: 0.8,
+    terrainDefBonus: 0.20, // strong defensive terrain
+    resourceMod: 0.85,
     allowedLocTypes: ['main_settlement', 'village', 'fort', 'monster_den', 'ruins'],
     description: 'Rugged peaks — formidable defenses, rich in ore.',
   },
@@ -44,8 +44,8 @@ export const BIOMES = {
     name: 'Desert',
     emoji: '🏜️',
     color: '#c8a040',
-    terrainDefBonus: 0.05,
-    resourceMod: 0.7,      // harsh, low income
+    terrainDefBonus: -0.10,
+    resourceMod: 0.8,      // harsh, low income
     allowedLocTypes: ['main_settlement', 'village', 'ruins', 'shrine', 'monster_den'],
     description: 'Scorching sands — harsh and sparse, but hiding ancient ruins.',
   },
@@ -54,8 +54,8 @@ export const BIOMES = {
     name: 'Tundra',
     emoji: '❄️',
     color: '#a0b8c0',
-    terrainDefBonus: 0.10,
-    resourceMod: 0.65,
+    terrainDefBonus: 0.00,
+    resourceMod: 0.85,
     allowedLocTypes: ['main_settlement', 'village', 'fort', 'monster_den'],
     description: 'Frozen wastes — difficult terrain, sparse population.',
   },
@@ -64,8 +64,8 @@ export const BIOMES = {
     name: 'Swamp',
     emoji: '🌿',
     color: '#4a7050',
-    terrainDefBonus: 0.20,
-    resourceMod: 0.75,
+    terrainDefBonus: 0.15,
+    resourceMod: 0.8,
     allowedLocTypes: ['main_settlement', 'village', 'monster_den', 'ruins', 'shrine'],
     description: 'Boggy marshland — attackers struggle, strange creatures lurk.',
   },
@@ -75,7 +75,7 @@ export const BIOMES = {
     emoji: '🌊',
     color: '#3a70a0',
     terrainDefBonus: 0,
-    resourceMod: 1.1,      // trade ports boost income
+    resourceMod: 1.0,      // trade ports boost income
     allowedLocTypes: ['main_settlement', 'village', 'fort', 'ruins', 'shrine'],
     description: 'Shores and harbors — good trade, accessible to naval forces.',
   },
