@@ -44,11 +44,11 @@ export function updateFogOfWar() {
 
   // Update province visibility states
   for (const prov of state.provinces.values()) {
-    // Ocean provinces are always fully visible
-    if (prov.isOcean) {
-      prov.visibility = 'visible';
-      continue;
-    }
+    // // Ocean provinces are always fully visible
+    // if (prov.isOcean) {
+    //   prov.visibility = 'visible';
+    //   continue;
+    // }
     if (visibleIds.has(prov.id)) {
       prov.visibility = 'visible';
     } else if (prov.visibility === 'visible') {
