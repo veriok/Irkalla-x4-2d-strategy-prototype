@@ -7,6 +7,7 @@
  */
 
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
+import { BUILDING_MAP, LOCATION_MAIN_CHAIN } from '../data/buildings-data.js';
 import { state } from '../engine/game-state.js';
 import { TRAIT_MAP } from '../data/traits-data.js';
 import { createNativePreviewCard } from './card-renderer.js';
@@ -308,6 +309,14 @@ function _buildHtml(bDef, opts = {}) {
       bonusParts.push(`${resEmoji} +${val}/turn ${resName}`);
       continue;
     }
+    if (key === 'faction_secondary_adv') {
+      const faction = FACTION_MAP[state?.playerFactionId];
+      const advRes = faction?.resources?.advanced?.[1];
+      const resName = advRes?.name ?? 'Secondary Resource';
+      const resEmoji = advRes?.emoji ?? '🔮';
+      bonusParts.push(`${resEmoji} +${val}/turn ${resName}`);
+      continue;
+    }
     const r = ALL_RES[key];
     if (r) {
       bonusParts.push(`${r.emoji} +${val}/turn ${r.name}`);
@@ -317,10 +326,23 @@ function _buildHtml(bDef, opts = {}) {
     bonusParts.push(`⚔ +${bDef.militiaBonus} Militia max`);
   }
 
-  // Prerequisites
+  // Prerequisites (explicit ids + main-building tier gate)
   const prereqParts = (bDef.prerequisites ?? [])
     .filter(Boolean)
-    .map(id => `<em>${id}</em>`);
+    .map(id => {
+      const b = BUILDING_MAP[id];
+      return b ? `<em>${b.emoji} ${b.name}</em>` : `<em>${id}</em>`;
+    });
+
+  if (bDef.mainBuildingTier != null) {
+    const chain = LOCATION_MAIN_CHAIN[opts.locationType];
+    const reqId = chain?.[bDef.mainBuildingTier - 1];
+    const reqB  = reqId ? BUILDING_MAP[reqId] : null;
+    prereqParts.push(reqB
+      ? `<em>${reqB.emoji} ${reqB.name}</em>`
+      : `<em>Main building Tier ${bDef.mainBuildingTier}</em>`
+    );
+  }
 
   // Faction restriction
   const factionTag = bDef.factionId

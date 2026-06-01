@@ -204,24 +204,14 @@ export function getArmiesByFaction(factionId) {
 
 // ─── Militia helpers ─────────────────────────────────────
 
-/** Base militia per location type */
-const MILITIA_BASE = {
-  main_settlement: 2,
-  village:         1,
-  fort:            3,
-  shrine:          1,
-  ruins:           0,
-  monster_den:     0,
-};
-
 /**
  * Compute maximum militia count for a province.
- * Sums location-type base + militiaBonus from installed buildings.
+ * Flat base of 3 + militiaBonus from all installed buildings.
  */
 export function computeMilitiaMax(province) {
-  let total = 0;
+  if (province.isOcean) return 0;
+  let total = 3;
   for (const loc of province.locations) {
-    total += MILITIA_BASE[loc.type] ?? 0;
     for (const b of loc.buildings) {
       const bDef = BUILDING_MAP[b.buildingId];
       total += bDef?.militiaBonus ?? 0;

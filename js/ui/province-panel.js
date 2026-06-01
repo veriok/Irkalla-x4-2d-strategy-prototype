@@ -136,6 +136,11 @@ export function hideProvincePanel() {
   _removeManageBtn();
 }
 
+// Refresh side panel when province modal closes
+document.addEventListener('province-modal-closed', e => {
+  showProvincePanel(e.detail.provinceId);
+});
+
 // ─── Resource summary ─────────────────────────────────────
 function renderResourceSummary(prov) {
   const biome         = getBiome(prov.biomeId);

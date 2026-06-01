@@ -132,6 +132,14 @@ export function getLocationResourceBonuses(location, buildingMap, factionId = nu
         }
         continue;
       }
+      if (res === 'faction_secondary_adv') {
+        if (factionId) {
+          const faction = FACTION_MAP[factionId];
+          const advResId = faction?.resources?.advanced?.[1]?.id;
+          if (advResId) totals[advResId] = (totals[advResId] ?? 0) + amt;
+        }
+        continue;
+      }
       totals[res] = (totals[res] ?? 0) + amt;
     }
   }

@@ -159,12 +159,17 @@ function tickProductionQueues(factionId) {
       if (item.type === 'building') {
         const bDef = BUILDING_MAP[item.id];
         if (bDef && loc) {
-          // Remove the upgraded-from building if this is an upgrade
+          // Replace upgraded-from building in-place; otherwise append
           if (bDef.upgradeFromId) {
             const idx = loc.buildings.findIndex(b => b.buildingId === bDef.upgradeFromId);
-            if (idx !== -1) loc.buildings.splice(idx, 1);
+            if (idx !== -1) {
+              loc.buildings.splice(idx, 1, { slotIndex: idx, buildingId: item.id });
+            } else {
+              loc.buildings.push({ slotIndex: loc.buildings.length, buildingId: item.id });
+            }
+          } else {
+            loc.buildings.push({ slotIndex: loc.buildings.length, buildingId: item.id });
           }
-          loc.buildings.push({ slotIndex: loc.buildings.length, buildingId: item.id });
           if (faction && playerCanSee(prov.id)) logBuild(faction.name, bDef.name, prov.name);
         }
 

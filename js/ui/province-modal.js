@@ -33,7 +33,7 @@ import {
   getLocationResourceBonuses,
 } from '../models/location.js';
 import { enqueueProduction, dequeueProduction } from '../models/province.js';
-import { BUILDING_MAP, getBuildingsForLocation } from '../data/buildings-data.js';
+import { BUILDING_MAP, getBuildingsForLocation, getBuildingsForFaction, LOCATION_MAIN_CHAIN } from '../data/buildings-data.js';
 import { getRecruitableUnits, UNIT_MAP } from '../data/units-data.js';
 import { MONSTER_UNITS } from '../data/monsters-data.js';
 import { createCard } from './card-renderer.js';
@@ -77,10 +77,23 @@ export function showProvinceModal(provinceId) {
 }
 
 export function hideProvinceModal() {
+  const closedId   = _provinceId;
   overlayEl.hidden = true;
   _provinceId      = null;
   _selectedLocId   = null;
   _selectedSlotKey = null;
+
+  // Hide any lingering tooltips
+  hideBuildingTooltip();
+  hideUnitTooltip();
+  hideLocationTooltip();
+  hideBiomeTooltip();
+  hideIncomeBreakdownTooltip();
+
+  // Refresh the side panel so queue changes are reflected immediately
+  if (closedId) {
+    document.dispatchEvent(new CustomEvent('province-modal-closed', { detail: { provinceId: closedId } }));
+  }
 }
 
 export function isModalOpen() {
@@ -216,37 +229,62 @@ function _renderHeader(prov) {
 
 function _computeProvinceBreakdown(prov, playerFaction) {
   const biome = getBiome(prov.biomeId);
+  const mod   = biome.resourceMod ?? 1;
+
+  const advResId0 = playerFaction.resources.advanced?.[0]?.id;
+  const advResId1 = playerFaction.resources.advanced?.[1]?.id;
   const factionResIds = new Set([
     playerFaction.resources.basic.id,
-    ...playerFaction.resources.advanced.map(r => r.id),
+    ...(advResId0 ? [advResId0] : []),
+    ...(advResId1 ? [advResId1] : []),
   ]);
 
-  const breakdown = {};
-  function addSource(resId, label, amount) {
-    if (!breakdown[resId]) breakdown[resId] = { total: 0, sources: [] };
-    breakdown[resId].total  += amount;
-    breakdown[resId].sources.push({ label, amount });
+  // Per-resource accumulator keyed by building name so duplicates are grouped.
+  // bySource: Map<name, { amount, count }>
+  const acc = {};
+  function addSource(resId, name, amount) {
+    if (!factionResIds.has(resId)) return;
+    if (!acc[resId]) acc[resId] = { total: 0, bySource: new Map() };
+    acc[resId].total = parseFloat((acc[resId].total + amount).toFixed(2));
+    const entry = acc[resId].bySource.get(name);
+    if (entry) {
+      entry.amount = parseFloat((entry.amount + amount).toFixed(2));
+      entry.count += 1;
+    } else {
+      acc[resId].bySource.set(name, { amount, count: 1 });
+    }
   }
 
   addSource('gold', 'Province base', 3);
 
   for (const loc of prov.locations) {
     if (!loc.isControllable) continue;
-    const locMeta = LOCATION_TYPES[loc.type];
-    const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, playerFaction.id);
-    for (const [res, amt] of Object.entries(bonuses)) {
-      if (!factionResIds.has(res)) continue;
-      const adjusted = parseFloat((amt * (biome.resourceMod ?? 1)).toFixed(2));
-      if (adjusted !== 0) {
-        const buildingNames = loc.buildings
-          .map(b => BUILDING_MAP[b.buildingId]?.name)
-          .filter(Boolean)
-          .join(', ');
-        addSource(res, buildingNames || (locMeta?.name ?? loc.type), adjusted);
+    for (const { buildingId } of loc.buildings) {
+      const bDef = BUILDING_MAP[buildingId];
+      if (!bDef) continue;
+      for (const [key, val] of Object.entries(bDef.bonuses ?? {})) {
+        if (key === 'defense' || key === 'growthSlots') continue;
+        let resId = key;
+        if (key === 'faction_primary_adv')   resId = advResId0;
+        if (key === 'faction_secondary_adv') resId = advResId1;
+        if (!resId) continue;
+        const adjusted = parseFloat((val * mod).toFixed(2));
+        if (adjusted !== 0) addSource(resId, bDef.name, adjusted);
       }
     }
   }
 
+  // Convert to the { total, sources: [{label, amount}] } shape the tooltip expects
+  const breakdown = {};
+  for (const [resId, data] of Object.entries(acc)) {
+    breakdown[resId] = {
+      total: data.total,
+      sources: Array.from(data.bySource.entries()).map(([name, { amount, count }]) => ({
+        label: count > 1 ? `${name} ×${count}` : name,
+        amount,
+      })),
+    };
+  }
   return breakdown;
 }
 
@@ -417,6 +455,16 @@ function _renderSidebar(prov) {
   _renderRecruit(prov);
 }
 
+// Returns the required-but-missing main building def if a building is blocked
+// solely by its mainBuildingTier, null otherwise.
+function _mainBuildingBlocker(bDef, locationType, installedIds) {
+  if (bDef.mainBuildingTier == null) return null;
+  const chain = LOCATION_MAIN_CHAIN[locationType];
+  const reqId = chain?.[bDef.mainBuildingTier - 1];
+  if (!reqId || installedIds.includes(reqId)) return null;
+  return BUILDING_MAP[reqId] ?? null;
+}
+
 // ── Sidebar: occupied slot (upgrade + demolish) ───────────
 function _renderSlotActions(prov, loc, buildingId) {
   const bDef       = BUILDING_MAP[buildingId];
@@ -425,6 +473,19 @@ function _renderSlotActions(prov, loc, buildingId) {
   const installedIds = getInstalledBuildingIds(loc);
   const allAvail   = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds);
   const upgradeDef = allAvail.find(b => b.upgradeFromId === buildingId) ?? null;
+
+  // Find upgrade blocked specifically by mainBuildingTier (all other requirements already met)
+  let upgradeDefBlocked = null;
+  let upgradeBlockedBy  = null;
+  if (!upgradeDef) {
+    const candidate = getBuildingsForFaction(state.playerFactionId)
+      .find(b => b.allowedLocTypes.includes(loc.type) && b.upgradeFromId === buildingId);
+    if (candidate) {
+      upgradeBlockedBy = _mainBuildingBlocker(candidate, loc.type, installedIds);
+      if (upgradeBlockedBy) upgradeDefBlocked = candidate;
+    }
+  }
+
   const queueFull  = (prov.productionQueue?.length ?? 0) >= 5;
   const faction    = FACTION_MAP[state.playerFactionId];
   const allRes     = faction ? [faction.resources.basic, ...faction.resources.advanced] : [];
@@ -455,13 +516,33 @@ function _renderSlotActions(prov, loc, buildingId) {
       hint: alreadyQueued ? 'Already queued' : queueFull ? 'Queue full' : !affordable ? "Can't afford" : '',
       disabled: alreadyQueued || queueFull || !affordable,
       affordable,
-      onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(upgradeDef, el)); el.addEventListener('mouseleave', hideBuildingTooltip); },
+      onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(upgradeDef, el, { locationType: loc.type })); el.addEventListener('mouseleave', hideBuildingTooltip); },
       onClick: () => {
         if (!spendResources(state.playerFactionId, upgradeDef.cost)) return;
         enqueueProduction(prov, { type: 'building', id: upgradeDef.id, locationId: loc.id, turnsRemaining: upgradeDef.buildTurns });
         renderResourceBar();
         _render();
       },
+    });
+    sidebarActEl.appendChild(row);
+  }
+
+  // ── Blocked upgrade row ─────────────────────────────
+  if (upgradeDefBlocked) {
+    const row = _makeActionRow({
+      cardOpts: {
+        variant: 'building',
+        compositeSrc: upgradeDefBlocked.cardImg ?? null,
+        fallbackIcon: upgradeDefBlocked.emoji ?? '🏗',
+        fallbackName: upgradeDefBlocked.name,
+        fallbackSub: '',
+      },
+      name: `↑ ${upgradeDefBlocked.name}`,
+      costLabel: `${_costStr(upgradeDefBlocked.cost, faction ? [faction.resources.basic, ...faction.resources.advanced] : [])} · ${upgradeDefBlocked.buildTurns}t`,
+      hint: `Needs ${upgradeBlockedBy.name}`,
+      disabled: true,
+      affordable: false,
+      onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(upgradeDefBlocked, el, { locationType: loc.type })); el.addEventListener('mouseleave', hideBuildingTooltip); },
     });
     sidebarActEl.appendChild(row);
   }
@@ -507,6 +588,18 @@ function _renderEmptySlotBuildMenu(prov, loc) {
   const installedIds = getInstalledBuildingIds(loc);
   const available    = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds)
     .filter(b => b.upgradeFromId === null);
+  const availableIds = new Set(available.map(b => b.id));
+
+  // Tier-1 buildings blocked only by mainBuildingTier (all other prerequisites met)
+  const blocked = getBuildingsForFaction(state.playerFactionId)
+    .filter(b =>
+      b.allowedLocTypes.includes(loc.type) &&
+      b.upgradeFromId === null &&
+      !installedIds.includes(b.id) &&
+      !availableIds.has(b.id) &&
+      _mainBuildingBlocker(b, loc.type, installedIds) !== null
+    );
+
   const queueFull    = (prov.productionQueue?.length ?? 0) >= 5;
   const faction      = FACTION_MAP[state.playerFactionId];
   const allRes       = faction ? [faction.resources.basic, ...faction.resources.advanced] : [];
@@ -516,7 +609,7 @@ function _renderEmptySlotBuildMenu(prov, loc) {
   header.textContent = 'Build';
   sidebarActEl.appendChild(header);
 
-  if (available.length === 0) {
+  if (available.length === 0 && blocked.length === 0) {
     const hint = document.createElement('div');
     hint.className = 'pmod-empty-hint';
     hint.textContent = 'No buildings available for this location.';
@@ -524,7 +617,9 @@ function _renderEmptySlotBuildMenu(prov, loc) {
     return;
   }
 
-  for (const bDef of available) {
+  for (const bDef of [...available, ...blocked]) {
+    const isBlocked    = !availableIds.has(bDef.id);
+    const blockedByDef = isBlocked ? _mainBuildingBlocker(bDef, loc.type, installedIds) : null;
     const affordable = canAfford(state.playerFactionId, bDef.cost);
     const costStr    = _costStr(bDef.cost, allRes);
     const alreadyQ   = prov.productionQueue?.some(i => i.type === 'building' && i.id === bDef.id);
@@ -533,17 +628,19 @@ function _renderEmptySlotBuildMenu(prov, loc) {
       cardOpts: { variant: 'building', compositeSrc: bDef.cardImg ?? null, fallbackIcon: bDef.emoji ?? '🏗', fallbackName: bDef.name, fallbackSub: '' },
       name: bDef.name,
       costLabel: `${costStr} · ${bDef.buildTurns}t`,
-      hint: alreadyQ ? 'Already queued' : queueFull ? 'Queue full' : !affordable ? "Can't afford" : '',
-      disabled: alreadyQ || queueFull || !affordable,
-      affordable,
-      onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(bDef, el)); el.addEventListener('mouseleave', hideBuildingTooltip); },
-      onClick: () => {
+      hint: isBlocked
+        ? `Needs ${blockedByDef?.name ?? '???'}`
+        : alreadyQ ? 'Already queued' : queueFull ? 'Queue full' : !affordable ? "Can't afford" : '',
+      disabled: isBlocked || alreadyQ || queueFull || !affordable,
+      affordable: !isBlocked && affordable,
+      onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(bDef, el, { locationType: loc.type })); el.addEventListener('mouseleave', hideBuildingTooltip); },
+      onClick: !isBlocked ? () => {
         if (!spendResources(state.playerFactionId, bDef.cost)) return;
         enqueueProduction(prov, { type: 'building', id: bDef.id, locationId: loc.id, turnsRemaining: bDef.buildTurns });
         renderResourceBar();
         _selectedSlotKey = null;
         _render();
-      },
+      } : null,
     });
     sidebarActEl.appendChild(row);
   }
@@ -765,7 +862,7 @@ function _renderRecruit(prov) {
   for (const loc of prov.locations) {
     if (!loc.isControllable) continue;
     const installedIds = getInstalledBuildingIds(loc);
-    for (const uDef of getRecruitableUnits(state.playerFactionId, installedIds)) {
+    for (const uDef of getRecruitableUnits(state.playerFactionId, installedIds, loc.type)) {
       if (!seen.has(uDef.id)) {
         seen.add(uDef.id);
         units.push({ uDef, locationId: loc.id });

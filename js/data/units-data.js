@@ -384,11 +384,22 @@ export function getUnitsForFaction(factionId, includeMilitia = false) {
   return UNITS.filter(u => u.factionId === factionId && (includeMilitia || !u.isMilitia));
 }
 
-/** Get units recruiteable at a location given its existing buildings */
-export function getRecruitableUnits(factionId, existingBuildingIds) {
-  return getUnitsForFaction(factionId).filter(u =>
-    u.requiredBuilding === null || existingBuildingIds.includes(u.requiredBuilding)
-  );
+/**
+ * Get units recruitable at a location.
+ * @param {string} factionId
+ * @param {string[]} existingBuildingIds  installed building ids at this location
+ * @param {string|null} locationType      location type (e.g. 'main_settlement', 'fort')
+ */
+export function getRecruitableUnits(factionId, existingBuildingIds, locationType = null) {
+  return getUnitsForFaction(factionId).filter(u => {
+    const req = u.requiredBuilding;
+    if (req === null) {
+      // Tier-1 units: recruitable from main_settlement, or any location with a barracks
+      return locationType === 'main_settlement' || existingBuildingIds.includes('barracks');
+    }
+    if (Array.isArray(req)) return req.some(id => existingBuildingIds.includes(id));
+    return existingBuildingIds.includes(req);
+  });
 }
 
 export function getMilitiaUnitIdForFaction(factionId) {
