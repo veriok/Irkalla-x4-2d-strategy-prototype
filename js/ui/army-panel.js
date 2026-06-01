@@ -71,8 +71,11 @@ export function renderArmyPanel() {
 
     for (const { typeId, count } of army.units) {
       const uDef = UNIT_MAP[typeId];
+      const hpArr = (army.hp?.active?.[typeId] ?? []).slice();
+      while (hpArr.length < count) hpArr.push(uDef?.maxHp ?? 10);
       for (let i = 0; i < count; i++) {
-        const unitCard = _makeUnitCard(uDef, false, faction);
+        const currentHp = hpArr[i] ?? (uDef?.maxHp ?? 10);
+        const unitCard = _makeUnitCard(uDef, false, faction, currentHp);
         if (hasSiblings) {
           // Draggable even if it would empty this army — empty army is removed on drop
           unitCard.draggable = true;
@@ -92,8 +95,11 @@ export function renderArmyPanel() {
     }
     for (const { typeId, count } of (army.wounded ?? [])) {
       const uDef = UNIT_MAP[typeId];
+      const hpArr = (army.hp?.wounded?.[typeId] ?? []).slice();
+      while (hpArr.length < count) hpArr.push(Math.max(1, Math.floor((uDef?.maxHp ?? 10) * 0.2)));
       for (let i = 0; i < count; i++) {
-        unitsEl.appendChild(_makeUnitCard(uDef, true, faction));
+        const currentHp = hpArr[i] ?? Math.max(1, Math.floor((uDef?.maxHp ?? 10) * 0.2));
+        unitsEl.appendChild(_makeUnitCard(uDef, true, faction, currentHp));
       }
     }
     card.appendChild(unitsEl);
@@ -197,7 +203,7 @@ export function renderArmyPanel() {
 
 // ── Unit card helper ─────────────────────────────────────────
 
-function _makeUnitCard(uDef, wounded, factionDef) {
+function _makeUnitCard(uDef, wounded, factionDef, currentHp = null) {
   const c = createCard({
     variant: 'unit',
     wounded,
@@ -208,7 +214,16 @@ function _makeUnitCard(uDef, wounded, factionDef) {
     fallbackSub: '',
   });
 
-  c.addEventListener('mouseenter', () => showUnitTooltip(uDef, factionDef, c));
+  const maxHp = Math.max(1, uDef?.maxHp ?? 10);
+  const hpNow = Math.max(0, Math.min(maxHp, currentHp ?? maxHp));
+  const missingPct = Math.round(((maxHp - hpNow) / maxHp) * 100);
+
+  const hpOverlay = document.createElement('div');
+  hpOverlay.className = 'game-card__hp-overlay';
+  hpOverlay.style.height = `${missingPct}%`;
+  c.appendChild(hpOverlay);
+
+  c.addEventListener('mouseenter', () => showUnitTooltip(uDef, factionDef, c, hpNow, maxHp));
   c.addEventListener('mouseleave', hideUnitTooltip);
   return c;
 }

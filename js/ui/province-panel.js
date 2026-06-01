@@ -430,6 +430,8 @@ function renderRecruitSection(prov) {
 
   for (const { uDef, locationId } of units) {
     const canRecruit = canAfford(state.playerFactionId, uDef.cost) && !queueFull;
+    const stackSize = uDef.stackSize ?? 1;
+    const displayName = stackSize > 1 ? `${stackSize}x ${uDef.name}` : uDef.name;
 
     const costStr = Object.entries(uDef.cost)
       .map(([res, amt]) => {
@@ -439,11 +441,16 @@ function renderRecruitSection(prov) {
       .join(' ');
 
     const row = document.createElement('div');
-    row.className = 'build-menu-row';
+    row.className = 'build-menu-row recruit-row';
     row.innerHTML = `
       <span class="bm-icon">${uDef.emoji}</span>
-      <span class="bm-name">${uDef.name}</span>
-      <span class="bm-cost">⚔${uDef.attack} 🛡${uDef.defense} ❤${uDef.maxHp ?? 10} 🐎${uDef.movement ?? 1} 💰-${uDef.upkeepGold ?? 0}/t · ${costStr} · ${uDef.buildTurns}t</span>
+      <span class="recruit-row__main">
+        <span class="bm-name">${displayName}</span>
+        <span class="bm-meta">
+          <span class="bm-stats">⚔${uDef.attack} 🛡${uDef.defense} ❤${uDef.maxHp ?? 10} 🐎${uDef.movement ?? 1}</span>
+          <span class="bm-cost">💰-${uDef.upkeepGold ?? 0}/t · ${costStr} · ${uDef.buildTurns}t</span>
+        </span>
+      </span>
     `;
 
     const nameEl2 = row.querySelector('.bm-name');

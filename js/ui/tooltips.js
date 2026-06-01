@@ -55,7 +55,7 @@ export function hideBuildingTooltip() {
   _hideTimer = setTimeout(() => { tooltipEl.hidden = true; }, 80);
 }
 
-export function showUnitTooltip(uDef, factionDef, anchorEl) {
+export function showUnitTooltip(uDef, factionDef, anchorEl, currentHp = null, maxHpOverride = null) {
   if (!unitTooltipEl || !uDef || !anchorEl) return;
 
   clearTimeout(_hideTimer);
@@ -82,17 +82,27 @@ export function showUnitTooltip(uDef, factionDef, anchorEl) {
   attack.textContent = `Attack: ${uDef.attack ?? 0}`;
   const defense = document.createElement('div');
   defense.textContent = `Defense: ${uDef.defense ?? 0}`;
+  const type = document.createElement('div');
+  type.textContent = `Type: ${uDef.unitType ?? 'infantry'}`;
   const hp = document.createElement('div');
-  hp.textContent = `HP: ${uDef.maxHp ?? 10}`;
+  const maxHp = Math.max(1, maxHpOverride ?? uDef.maxHp ?? 10);
+  const hpNow = Math.max(0, Math.min(maxHp, currentHp ?? maxHp));
+  const hpPct = Math.round((hpNow / maxHp) * 100);
+  const hpClass = hpPct < 30 ? 'unit-hp--low' : hpPct < 60 ? 'unit-hp--mid' : 'unit-hp--high';
+  hp.innerHTML = `HP: <span class="${hpClass}">${hpNow}</span>/${maxHp}`;
   const movement = document.createElement('div');
   movement.textContent = `Movement: ${uDef.movement ?? 1}`;
-  const upkeep = document.createElement('div');
-  upkeep.textContent = `Upkeep: ${uDef.upkeepGold ?? 0} gold/turn`;
+  const upkeepGold = uDef.upkeepGold ?? 0;
   stats.appendChild(attack);
   stats.appendChild(defense);
+  stats.appendChild(type);
   stats.appendChild(hp);
   stats.appendChild(movement);
-  stats.appendChild(upkeep);
+  if (upkeepGold > 0) {
+    const upkeep = document.createElement('div');
+    upkeep.textContent = `Upkeep: ${upkeepGold} gold/turn`;
+    stats.appendChild(upkeep);
+  }
   unitTooltipEl.appendChild(stats);
 
   const traits = _resolveTraits(uDef.traitIds ?? []);
