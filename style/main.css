@@ -515,6 +515,7 @@ body {
   flex-direction: column;
   gap: 2px;
 }
+.tooltip-combat-info[hidden] { display: none; }
 .tooltip-win-chance,
 .tooltip-def-bonus,
 .tooltip-casualties { font-size: 11px; color: var(--text-muted); }

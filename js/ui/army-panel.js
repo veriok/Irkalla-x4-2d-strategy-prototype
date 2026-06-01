@@ -6,12 +6,12 @@
  */
 
 import { state, getProvince, getArmiesByFaction, getArmiesInProvince, selectArmy,
-         startArmyMove, cancelArmyMove, splitArmy, transferUnit,
+         startArmyMove, splitArmy, transferUnit,
          getArmySupplyCap } from '../engine/game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
 import { armySize, armyWoundedCount, armyAttackStrength, armyDefenseStrength } from '../models/army.js';
-import { showReachableProvinces, renderArmyIcons, renderAllProvinces } from './map-view.js';
+import { showReachableProvinces, renderArmyIcons, renderAllProvinces, cancelArmyMoveAndClear } from './map-view.js';
 import { showModal, hideModal } from './modal.js';
 import { createCard } from './card-renderer.js';
 import { showUnitTooltip, hideUnitTooltip } from './tooltips.js';
@@ -155,9 +155,8 @@ export function renderArmyPanel() {
       moveBtn.addEventListener('click', e => {
         e.stopPropagation();
         if (state.movingArmyId === army.id) {
-          cancelArmyMove();
+          cancelArmyMoveAndClear();
           renderArmyPanel();
-          renderAllProvinces();
         } else {
           selectArmy(army.id);
           startArmyMove(army.id);
