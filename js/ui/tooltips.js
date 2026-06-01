@@ -6,7 +6,8 @@
  * All keyword/bonus rendering is derived from the building definition data.
  */
 
-import { FACTIONS } from '../data/factions-data.js';
+import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
+import { state } from '../engine/game-state.js';
 import { TRAIT_MAP } from '../data/traits-data.js';
 import { createNativePreviewCard } from './card-renderer.js';
 
@@ -22,11 +23,11 @@ const unitTooltipEl = document.getElementById('unit-tooltip');
 
 let _hideTimer = null;
 
-export function showBuildingTooltip(bDef, anchorEl) {
+export function showBuildingTooltip(bDef, anchorEl, opts = {}) {
   if (!tooltipEl || !bDef) return;
 
   clearTimeout(_hideTimer);
-  tooltipEl.innerHTML = _buildHtml(bDef);
+  tooltipEl.innerHTML = _buildHtml(bDef, opts);
   tooltipEl.hidden = false;
 
   // Position after layout so offsetHeight is accurate
@@ -240,15 +241,17 @@ export function showIncomeBreakdownTooltip(resName, resEmoji, sources, total, an
   if (!tooltipEl) return;
   clearTimeout(_hideTimer);
 
-  const lines = sources.map(s =>
-    `<div class="btt-row ${s.amount >= 0 ? 'btt-bonus' : 'btt-cost'}">▸ ${s.label}: ${s.amount >= 0 ? '+' : ''}${s.amount}</div>`
-  ).join('');
+  const lines = sources.map(s => {
+    const display = parseFloat(Number(s.amount).toFixed(2));
+    return `<div class="btt-row ${s.amount >= 0 ? 'btt-bonus' : 'btt-cost'}">▸ ${s.label}: ${s.amount >= 0 ? '+' : ''}${display}</div>`;
+  }).join('');
 
+  const totalDisplay = parseFloat(Number(total).toFixed(2));
   tooltipEl.innerHTML = `
     <div class="btt-header">${resEmoji ?? ''} ${resName} Income</div>
     <div class="btt-section">${lines || '<div class="btt-row" style="color:var(--text-muted)">No sources</div>'}</div>
     <hr class="btt-hr">
-    <div class="btt-row"><strong>Total: +${total}/turn</strong></div>
+    <div class="btt-row"><strong>Total: +${totalDisplay}/turn</strong></div>
   `.trim();
 
   tooltipEl.hidden = false;
@@ -279,7 +282,7 @@ window.addEventListener('scroll', () => {
 
 // ─── HTML builder ─────────────────────────────────────────
 
-function _buildHtml(bDef) {
+function _buildHtml(bDef, opts = {}) {
   // Cost line(s)
   const costParts = Object.entries(bDef.cost ?? {}).map(([res, amt]) => {
     const r = ALL_RES[res];
@@ -295,6 +298,14 @@ function _buildHtml(bDef) {
     }
     if (key === 'growthSlots') {
       bonusParts.push(`+${val} Building Slot${val > 1 ? 's' : ''}`);
+      continue;
+    }
+    if (key === 'faction_primary_adv') {
+      const faction = FACTION_MAP[state?.playerFactionId];
+      const advRes = faction?.resources?.advanced?.[0];
+      const resName = advRes?.name ?? 'Primary Resource';
+      const resEmoji = advRes?.emoji ?? '✨';
+      bonusParts.push(`${resEmoji} +${val}/turn ${resName}`);
       continue;
     }
     const r = ALL_RES[key];
@@ -321,10 +332,11 @@ function _buildHtml(bDef) {
     ${bDef.tier ? `<div class="btt-tier">Tier ${bDef.tier}</div>` : ''}
     <div class="btt-desc">${bDef.description ?? ''}</div>
     <hr class="btt-hr">
+    ${!opts.installed ? `
     <div class="btt-section">
       <div class="btt-row">⏱ ${bDef.buildTurns} turn${bDef.buildTurns !== 1 ? 's' : ''} to build</div>
       ${costParts.map(c => `<div class="btt-row btt-cost">💸 ${c}</div>`).join('')}
-    </div>
+    </div>` : ''}
     ${bonusParts.length > 0 ? `
     <div class="btt-section">
       <div class="btt-label">Bonuses</div>

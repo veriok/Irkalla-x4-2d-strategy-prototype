@@ -50,8 +50,8 @@ export const FACTIONS = [
     resources: {
       basic:    { id: 'gold',        name: 'Gold',      emoji: '🪙', description: 'Universal currency.' },
       advanced: [
-        { id: 'philosophy',  name: 'Philosophy', emoji: '📜', description: 'Accumulated knowledge. Drives research and diplomacy.' },
         { id: 'timber',      name: 'Timber',     emoji: '🌲', description: 'Fine elven wood. Required for fleets and siege equipment.' },
+        { id: 'philosophy',  name: 'Philosophy', emoji: '📜', description: 'Accumulated knowledge. Drives research and diplomacy.' },
       ],
     },
     unitEmoji: '🌿',

@@ -54,7 +54,7 @@ export function createProvince(raw) {
  * @returns {boolean}
  */
 export function enqueueProduction(province, item) {
-  if (province.productionQueue.length >= 6) return false;
+  if (province.productionQueue.length >= 5) return false;
   province.productionQueue.push({ ...item });
   return true;
 }

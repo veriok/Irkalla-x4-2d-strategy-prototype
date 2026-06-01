@@ -74,10 +74,11 @@ export function renderResourceBar() {
     const amount = fs.resources[res.id] ?? 0;
     const info   = breakdown[res.id] ?? { total: 0, sources: [] };
     const delta  = info.total;
+    const deltaRounded = Math.round(delta);
     const deltaClass = delta > 0 ? 'positive' : delta < 0 ? 'negative' : '';
-    const deltaStr   = delta !== 0 ? `${delta > 0 ? '+' : ''}${delta}/turn` : '—';
+    const deltaStr   = deltaRounded !== 0 ? `${deltaRounded > 0 ? '+' : ''}${deltaRounded}/turn` : '—';
     const tipLines   = info.sources.length > 0
-      ? info.sources.map(s => `${s.label}: ${s.amount > 0 ? '+' : ''}${s.amount}`).join('&#10;')
+      ? info.sources.map(s => `${s.label}: ${s.amount > 0 ? '+' : ''}${parseFloat(Number(s.amount).toFixed(2))}`).join('&#10;')
       : 'No income sources';
 
     return `<div class="resource-chip" title="${res.description}">

@@ -17,7 +17,7 @@ import { state, addResources, getProvincesByFaction, getArmiesByFaction,
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
-import { getLocationResourceBonuses, LOCATION_BASE_SLOTS } from '../models/location.js';
+import { getLocationResourceBonuses, LOCATION_BASE_SLOTS, LOCATION_STARTING_BUILDING } from '../models/location.js';
 import { getBiome } from '../data/biomes-data.js';
 import { BIOME_DEN_ENCOUNTER, MONSTER_UNITS } from '../data/monsters-data.js';
 import {
@@ -53,7 +53,7 @@ export function computeIncome(factionId) {
 
     for (const loc of prov.locations) {
       if (!loc.isControllable) continue;
-      const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP);
+      const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, factionId);
       for (const [res, amt] of Object.entries(bonuses)) {
         income[res] = (income[res] ?? 0) + Math.round(amt * biome.resourceMod);
       }
@@ -79,25 +79,24 @@ export function computeIncomeBreakdown(factionId) {
   }
 
   const provinces = getProvincesByFaction(factionId);
-  if (provinces.length > 0) {
-    addSource('gold', `${provinces.length} prov. × 3💰`, provinces.length * 3);
-  }
 
   for (const prov of provinces) {
     const biome = getBiome(prov.biomeId);
+    const provTotals = { gold: 3 };
+
     for (const loc of prov.locations) {
       if (!loc.isControllable) continue;
-      const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP);
+      const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, factionId);
       for (const [res, amt] of Object.entries(bonuses)) {
-        const adjusted = Math.round(amt * biome.resourceMod);
+        const adjusted = parseFloat((amt * biome.resourceMod).toFixed(2));
         if (adjusted !== 0) {
-          const buildingNames = loc.buildings
-            .map(b => BUILDING_MAP[b.buildingId]?.name)
-            .filter(Boolean)
-            .join(', ');
-          addSource(res, `${buildingNames || '?'} @ ${prov.name}`, adjusted);
+          provTotals[res] = parseFloat(((provTotals[res] ?? 0) + adjusted).toFixed(2));
         }
       }
+    }
+
+    for (const [res, amt] of Object.entries(provTotals)) {
+      if (amt !== 0) addSource(res, prov.name, amt);
     }
   }
 
@@ -221,9 +220,10 @@ function tickProductionQueues(factionId) {
       } else if (item.type === 'build_location') {
         if (loc) {
           loc.type = item.locationType;
-          loc.buildings = [];
-          loc.buildingSlots = LOCATION_BASE_SLOTS[item.locationType] ?? 1;
           loc.isControllable = true;
+          loc.buildingSlots = LOCATION_BASE_SLOTS[item.locationType] ?? 1;
+          const startingBldg = LOCATION_STARTING_BUILDING[item.locationType];
+          loc.buildings = startingBldg ? [{ buildingId: startingBldg }] : [];
           if (faction && playerCanSee(prov.id)) logBuild(faction.name, `Built ${item.locationType}`, prov.name);
         }
       }

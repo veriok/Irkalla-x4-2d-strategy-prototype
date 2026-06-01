@@ -18,6 +18,7 @@
 import { Delaunay } from 'd3-delaunay';
 import { getBiome } from '../data/biomes-data.js';
 import { BIOME_DEN_ENCOUNTER, MONSTER_UNITS } from '../data/monsters-data.js';
+import { LOCATION_BASE_SLOTS, LOCATION_STARTING_BUILDING } from '../models/location.js';
 
 // ─── Map size configurations ──────────────────────────────
 export const MAP_SIZES = {
@@ -275,8 +276,8 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
       type: t,
       isControllable: t !== 'monster_den',
       isCapital: false,
-      buildingSlots: t === 'village' ? 2 : 1,
-      buildings: [],
+      buildingSlots: LOCATION_BASE_SLOTS[t] ?? 1,
+      buildings: LOCATION_STARTING_BUILDING[t] ? [{ buildingId: LOCATION_STARTING_BUILDING[t] }] : [],
     });
   }
 
@@ -294,8 +295,8 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
       type,
       isControllable,
       isCapital: false,
-      buildingSlots: type === 'village' ? 2 : 1,
-      buildings: [],
+      buildingSlots: LOCATION_BASE_SLOTS[type] ?? 1,
+      buildings: LOCATION_STARTING_BUILDING[type] ? [{ buildingId: LOCATION_STARTING_BUILDING[type] }] : [],
     };
     if (type === 'monster_den') {
       loc.denEnemies = _makeDenEnemies(biomeId);

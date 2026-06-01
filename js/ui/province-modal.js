@@ -19,6 +19,7 @@ import {
   canAfford,
   spendResources,
   addResources,
+  computeMilitiaMax,
 } from '../engine/game-state.js';
 import { FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
 import { getBiome } from '../data/biomes-data.js';
@@ -160,7 +161,7 @@ function _renderHeader(prov) {
       const resDef = allResById[resId];
       const chip = document.createElement('span');
       chip.className = 'pmod-res-chip';
-      chip.innerHTML = `${resDef?.emoji ?? ''} <strong>+${info.total}</strong>/t`;
+      chip.innerHTML = `${resDef?.emoji ?? ''} <strong>+${Math.round(info.total)}</strong>/t`;
       chip.addEventListener('mouseenter', () =>
         showIncomeBreakdownTooltip(resDef?.name ?? resId, resDef?.emoji ?? '', info.sources, info.total, chip)
       );
@@ -169,20 +170,47 @@ function _renderHeader(prov) {
     }
   }
 
-  // Stats row — defense
+  // Stats row — defense + income modifier
   if (statsRowEl) {
     statsRowEl.innerHTML = '';
+
     const defStats = _computeDefenseStats(prov);
     const totalDefPct = Math.round(defStats.total * 100);
-    const chip = document.createElement('span');
-    chip.className = 'pmod-stat-chip';
-    chip.textContent = `🛡 Defense: +${totalDefPct}%`;
-    const defTip = [
+    const defChip = document.createElement('span');
+    defChip.className = 'pmod-stat-chip';
+    defChip.textContent = `🛡 Defense: +${totalDefPct}%`;
+    defChip.title = [
       `Biome (${biome.name}): +${Math.round(defStats.biome * 100)}%`,
       defStats.buildings > 0 ? `Buildings: +${Math.round(defStats.buildings * 100)}%` : null,
     ].filter(Boolean).join('\n');
-    chip.title = defTip;
-    statsRowEl.appendChild(chip);
+    statsRowEl.appendChild(defChip);
+
+    const resMod  = biome.resourceMod ?? 1;
+    const resDiff = Math.round((resMod - 1) * 100);
+    const resChip = document.createElement('span');
+    resChip.className = 'pmod-stat-chip';
+    resChip.textContent = resDiff === 0
+      ? `📊 Income: ×1.0`
+      : `📊 Income: ${resDiff > 0 ? '+' : ''}${resDiff}%`;
+    resChip.title = `Biome modifier: all building income ×${resMod.toFixed(2)}`;
+    statsRowEl.appendChild(resChip);
+
+    if (prov.militia && prov.visibility === 'visible') {
+      const max  = computeMilitiaMax(prov);
+      const cur  = prov.militia.current;
+      const pct  = max > 0 ? Math.round((cur / max) * 100) : 0;
+      const barColor = pct > 66 ? '#4aaa77' : pct > 33 ? '#c8a030' : '#c04040';
+      const replenishing = prov.militia.lastCombatTurn !== null && cur < max;
+
+      const milChip = document.createElement('span');
+      milChip.className = 'pmod-stat-chip';
+      milChip.innerHTML =
+        `⚔ Militia: ${cur}/${max} ` +
+        `<span style="display:inline-block;width:36px;height:6px;background:var(--border);border-radius:3px;vertical-align:middle;">` +
+        `<span style="display:block;width:${pct}%;height:100%;background:${barColor};border-radius:3px;"></span></span>`;
+      milChip.title = replenishing ? 'Replenishing +1/turn' : cur >= max ? 'At full strength' : '';
+      statsRowEl.appendChild(milChip);
+    }
   }
 }
 
@@ -205,10 +233,10 @@ function _computeProvinceBreakdown(prov, playerFaction) {
   for (const loc of prov.locations) {
     if (!loc.isControllable) continue;
     const locMeta = LOCATION_TYPES[loc.type];
-    const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP);
+    const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, playerFaction.id);
     for (const [res, amt] of Object.entries(bonuses)) {
       if (!factionResIds.has(res)) continue;
-      const adjusted = Math.round(amt * (biome.resourceMod ?? 1));
+      const adjusted = parseFloat((amt * (biome.resourceMod ?? 1)).toFixed(2));
       if (adjusted !== 0) {
         const buildingNames = loc.buildings
           .map(b => BUILDING_MAP[b.buildingId]?.name)
@@ -296,7 +324,7 @@ function _renderLocationRows(prov) {
             fallbackSub: '',
           });
           if (bDef) {
-            card.addEventListener('mouseenter', () => showBuildingTooltip(bDef, card));
+            card.addEventListener('mouseenter', () => showBuildingTooltip(bDef, card, { installed: true }));
             card.addEventListener('mouseleave', hideBuildingTooltip);
           }
           card.addEventListener('click', () => {
@@ -397,7 +425,7 @@ function _renderSlotActions(prov, loc, buildingId) {
   const installedIds = getInstalledBuildingIds(loc);
   const allAvail   = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds);
   const upgradeDef = allAvail.find(b => b.upgradeFromId === buildingId) ?? null;
-  const queueFull  = (prov.productionQueue?.length ?? 0) >= 6;
+  const queueFull  = (prov.productionQueue?.length ?? 0) >= 5;
   const faction    = FACTION_MAP[state.playerFactionId];
   const allRes     = faction ? [faction.resources.basic, ...faction.resources.advanced] : [];
 
@@ -527,7 +555,7 @@ function _renderClearAction(prov, loc, goldCost, turns, label) {
 
   const cost      = { gold: goldCost };
   const affordable = canAfford(state.playerFactionId, cost);
-  const queueFull  = (prov.productionQueue?.length ?? 0) >= 6;
+  const queueFull  = (prov.productionQueue?.length ?? 0) >= 5;
   const alreadyQ   = prov.productionQueue?.some(i => i.type === 'clear_location' && i.locationId === loc.id);
   const typeMeta   = LOCATION_TYPES[loc.type];
 
@@ -558,7 +586,7 @@ function _renderClearAction(prov, loc, goldCost, turns, label) {
 
 // ── Sidebar: build on empty plot ─────────────────────────
 function _renderBuildLocationMenu(prov, loc) {
-  const queueFull = (prov.productionQueue?.length ?? 0) >= 6;
+  const queueFull = (prov.productionQueue?.length ?? 0) >= 5;
 
   const header = document.createElement('div');
   header.className = 'pmod-section-header';
@@ -594,7 +622,7 @@ function _renderBuildLocationMenu(prov, loc) {
 
 // ── Sidebar: convert existing controllable location ───────
 function _renderConvertMenu(prov, loc) {
-  const queueFull  = (prov.productionQueue?.length ?? 0) >= 6;
+  const queueFull  = (prov.productionQueue?.length ?? 0) >= 5;
   const currentType = loc.type;
 
   const header = document.createElement('div');
@@ -726,7 +754,7 @@ function _renderMonsterDenSidebar(prov, loc) {
 function _renderRecruit(prov) {
   if (prov.ownerId !== state.playerFactionId || prov.visibility !== 'visible') return;
 
-  const queueFull = (prov.productionQueue?.length ?? 0) >= 6;
+  const queueFull = (prov.productionQueue?.length ?? 0) >= 5;
   const faction   = FACTION_MAP[state.playerFactionId];
   const allRes    = faction ? [faction.resources.basic, ...faction.resources.advanced] : [];
 
@@ -810,7 +838,7 @@ function _renderQueue(prov) {
   const faction = FACTION_MAP[state.playerFactionId];
   const isPlayer = prov.ownerId === state.playerFactionId && prov.visibility === 'visible';
 
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 5; i++) {
     const item = isPlayer ? (prov.productionQueue[i] ?? null) : null;
 
     const slot = document.createElement('div');

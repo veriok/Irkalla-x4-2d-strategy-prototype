@@ -4,6 +4,8 @@
  * This module provides helpers for working with locations.
  */
 
+import { FACTION_MAP } from '../data/factions-data.js';
+
 /** Location type metadata */
 export const LOCATION_TYPES = {
   main_settlement: {
@@ -14,18 +16,18 @@ export const LOCATION_TYPES = {
     description: 'The heart of the province. Cannot be converted or razed.',
   },
   village: {
-    name: 'Village',
+    name: 'Mercantile',
     emoji: '🏘️',
     isControllable: true,
     cardImg: 'assets/cards/locations/village.png',
-    description: 'A farming community. Generates gold and supports basic buildings.',
+    description: 'A mercantile settlement. Generates gold income and supports trade buildings.',
   },
   fort: {
-    name: 'Fort',
-    emoji: '🏯',
+    name: 'Military',
+    emoji: '⚔️',
     isControllable: true,
     cardImg: 'assets/cards/locations/fort.png',
-    description: 'A military garrison. Provides strong defense bonuses and militia.',
+    description: 'A military garrison. Provides defense bonuses, militia, and martial buildings.',
   },
   ruins: {
     name: 'Ruins',
@@ -35,11 +37,11 @@ export const LOCATION_TYPES = {
     description: 'Crumbling remains of an old structure. Clear them to build something new.',
   },
   shrine: {
-    name: 'Shrine',
+    name: 'Religious',
     emoji: '🛕',
     isControllable: true,
     cardImg: 'assets/cards/locations/shrine.png',
-    description: 'A place of worship. Unlocks faith-based buildings and resource bonuses.',
+    description: 'A sacred district. Generates primary advanced resource and supports religious buildings.',
   },
   monster_den: {
     name: 'Monster Den',
@@ -60,7 +62,7 @@ export const LOCATION_TYPES = {
     emoji: '🌿',
     isControllable: false,
     cardImg: 'assets/cards/locations/empty.png',
-    description: 'Open land ready for development. Build a village, fort, or shrine here.',
+    description: 'Open land ready for development. Build a mercantile, military, or religious location here.',
   },
 };
 
@@ -74,8 +76,15 @@ export const LOCATION_BUILD_COSTS = {
 /** Turns required to build/convert a location */
 export const LOCATION_BUILD_TURNS = { village: 2, shrine: 3, fort: 5 };
 
-/** Base building slots for each buildable location type */
-export const LOCATION_BASE_SLOTS = { village: 2, shrine: 1, fort: 1 };
+/** Base building slots for each buildable location type (mandatory base building occupies 1) */
+export const LOCATION_BASE_SLOTS = { village: 3, shrine: 3, fort: 3 };
+
+/** The pre-placed mandatory base building for each buildable location type */
+export const LOCATION_STARTING_BUILDING = {
+  village: 'mercantile_1',
+  fort:    'palisade',
+  shrine:  'religious_1',
+};
 
 /**
  * Get all building ids currently installed (completed) in a location.
@@ -101,18 +110,28 @@ export function getLocationDefenseBonus(location, buildingMap) {
 
 /**
  * Get per-turn resource bonuses from all buildings in a location.
+ * Resolves the special `faction_primary_adv` key to the faction's first advanced resource.
  * Returns { [resourceId]: totalAmount }
  * @param {Object} location
  * @param {Object} buildingMap
+ * @param {string|null} factionId  — owner faction, used to resolve faction_primary_adv
  * @returns {Object}
  */
-export function getLocationResourceBonuses(location, buildingMap) {
+export function getLocationResourceBonuses(location, buildingMap, factionId = null) {
   const totals = {};
   for (const { buildingId } of location.buildings) {
     const def = buildingMap[buildingId];
     if (!def) continue;
     for (const [res, amt] of Object.entries(def.bonuses)) {
       if (res === 'defense' || res === 'growthSlots') continue;
+      if (res === 'faction_primary_adv') {
+        if (factionId) {
+          const faction = FACTION_MAP[factionId];
+          const advResId = faction?.resources?.advanced?.[0]?.id;
+          if (advResId) totals[advResId] = (totals[advResId] ?? 0) + amt;
+        }
+        continue;
+      }
       totals[res] = (totals[res] ?? 0) + amt;
     }
   }

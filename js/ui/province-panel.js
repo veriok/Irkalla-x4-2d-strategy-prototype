@@ -152,7 +152,7 @@ function renderResourceSummary(prov) {
   const totals = { gold: 3 };
   for (const loc of prov.locations) {
     if (!loc.isControllable) continue;
-    const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP);
+    const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, state.playerFactionId);
     for (const [res, amt] of Object.entries(bonuses)) {
       if (!factionResIds.has(res)) continue;
       totals[res] = (totals[res] ?? 0) + Math.round(amt * biome.resourceMod);
@@ -215,7 +215,7 @@ function renderProductionQueue(prov) {
   queueListEl.innerHTML = '';
   const faction = FACTION_MAP[state.playerFactionId];
 
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 5; i++) {
     const item = prov.productionQueue[i];
     const cwa  = document.createElement('div');
     cwa.className = 'card-with-action';
