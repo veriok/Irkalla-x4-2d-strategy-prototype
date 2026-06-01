@@ -32,6 +32,7 @@ import {
 import { getLocationDefenseBonus } from '../models/location.js';
 import { flashCombat, flashConquest } from '../ui/map-view.js';
 import { logCapture } from '../ui/event-log.js';
+import { playerCanSee } from './game-state.js';
 
 const WOUND_CHANCE = 0.45;
 
@@ -340,6 +341,12 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   const targetP = getProvince(targetProvinceId);
   if (!attArmy || !targetP) return null;
 
+  // Moving into your own province — just relocate, never fight your own militia
+  if (targetP.ownerId === attArmy.factionId) {
+    moveArmy(attackerArmyId, targetProvinceId);
+    return null;
+  }
+
   const isEnemyProvince = targetP.ownerId !== attArmy.factionId && targetP.ownerId !== 'neutral';
   const enemyArmies = getArmiesInProvince(targetProvinceId)
     .filter(a => a.id !== attackerArmyId && a.factionId !== attArmy.factionId);
@@ -364,8 +371,11 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     if (targetP.ownerId === 'neutral') {
       captureProvince(targetProvinceId, attArmy.factionId);
       const attFaction = FACTION_MAP[attArmy.factionId];
-      logCapture(attFaction?.name ?? attArmy.factionId, targetP.name);
-      flashConquest(targetProvinceId);
+      if (playerCanSee(targetProvinceId)) 
+      {
+        logCapture(attFaction?.name ?? attArmy.factionId, targetP.name);
+        flashConquest(targetProvinceId);
+      }
     }
     return null;
   }
@@ -542,8 +552,8 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
         captureProvince(targetProvinceId, attArmy.factionId);
         if (targetP.militia) targetP.militia.current = 0;
         if (prevOwner !== attArmy.factionId) {
-          flashConquest(targetProvinceId);
-          logCapture(attFaction?.name ?? attArmy.factionId, targetP.name);
+    
+          if (playerCanSee(targetProvinceId)) logCapture(attFaction?.name ?? attArmy.factionId, targetP.name);
         }
       }
       moveArmy(attackerArmyId, targetProvinceId);

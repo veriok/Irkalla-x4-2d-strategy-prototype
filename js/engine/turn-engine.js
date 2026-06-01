@@ -28,7 +28,7 @@ import {
   armyUpkeepGold,
   hasArmyMovedOrAttacked,
 } from '../models/army.js';
-import { placeArmy, getArmySupplyCap } from './game-state.js';
+import { placeArmy, getArmySupplyCap, playerCanSee } from './game-state.js';
 import { logTurn, logBuild, logRecruit, logElimination } from '../ui/event-log.js';
 
 // ─── Per-faction income calculation ──────────────────────
@@ -165,7 +165,7 @@ function tickProductionQueues(factionId) {
             if (idx !== -1) loc.buildings.splice(idx, 1);
           }
           loc.buildings.push({ slotIndex: loc.buildings.length, buildingId: item.id });
-          if (faction) logBuild(faction.name, bDef.name, prov.name);
+          if (faction && playerCanSee(prov.id)) logBuild(faction.name, bDef.name, prov.name);
         }
 
       } else if (item.type === 'unit') {
@@ -192,7 +192,7 @@ function tickProductionQueues(factionId) {
             placeArmy(overflowArmy);
           }
 
-          if (faction) logRecruit(faction.name, uDef.name, uDef.stackSize, prov.name);
+          if (faction && playerCanSee(prov.id)) logRecruit(faction.name, uDef.name, uDef.stackSize, prov.name);
         }
 
       } else if (item.type === 'demolish') {
@@ -205,7 +205,7 @@ function tickProductionQueues(factionId) {
             Object.entries(bDef.cost).map(([r, v]) => [r, Math.floor(v / 2)])
           );
           addResources(factionId, refund);
-          if (faction) logBuild(faction.name, `Razed ${bDef.name}`, prov.name);
+          if (faction && playerCanSee(prov.id)) logBuild(faction.name, `Razed ${bDef.name}`, prov.name);
         }
       }
     }

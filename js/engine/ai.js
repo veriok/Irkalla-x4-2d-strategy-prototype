@@ -12,7 +12,7 @@
  */
 
 import { state, getProvince, getArmy, getProvincesByFaction, getArmiesByFaction,
-         moveArmy, captureProvince, placeArmy, getArmiesInProvince } from './game-state.js';
+         moveArmy, captureProvince, placeArmy, getArmiesInProvince, playerCanSee } from './game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { resolveCombat } from './combat.js';
 import { BUILDING_MAP, getBuildingsForLocation } from '../data/buildings-data.js';
@@ -87,7 +87,7 @@ export async function runAI(factionId) {
           const atkStr = armyAttackStrength(army, UNIT_MAP);
           if (atkStr >= militiaDef * 0.8) {
             const combatResult = resolveCombat(army.id, target.id);
-            if (combatResult) {
+            if (combatResult && playerCanSee(target.id)) {
               import('../ui/event-log.js').then(({ logCombat }) => logCombat(combatResult));
             }
             acted = true;
@@ -107,7 +107,7 @@ export async function runAI(factionId) {
 
         if (atkStr >= defStr * 0.8) {
           const combatResult = resolveCombat(army.id, target.id);
-          if (combatResult) {
+          if (combatResult && playerCanSee(target.id)) {
             import('../ui/event-log.js').then(({ logCombat }) => logCombat(combatResult));
           }
           acted = true;

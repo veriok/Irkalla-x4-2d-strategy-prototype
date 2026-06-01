@@ -155,6 +155,17 @@ export function getProvince(id)  { return state.provinces.get(id); }
 export function getArmy(id)      { return state.armies.get(id); }
 export function getFaction(id)   { return state.factions.get(id); }
 
+/**
+ * Returns true if the player can currently see the given province
+ * (visibility === 'visible').
+ * Used to suppress event-log entries for out-of-fog events.
+ */
+export function playerCanSee(provinceId) {
+  const prov = state.provinces.get(provinceId);
+  if (!prov) return false;
+  return prov.visibility === 'visible';
+}
+
 /** All armies currently stationed in a province */
 export function getArmiesInProvince(provinceId) {
   const prov = getProvince(provinceId);
