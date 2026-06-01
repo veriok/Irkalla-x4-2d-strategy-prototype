@@ -685,12 +685,14 @@ function _renderMonsterDenSidebar(prov, loc) {
     if (monDef) {
       const monCard = createCard({
         variant: 'unit',
+        backgroundSrc: NEUTRAL.unitCardBgImg ?? null,
+        foregroundSrc: monDef.cardSpriteImg ?? null,
         fallbackIcon: monDef.emoji,
         fallbackName: monDef.name,
         fallbackSub: `⚔${monDef.attack} 🛡${monDef.defense}`,
       });
       monCard.addEventListener('mouseenter', () =>
-        showUnitTooltip(monDef, { color: '#888', name: 'Neutral' }, monCard)
+        showUnitTooltip(monDef, NEUTRAL, monCard)
       );
       monCard.addEventListener('mouseleave', hideUnitTooltip);
       denInfo.appendChild(monCard);

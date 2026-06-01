@@ -120,4 +120,5 @@ export const NEUTRAL = {
   color: '#2a2a20',
   borderColor: '#3a3a28',
   textColor: '#888880',
+  unitCardBgImg: 'assets/cards/backgrounds/neutral-unit-bg.png',
 };
