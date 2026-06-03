@@ -249,7 +249,10 @@ export function canAfford(factionId, cost) {
 }
 
 /**
- * Roll a random treasure reward (30–100 gold, 50% chance of 5–15 primary resource).
+ * Roll a random treasure reward:
+ *   Always:  30–100 gold
+ *   50%:     5–15 primary faction resource
+ *   25%:     Ancient Scrolls — 20–50 research (hefty bonus)
  * Adds directly to faction resources and returns the gain object for display.
  */
 export function rollTreasure(factionId, provinceId) {
@@ -260,6 +263,9 @@ export function rollTreasure(factionId, provinceId) {
     if (fDef?.resources?.basic?.id) {
       gain[fDef.resources.basic.id] = 5 + Math.floor(Math.random() * 11);
     }
+  }
+  if (Math.random() < 0.25) {
+    gain.research = 20 + Math.floor(Math.random() * 31);
   }
   addResources(factionId, gain);
   return gain;

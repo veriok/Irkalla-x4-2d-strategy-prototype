@@ -29,6 +29,8 @@ import {
   LOCATION_BUILD_COSTS,
   LOCATION_BUILD_TURNS,
   LOCATION_BASE_SLOTS,
+  LOCATION_CLEAR_COSTS,
+  LOCATION_CLEAR_TECH_REQ,
   getInstalledBuildingIds,
   getAvailableBuildingSlots,
   getLocationResourceBonuses,
@@ -46,8 +48,11 @@ import {
   showBiomeTooltip, hideBiomeTooltip,
   showIncomeBreakdownTooltip, hideIncomeBreakdownTooltip,
 } from './tooltips.js';
+import { TECH_MAP } from '../data/techs-data.js';
 import { resolveMonsterDenCombat } from '../engine/combat.js';
 import { renderArmyPanel } from './army-panel.js';
+import { showResearchModalAndHighlight } from './research-modal.js';
+import { showDenCombatReportModal } from './modal.js';
 
 // ─── DOM refs ─────────────────────────────────────────────
 const overlayEl      = document.getElementById('province-modal-overlay');
@@ -325,7 +330,7 @@ function _renderLocationRows(prov) {
       fallbackName: loc.type === 'main_settlement' ? prov.name : typeMeta.name,
       fallbackSub: '',
     });
-    locCard.addEventListener('mouseenter', () => showLocationTooltip(typeMeta, locCard));
+    locCard.addEventListener('mouseenter', () => showLocationTooltip(typeMeta, locCard, loc));
     locCard.addEventListener('mouseleave', hideLocationTooltip);
     locCard.addEventListener('click', () => {
       if (_selectedLocId === loc.id && !_selectedSlotKey) {
@@ -430,11 +435,16 @@ function _renderSidebar(prov) {
 
     switch (loc.type) {
       case 'ruins':
-        _renderClearAction(prov, loc, 120, 3, 'Clear Ruins');
+      case 'dense_forest':
+      case 'dense_jungle':
+      case 'rocky_ground':
+      case 'frozen_wastes':
+      case 'dry_wastes':
+      case 'cleared_monster_den': {
+        const clearCost = LOCATION_CLEAR_COSTS[loc.type] ?? { gold: 120, turns: 3 };
+        _renderClearAction(prov, loc, clearCost.gold, clearCost.turns, `Clear ${LOCATION_TYPES[loc.type]?.name ?? loc.type}`);
         return;
-      case 'cleared_monster_den':
-        _renderClearAction(prov, loc, 20, 1, 'Clear Den');
-        return;
+      }
       case 'empty':
         if (isPlayerProvince) _renderBuildLocationMenu(prov, loc);
         return;
@@ -651,11 +661,15 @@ function _renderEmptySlotBuildMenu(prov, loc) {
   }
 }
 
-// ── Sidebar: clear ruins / cleared den ───────────────────
+// ── Sidebar: clear ruins / blockers / cleared den ────────
 function _renderClearAction(prov, loc, goldCost, turns, label) {
   if (prov.ownerId !== state.playerFactionId) return;
 
-  const cost      = { gold: goldCost };
+  const clearTechId   = LOCATION_CLEAR_TECH_REQ[loc.type];
+  const unlockedTechs = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
+  const hasTech       = !clearTechId || unlockedTechs.includes(clearTechId);
+
+  const cost       = { gold: goldCost };
   const affordable = canAfford(state.playerFactionId, cost);
   const queueFull  = (prov.productionQueue?.length ?? 0) >= 5;
   const alreadyQ   = prov.productionQueue?.some(i => i.type === 'clear_location' && i.locationId === loc.id);
@@ -663,19 +677,28 @@ function _renderClearAction(prov, loc, goldCost, turns, label) {
 
   const header = document.createElement('div');
   header.className = 'pmod-section-header';
-  header.textContent = LOCATION_TYPES[loc.type]?.name ?? loc.type;
+  header.textContent = typeMeta?.name ?? loc.type;
   sidebarActEl.appendChild(header);
+
+  // Build hint — tech missing gets a clickable span instead of plain text
+  let hintText = '';
+  let hintTechId = null;
+  if (alreadyQ)       hintText = 'Already queued';
+  else if (queueFull) hintText = 'Queue full';
+  else if (!hasTech)  hintTechId = clearTechId;
+  else if (!affordable) hintText = "Can't afford";
 
   const row = _makeActionRow({
     cardOpts: { variant: 'location', compositeSrc: typeMeta?.cardImg ?? null, fallbackIcon: '🧹', fallbackName: label, fallbackSub: '' },
     name: label,
     costLabel: `💰${goldCost} · ${turns}t`,
-    hint: alreadyQ ? 'Already queued' : queueFull ? 'Queue full' : !affordable ? "Can't afford" : '',
-    disabled: alreadyQ || queueFull || !affordable,
-    affordable,
-    onTooltip: (el) => { if (typeMeta) { el.addEventListener('mouseenter', () => showLocationTooltip(typeMeta, el)); el.addEventListener('mouseleave', hideLocationTooltip); } },
+    hint: hintText,
+    hintTechId,
+    disabled: alreadyQ || queueFull || !hasTech || !affordable,
+    affordable: hasTech && affordable,
+    onTooltip: (el) => { if (typeMeta) { el.addEventListener('mouseenter', () => showLocationTooltip(typeMeta, el, loc)); el.addEventListener('mouseleave', hideLocationTooltip); } },
     onClick: () => {
-      if (!spendResources(state.playerFactionId, cost)) return;
+      if (!hasTech || !spendResources(state.playerFactionId, cost)) return;
       enqueueProduction(prov, { type: 'clear_location', locationId: loc.id, turnsRemaining: turns, goldCost });
       renderResourceBar();
       _selectedLocId   = null;
@@ -708,7 +731,7 @@ function _renderBuildLocationMenu(prov, loc) {
       hint: alreadyQ ? 'Already queued' : queueFull ? 'Queue full' : !affordable ? "Can't afford" : '',
       disabled: alreadyQ || queueFull || !affordable,
       affordable,
-      onTooltip: (el) => { if (typeMeta) { el.addEventListener('mouseenter', () => showLocationTooltip(typeMeta, el)); el.addEventListener('mouseleave', hideLocationTooltip); } },
+      onTooltip: (el) => { if (typeMeta) { el.addEventListener('mouseenter', () => showLocationTooltip(typeMeta, el, loc)); el.addEventListener('mouseleave', hideLocationTooltip); } },
       onClick: () => {
         if (!spendResources(state.playerFactionId, cost)) return;
         enqueueProduction(prov, { type: 'build_location', locationId: loc.id, locationType: locType, turnsRemaining: turns });
@@ -751,7 +774,7 @@ function _renderConvertMenu(prov, loc) {
       hint: alreadyQ ? 'Already queued' : queueFull ? 'Queue full' : !affordable ? "Can't afford" : '',
       disabled: alreadyQ || queueFull || !affordable,
       affordable,
-      onTooltip: (el) => { if (typeMeta) { el.addEventListener('mouseenter', () => showLocationTooltip(typeMeta, el)); el.addEventListener('mouseleave', hideLocationTooltip); } },
+      onTooltip: (el) => { if (typeMeta) { el.addEventListener('mouseenter', () => showLocationTooltip(typeMeta, el, loc)); el.addEventListener('mouseleave', hideLocationTooltip); } },
       onClick: () => {
         if (!spendResources(state.playerFactionId, cost)) return;
         enqueueProduction(prov, { type: 'build_location', locationId: loc.id, locationType: locType, turnsRemaining: turns });
@@ -845,9 +868,8 @@ function _renderMonsterDenSidebar(prov, loc) {
 
       renderResourceBar();
       renderArmyPanel();
-      _selectedLocId   = null;
-      _selectedSlotKey = null;
-      _render();
+      hideProvinceModal();
+      showDenCombatReportModal(result);
     });
     row.appendChild(fightBtn);
     sidebarActEl.appendChild(row);
@@ -1025,10 +1047,10 @@ function _costStr(cost, allRes) {
 
 /**
  * Create a standardised action card row for the sidebar.
- * @param {{ cardOpts, name, costLabel, hint, disabled, affordable, onTooltip, onClick }} opts
+ * @param {{ cardOpts, name, costLabel, hint, hintTechId, disabled, affordable, onTooltip, onClick }} opts
  */
 function _makeActionRow(opts) {
-  const { cardOpts, name, costLabel, hint, disabled, affordable, onTooltip, onClick } = opts;
+  const { cardOpts, name, costLabel, hint, hintTechId, disabled, affordable, onTooltip, onClick } = opts;
 
   const row = document.createElement('div');
   row.className = `pmod-action-row${disabled ? ' disabled' : ''}${!disabled ? (affordable ? ' can-afford' : ' cannot-afford') : ''}`;
@@ -1060,6 +1082,21 @@ function _makeActionRow(opts) {
     const hintEl = document.createElement('div');
     hintEl.className   = 'pmod-action-hint';
     hintEl.textContent = hint;
+    info.appendChild(hintEl);
+  }
+
+  if (hintTechId) {
+    const hintEl = document.createElement('div');
+    hintEl.className = 'pmod-action-hint';
+    hintEl.append('Needs: ');
+    const techLink = document.createElement('span');
+    techLink.className   = 'pmod-action-hint-link';
+    techLink.textContent = TECH_MAP[hintTechId]?.name ?? hintTechId;
+    techLink.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showResearchModalAndHighlight(hintTechId);
+    });
+    hintEl.appendChild(techLink);
     info.appendChild(hintEl);
   }
 

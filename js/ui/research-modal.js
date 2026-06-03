@@ -39,6 +39,17 @@ export function refreshResearchModal() {
   _render();
 }
 
+export function showResearchModalAndHighlight(techId) {
+  showResearchModal();
+  requestAnimationFrame(() => {
+    const el = overlayEl.querySelector(`[data-tech-id="${techId}"]`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('tech-highlight-blink');
+    el.addEventListener('animationend', () => el.classList.remove('tech-highlight-blink'), { once: true });
+  });
+}
+
 // ── Rendering ─────────────────────────────────────────────
 
 function _render() {
@@ -103,7 +114,7 @@ function _renderTree(techTree, fs) {
     const grid = document.createElement('div');
     grid.className = 'rmod-era-grid';
     grid.style.gridTemplateColumns = `repeat(${maxCol + 1}, var(--rmod-card-w))`;
-    grid.style.gridTemplateRows    = `repeat(${maxRow + 1}, auto)`;
+    grid.style.gridTemplateRows    = `repeat(${maxRow + 1}, var(--rmod-row-h))`;
     eraSection.appendChild(grid);
 
     for (const techDef of techs) {
@@ -233,9 +244,9 @@ function _drawLines(techTree, fs) {
       const yOffset     = (clamped / MAX_ROW_DIFF) * maxOffset;
 
       const x1 = sourceOff.x + sourceEl.offsetWidth; // right edge of source
-      const y1 = sourceCenterY + yOffset;             // departure: shifted from center
+      const y1 = sourceCenterY + yOffset;             // departure: shifted toward target
       const x2 = targetOff.x;                         // left edge of target
-      const y2 = targetCenterY + yOffset;             // arrival: same shift
+      const y2 = targetCenterY - yOffset;             // arrival: shifted toward source (opposite direction)
       const midX = (x1 + x2) / 2;
 
       // Polyline: horizontal → vertical step → horizontal (angular, like Civ 4)

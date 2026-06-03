@@ -6,6 +6,7 @@
 
 import { state } from '../engine/game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
+import { MONSTER_UNITS } from '../data/monsters-data.js';
 
 const overlayEl  = document.getElementById('modal-overlay');
 const titleEl    = document.getElementById('modal-title');
@@ -65,6 +66,64 @@ export function hideModal() {
 overlayEl.addEventListener('click', e => {
   if (e.target === overlayEl) hideModal();
 });
+
+/**
+ * Show a den assault report modal directly from a resolveMonsterDenCombat result.
+ * @param {Object} result — return value of resolveMonsterDenCombat
+ */
+export function showDenCombatReportModal(result) {
+  const { outcome, rounds, treasure, armyCasualties, armyWounded, enemyCasualties,
+          startEnemyCount, monsterUnitId, provinceName, factionId, turn } = result;
+
+  const monDef     = MONSTER_UNITS[monsterUnitId] ?? { name: monsterUnitId, emoji: '👹' };
+  const factionDef = FACTION_MAP[factionId];
+  const attName    = factionDef?.name ?? factionId;
+
+  const won = outcome === 'attacker';
+
+  const outcomeLabel = won ? '🏆 Den Cleared!' : '💀 Repelled!';
+  const outcomeColor = won ? '#4caf50' : '#c06040';
+
+  const treasureLabels = { gold: '💰 Gold', research: '📚 Ancient Scrolls' };
+  const treasureHtml = (won && treasure)
+    ? `<div class="cr-treasure">Treasure found: <strong>${
+        Object.entries(treasure)
+          .map(([r, a]) => `+${a} ${treasureLabels[r] ?? r}`)
+          .join(', ')
+      }</strong></div>`
+    : won ? '<div class="cr-terrain">No treasure found.</div>'
+    : '';
+
+  const body = document.createElement('div');
+  body.className = 'combat-report-body';
+
+  body.innerHTML = `
+    <div class="cr-header">
+      <span class="cr-province">${provinceName}</span>
+      <span class="cr-turn">Turn ${turn}</span>
+    </div>
+    <div class="cr-outcome" style="color:${outcomeColor}">${outcomeLabel}</div>
+    <div class="cr-strengths">
+      <span>⚔ ${attName}</span>
+      <span>👹 ${startEnemyCount}× ${monDef.emoji} ${monDef.name}</span>
+    </div>
+    <hr class="cr-divider">
+    <div class="cr-rounds-title">Assault Narrative</div>
+    <ol class="cr-rounds">
+      ${rounds.map(r => `<li>${r}</li>`).join('')}
+    </ol>
+    <hr class="cr-divider">
+    <div class="cr-losses">
+      <span>📉 ${attName}: <strong>${armyCasualties}</strong> lost, <strong>${armyWounded}</strong> wounded</span>
+      <span>💀 Enemies slain: <strong>${enemyCasualties}</strong> / ${startEnemyCount}</span>
+    </div>
+    ${treasureHtml}
+  `;
+
+  showModal(`👹 Den Assault — ${provinceName}`, body, [
+    { label: 'Close' },
+  ]);
+}
 
 /**
  * Show a combat report modal for a given reportId.

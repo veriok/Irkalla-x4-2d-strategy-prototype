@@ -200,7 +200,7 @@ function renderLocations(prov) {
     card.title = typeMeta.name;
 
     if (typeMeta.description) {
-      card.addEventListener('mouseenter', () => showLocationTooltip(typeMeta, card));
+      card.addEventListener('mouseenter', () => showLocationTooltip(typeMeta, card, loc));
       card.addEventListener('mouseleave', hideLocationTooltip);
     }
 

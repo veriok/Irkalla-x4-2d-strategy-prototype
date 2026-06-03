@@ -20,6 +20,7 @@
   --rmod-card-h: 78px;
   --rmod-era-gap: 32px;
   --rmod-card-gap: 10px;
+  --rmod-row-h: 122px;
 
   background: var(--bg-panel);
   border: 2px solid var(--border);
@@ -128,7 +129,7 @@
   display: grid;
   column-gap: 10px;
   row-gap: var(--rmod-card-gap);
-  align-items: start;
+  align-items: center;
 }
 
 .rmod-era-header {
@@ -152,7 +153,8 @@
   color: var(--text);
   word-break: break-word;
   margin-bottom: 2px;
-  min-height: 18px;
+  height: 22px;       /* fixed: fits 2 lines — keeps cards vertically aligned */
+  overflow: hidden;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -213,6 +215,15 @@
 }
 .rmod-tech-item .game-card.tech-affordable {
   border-color: var(--accent);
+}
+
+/* Highlight blink when navigated from a tech requirement link */
+@keyframes tech-blink {
+  0%,  100% { outline: 2px solid transparent; box-shadow: none; }
+  33%, 66%  { outline: 2px solid gold; box-shadow: 0 0 10px gold; }
+}
+.rmod-tech-item.tech-highlight-blink {
+  animation: tech-blink 1.2s ease-in-out 2;
 }
 
 /* SVG connection lines */

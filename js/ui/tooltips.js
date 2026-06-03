@@ -7,7 +7,9 @@
  */
 
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
+import { MONSTER_UNITS } from '../data/monsters-data.js';
 import { BUILDING_MAP, LOCATION_MAIN_CHAIN } from '../data/buildings-data.js';
+import { LOCATION_TYPES } from '../models/location.js';
 import { state } from '../engine/game-state.js';
 import { TRAIT_MAP } from '../data/traits-data.js';
 import { createNativePreviewCard } from './card-renderer.js';
@@ -156,15 +158,34 @@ export function hideUnitTooltip() {
 
 /**
  * Show a tooltip for a location type.
- * @param {Object} locTypeMeta  — entry from LOCATION_TYPES
+ * @param {Object}  locTypeMeta  — entry from LOCATION_TYPES
  * @param {Element} anchorEl
+ * @param {Object}  [locData]    — actual location object (used for den enemy info)
  */
-export function showLocationTooltip(locTypeMeta, anchorEl) {
+export function showLocationTooltip(locTypeMeta, anchorEl, locData = null) {
   if (!tooltipEl || !locTypeMeta) return;
   clearTimeout(_hideTimer);
+
+  let denHtml = '';
+  if (locData?.denEnemies) {
+    const den     = locData.denEnemies;
+    const monDef  = MONSTER_UNITS[den.unitId];
+    const active  = den.hp.length;
+    const total   = den.hp.length + den.woundedHp.length;
+    const pct     = total > 0 ? Math.round((active / total) * 100) : 0;
+    const barColor = pct > 66 ? '#c04040' : pct > 33 ? '#c8a030' : '#888';
+    denHtml = `
+      <hr class="btt-hr">
+      <div class="btt-row">${active}/${total} ${monDef?.emoji ?? '👹'} ${monDef?.name ?? den.unitId}</div>
+      <div class="btt-den-bar-wrap">
+        <div class="btt-den-bar" style="width:${pct}%;background:${barColor};"></div>
+      </div>`;
+  }
+
   tooltipEl.innerHTML = `
     <div class="btt-header">${locTypeMeta.emoji ?? ''} ${locTypeMeta.name ?? ''}</div>
     <div class="btt-desc">${locTypeMeta.description ?? ''}</div>
+    ${denHtml}
   `.trim();
   tooltipEl.hidden = false;
   requestAnimationFrame(() => {
@@ -355,6 +376,11 @@ function _buildTechHtml(techDef) {
 
   if (techDef.militiaBonus) {
     effectParts.push(`⚔ Militia max: +${techDef.militiaBonus}`);
+  }
+
+  for (const locTypeId of (techDef.clearsLocationTypes ?? [])) {
+    const loc = LOCATION_TYPES[locTypeId];
+    if (loc) effectParts.push(`Allows clearing: ${loc.emoji} ${loc.name}`);
   }
 
   const effectSection = effectParts.length > 0

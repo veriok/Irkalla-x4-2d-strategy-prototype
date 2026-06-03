@@ -306,6 +306,15 @@
   color: var(--danger);
   font-style: italic;
 }
+.pmod-action-hint-link {
+  cursor: pointer;
+  text-decoration: underline;
+  color: var(--warning, #f0a500);
+  font-style: italic;
+}
+.pmod-action-hint-link:hover {
+  opacity: 0.8;
+}
 
 /* Sidebar section headers */
 .pmod-section-header {

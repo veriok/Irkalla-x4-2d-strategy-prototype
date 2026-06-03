@@ -19,13 +19,6 @@ export const RACE_IDS = Object.freeze({
   HUMAN:  'human',
 });
 
-export const FACTION_IDS = Object.freeze({
-  DWARVES: 'dwarves',
-  ELVES:   'elves',
-  LIZARDS: 'lizards',
-  DRAIG:   'draig',
-});
-
 export const RESOURCE_IDS = Object.freeze({
   GOLD:           'gold',
   RESEARCH:       'research',

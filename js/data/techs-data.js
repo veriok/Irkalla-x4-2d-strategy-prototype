@@ -156,6 +156,7 @@ const STONE_AGE = [
     quote: '"Stone endures. Stone remembers. Build in stone, and your name shall outlast your flesh."',
     description: 'Shaped stone allows permanent fortifications. Allows upgrade of forts to tier 2.',
     unlockBuildings: ['fortress_1'],
+    clearsLocationTypes: ['rocky_ground'],
   },
 ];
 
@@ -220,6 +221,7 @@ const BRONZE_AGE = [
     quote: '"Copper bends. Tin yields. Together they forge something neither can be alone."',
     description: 'Superior metal alloy. All infantry units gain +1 attack.',
     unitStatBonuses: [{ unitType: UNIT_TYPES.INFANTRY, stat: 'attack', amount: 1 }],
+    clearsLocationTypes: ['dense_forest', 'dry_wastes'],
   },
 
   // ── col 1 — advanced ────────────────────────────────────
@@ -325,6 +327,7 @@ const IRON_AGE = [
       { unitType: UNIT_TYPES.INFANTRY, stat: 'attack',  amount: 2 },
       { unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
     ],
+    clearsLocationTypes: ['dense_jungle', 'frozen_wastes'],
   },
 
   // ── col 1 — advanced ────────────────────────────────────

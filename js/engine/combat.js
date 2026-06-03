@@ -638,7 +638,7 @@ export function estimateCombat(attackerArmyId, targetProvinceId) {
 /**
  * Resolve a monster den combat between a player army and the den's occupants.
  * Runs 3 rounds of simplified simultaneous combat.
- * On attacker win: den converts to cleared_monster_den and treasure is rolled.
+ * On attacker win: den converts directly to an empty plot and treasure is rolled.
  * On defender win: army takes casualties, den HP is updated but type unchanged.
  *
  * @param {string} armyId
@@ -661,6 +661,11 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
 
   const rounds = [];
   const ROUNDS = 3;
+  let totalArmyCasualties  = 0;
+  let totalArmyWounded     = 0;
+  let totalEnemyCasualties = 0;
+  const monsterUnitId  = loc.denEnemies.unitId;
+  const startEnemyCount = loc.denEnemies.hp.length + loc.denEnemies.woundedHp.length;
 
   for (let r = 1; r <= ROUNDS; r++) {
     const armyUnits = _collectArmyUnits(army, army.factionId);
@@ -714,6 +719,9 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
 
     const result = _applyBatchDamageToArmy(army, armyDmgMap);
     armyDestroyed = result.destroyed;
+    totalArmyCasualties  += armyDestroyed;
+    totalArmyWounded     += result.wounded;
+    totalEnemyCasualties += denDestroyed;
 
     rounds.push(`Round ${r}: Your forces dealt ${denDmgDealt} damage (${denDestroyed} enemies slain). Monsters struck back for ${armyDmgDealt} damage (${armyDestroyed} of your units lost).`);
   }
@@ -731,7 +739,10 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
 
   let treasure = null;
   if (outcome === 'attacker') {
-    loc.type = 'cleared_monster_den';
+    loc.type = 'empty';
+    loc.buildings = [];
+    loc.buildingSlots = 0;
+    delete loc.denEnemies;
     if (Math.random() < 0.65) {
       treasure = rollTreasure(army.factionId, provinceId);
     }
@@ -745,5 +756,17 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
     logMessage(`⚔ ${factionDef?.name ?? army.factionId} failed to clear the monster den in ${prov.name}.`);
   }
 
-  return { outcome, rounds, treasure };
+  return {
+    outcome,
+    rounds,
+    treasure,
+    armyCasualties:   totalArmyCasualties - totalArmyWounded,
+    armyWounded:      totalArmyWounded,
+    enemyCasualties:  totalEnemyCasualties,
+    startEnemyCount,
+    monsterUnitId,
+    provinceName:     prov.name,
+    factionId:        army.factionId,
+    turn:             state.turn,
+  };
 }

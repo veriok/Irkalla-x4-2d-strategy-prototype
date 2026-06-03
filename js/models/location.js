@@ -57,6 +57,41 @@ export const LOCATION_TYPES = {
     cardImg: 'assets/cards/locations/cleared_monster_den.png',
     description: 'The creatures have been driven out. Clear the remaining debris to build here.',
   },
+  dense_forest: {
+    name: 'Dense Forest',
+    emoji: '🌳',
+    isControllable: false,
+    cardImg: null,
+    description: 'A thick tangle of ancient trees. Requires Bronze Working to clear.',
+  },
+  dense_jungle: {
+    name: 'Dense Jungle',
+    emoji: '🌿',
+    isControllable: false,
+    cardImg: null,
+    description: 'An impenetrable jungle growth. Requires Iron Working to clear.',
+  },
+  rocky_ground: {
+    name: 'Rocky Ground',
+    emoji: '🪨',
+    isControllable: false,
+    cardImg: null,
+    description: 'Difficult terrain riddled with boulders. Requires Masonry to clear.',
+  },
+  frozen_wastes: {
+    name: 'Frozen Wastes',
+    emoji: '🧊',
+    isControllable: false,
+    cardImg: null,
+    description: 'Permafrost and ice-locked ground. Requires Iron Working to clear.',
+  },
+  dry_wastes: {
+    name: 'Dry Wastes',
+    emoji: '🏜️',
+    isControllable: false,
+    cardImg: null,
+    description: 'Arid, cracked earth unsuitable for development. Requires Bronze Working to clear.',
+  },
   empty: {
     name: 'Empty Plot',
     emoji: '🌿',
@@ -84,6 +119,26 @@ export const LOCATION_STARTING_BUILDING = {
   village: 'mercantile_1',
   fort:    'palisade',
   shrine:  'religious_1',
+};
+
+/** Gold cost and turn count to clear each clearable location type */
+export const LOCATION_CLEAR_COSTS = {
+  ruins:               { gold: 120, turns: 3 },
+  dense_forest:        { gold: 80,  turns: 2 },
+  dense_jungle:        { gold: 120, turns: 3 },
+  rocky_ground:        { gold: 80,  turns: 2 },
+  frozen_wastes:       { gold: 100, turns: 3 },
+  dry_wastes:          { gold: 80,  turns: 2 },
+  cleared_monster_den: { gold: 20,  turns: 1 },
+};
+
+/** Tech ID required to be researched before the Clear action is available */
+export const LOCATION_CLEAR_TECH_REQ = {
+  dense_forest:  'bronze_working',
+  dense_jungle:  'iron_working',
+  rocky_ground:  'masonry',
+  frozen_wastes: 'iron_working',
+  dry_wastes:    'bronze_working',
 };
 
 /**

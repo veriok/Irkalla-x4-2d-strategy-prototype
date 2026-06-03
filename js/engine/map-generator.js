@@ -18,7 +18,7 @@
 import { Delaunay } from 'd3-delaunay';
 import { getBiome } from '../data/biomes-data.js';
 import { BIOME_DEN_ENCOUNTER, MONSTER_UNITS } from '../data/monsters-data.js';
-import { LOCATION_BASE_SLOTS, LOCATION_STARTING_BUILDING } from '../models/location.js';
+import { LOCATION_BASE_SLOTS, LOCATION_STARTING_BUILDING, LOCATION_TYPES } from '../models/location.js';
 
 // ─── Map size configurations ──────────────────────────────
 export const MAP_SIZES = {
@@ -64,6 +64,17 @@ const LOCATION_TYPE_WEIGHTS = {
   tundra:    { village: 3, fort: 2, monster_den: 4 },
   swamp:     { village: 2, monster_den: 5, ruins: 3, shrine: 1 },
   coastal:   { village: 4, fort: 2, ruins: 2, shrine: 2 },
+};
+
+// ─── Blocker terrain weights per biome (for secondary slots) ─
+const BIOME_BLOCKER_WEIGHTS = {
+  plains:    { dense_forest: 1 },
+  forest:    { dense_forest: 1 },
+  mountains: { rocky_ground: 1 },
+  desert:    { dry_wastes: 1 },
+  tundra:    { frozen_wastes: 1 },
+  swamp:     { dense_jungle: 1 },
+  coastal:   { dense_forest: 1 },
 };
 
 function pickWeighted(rng, weights) {
@@ -255,49 +266,60 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
     if (rng() < 0.35 && locCount < 5) locCount++;
   }
 
-  const weights  = LOCATION_TYPE_WEIGHTS[biomeId] || LOCATION_TYPE_WEIGHTS.plains;
   const locations = [];
-  const usedTypes = new Set();
 
-  if (isStartingProvince) {
+  // Only the true faction capital gets a main_settlement
+  if (isCapital) {
     locations.push({
       id: `${provinceId}_loc_0`,
       provinceId,
       type: 'main_settlement',
       isControllable: true,
-      isCapital,
+      isCapital: true,
       buildingSlots: 2,
       buildings: [],
     });
   } else {
-    const t = rng() < 0.5 ? 'village' : (rng() < 0.5 ? 'ruins' : 'shrine');
+    // All other provinces (starting or not) get one productive first location
+    const firstLocOptions = ['village', 'fort', 'shrine', 'ruins'];
+    const t = firstLocOptions[Math.floor(rng() * 4)];
     locations.push({
       id: `${provinceId}_loc_0`,
       provinceId,
       type: t,
-      isControllable: t !== 'monster_den',
+      isControllable: LOCATION_TYPES[t]?.isControllable ?? false,
       isCapital: false,
       buildingSlots: LOCATION_BASE_SLOTS[t] ?? 1,
       buildings: LOCATION_STARTING_BUILDING[t] ? [{ buildingId: LOCATION_STARTING_BUILDING[t] }] : [],
     });
   }
 
-  for (let i = 1; i < locCount; i++) {
-    const adjustedWeights = usedTypes.has('monster_den')
-      ? Object.fromEntries(Object.entries(weights).filter(([k]) => k !== 'monster_den'))
-      : weights;
+  const blockerWeights = BIOME_BLOCKER_WEIGHTS[biomeId] ?? {};
+  const hasBlockers = Object.keys(blockerWeights).length > 0;
 
-    const type = pickWeighted(rng, adjustedWeights);
-    usedTypes.add(type);
-    const isControllable = type !== 'monster_den';
+  for (let i = 1; i < locCount; i++) {
+    const hasDen = locations.some(l => l.type === 'monster_den');
+
+    const roll = rng();
+    let type;
+    if (roll < 0.25) {
+      type = 'empty';
+    } else if (roll < 0.50) {
+      // 25% monster den slot — if den already placed, use a blocker instead
+      type = !hasDen ? 'monster_den' : (hasBlockers ? pickWeighted(rng, blockerWeights) : 'empty');
+    } else {
+      // 50% biome blocker (fall back to empty if biome has none)
+      type = hasBlockers ? pickWeighted(rng, blockerWeights) : 'empty';
+    }
+
     const loc = {
       id: `${provinceId}_loc_${i}`,
       provinceId,
       type,
-      isControllable,
+      isControllable: LOCATION_TYPES[type]?.isControllable ?? false,
       isCapital: false,
       buildingSlots: LOCATION_BASE_SLOTS[type] ?? 1,
-      buildings: LOCATION_STARTING_BUILDING[type] ? [{ buildingId: LOCATION_STARTING_BUILDING[type] }] : [],
+      buildings: [],
     };
     if (type === 'monster_den') {
       loc.denEnemies = _makeDenEnemies(biomeId);
