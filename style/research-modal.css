@@ -127,7 +127,7 @@
 
 .rmod-era-grid {
   display: grid;
-  column-gap: 10px;
+  column-gap: 18px;
   row-gap: var(--rmod-card-gap);
   align-items: center;
 }
