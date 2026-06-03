@@ -86,6 +86,10 @@ export function createCard(opts = {}) {
  * Build a larger 2:3 card preview for tooltip display.
  * Uses same media/fallback rules as regular cards.
  */
+export function getTechCardImage(techId) {
+  return `assets/cards/techs/${techId}.png`;
+}
+
 export function createNativePreviewCard(opts = {}) {
   const card = createCard({ ...opts, variant: 'preview', extraClass: 'game-card--native-preview' });
   return card;

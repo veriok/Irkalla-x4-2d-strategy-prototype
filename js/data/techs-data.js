@@ -26,6 +26,9 @@
  *   resourceYieldPercentBonuses — [{ resourceId, percent }]
  *   militiaBonus             — flat addition to faction globalMilitiaBonus
  *
+ * Optional display fields:
+ *   img           — relative path to card image; defaults to assets/cards/techs/{id}.png
+ *
  * Override fields (only on race/faction replacement techs):
  *   replacesId    — id of the base tech slot this replaces
  *   factionId     — faction-specific override (highest priority)
@@ -61,7 +64,7 @@ import { FACTION_MAP } from './factions-data.js';
 const STONE_AGE = [
   // ── col 0 — root ────────────────────────────────────────
   {
-    id: 'agriculture', name: 'Agriculture', emoji: '🌾',
+    id: 'agriculture', name: 'Agriculture', emoji: '🌾', img: 'assets/cards/techs/agriculture.png',
     era: TECH_ERAS.STONE, col: 0, row: 0,
     baseCost: 40, requires: [],
     quote: '"Only those who toil in the soil understand that from the earth, all things flow."',
@@ -73,7 +76,7 @@ const STONE_AGE = [
     ],
   },
   {
-    id: 'hunting', name: 'Hunting', emoji: '🏹',
+    id: 'hunting', name: 'Hunting', emoji: '🏹', img: 'assets/cards/techs/hunting.png',
     era: TECH_ERAS.STONE, col: 0, row: 1,
     baseCost: 40, requires: [],
     quote: '"The greatest weapon is patience. The hunt teaches what armies cannot."',
@@ -81,7 +84,7 @@ const STONE_AGE = [
     unlockUnits: ['dwarf_bone_shot', 'elf_ranger', 'lizard_skink', 'draig_bowman'],
   },
   {
-    id: 'fishing', name: 'Fishing', emoji: '🎣',
+    id: 'fishing', name: 'Fishing', emoji: '🎣', img: 'assets/cards/techs/fishing.png',
     era: TECH_ERAS.STONE, col: 0, row: 2,
     baseCost: 40, requires: [],
     quote: '"He who controls the river controls the kingdom\'s stomach."',
@@ -89,7 +92,7 @@ const STONE_AGE = [
     unlockBuildings: ['fishing_raft'],
   },
   {
-    id: 'mysticism', name: 'Mysticism', emoji: '🌙',
+    id: 'mysticism', name: 'Mysticism', emoji: '🌙', img: 'assets/cards/techs/mysticism.png',
     era: TECH_ERAS.STONE, col: 0, row: 3,
     baseCost: 40, requires: [],
     quote: '"In the silence between heartbeats, the divine whispers its secrets."',
@@ -101,7 +104,7 @@ const STONE_AGE = [
     ],
   },
   {
-    id: 'mining', name: 'Mining', emoji: '⛏️',
+    id: 'mining', name: 'Mining', emoji: '⛏️', img: 'assets/cards/techs/mining.png',
     era: TECH_ERAS.STONE, col: 0, row: 4,
     baseCost: 40, requires: [],
     quote: '"Beneath every mountain sleeps a kingdom waiting to be unearthed."',

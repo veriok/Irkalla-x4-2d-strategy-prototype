@@ -8,7 +8,7 @@
 import { state, getFaction, canAfford, unlockTech, getEffectiveTechCost } from '../engine/game-state.js';
 import { computeIncome } from '../engine/turn-engine.js';
 import { TECH_MAP, buildFactionTechTree } from '../data/techs-data.js';
-import { createCard } from './card-renderer.js';
+import { createCard, getTechCardImage } from './card-renderer.js';
 import { TECH_ERAS } from '../data/enums.js';
 import { showTechTooltip, hideTechTooltip } from './tooltips.js';
 
@@ -152,6 +152,7 @@ function _makeTechItem(techDef, fs) {
 
   const card = createCard({
     variant: 'building',
+    compositeSrc: techDef.img ?? getTechCardImage(techDef.id),
     fallbackIcon: techDef.emoji,
     fallbackName: '',
     fallbackSub: '',
