@@ -32,6 +32,8 @@ const UNIT_DEFAULTS = {
   traitIds: [],
   isMilitia: false,
   unitType: UNIT_TYPES.INFANTRY,
+  techRequired: null,
+  obsoletedByTech: null,
 };
 
 function _normalizeUnit(u) {
@@ -115,6 +117,27 @@ const UNIT_DEFS = [
     requiredBuilding: 'necropolis_2',
   },
 
+  {
+    id: 'dwarf_bone_shot',
+    factionId: 'dwarves',
+    name: 'Bone Thrower',
+    emoji: '💀',
+    cardSpriteImg: 'assets/cards/units/dwarf_bone_shot.png',
+    description: 'Undead skeletons that hurl sharpened bone shards. Fragile but effective at range.',
+    attack: 5,
+    defense: 2,
+    tier: 1,
+    maxHp: 8,
+    movement: 1,
+    upkeepGold: 1,
+    unitType: UNIT_TYPES.ARCHER,
+    cost: { gold: 35, soul_essence: 5 },
+    buildTurns: 1,
+    stackSize: 2,
+    requiredBuilding: 'barracks',
+    techRequired: 'hunting',
+  },
+
   // ─────────────────────────────────────────────────────────
   // ELVES — Elven City States
   // ─────────────────────────────────────────────────────────
@@ -176,6 +199,27 @@ const UNIT_DEFS = [
     requiredBuilding: 'academy_2',
   },
 
+  {
+    id: 'elf_ranger',
+    factionId: 'elves',
+    name: 'Elven Ranger',
+    emoji: '🏹',
+    cardSpriteImg: 'assets/cards/units/elf_ranger.png',
+    description: 'Swift forest rangers trained in the art of the bow. Deadly at range.',
+    attack: 6,
+    defense: 2,
+    tier: 1,
+    maxHp: 8,
+    movement: 2,
+    upkeepGold: 1,
+    unitType: UNIT_TYPES.ARCHER,
+    cost: { gold: 35, timber: 4 },
+    buildTurns: 1,
+    stackSize: 2,
+    requiredBuilding: 'barracks',
+    techRequired: 'hunting',
+  },
+
   // ─────────────────────────────────────────────────────────
   // LIZARDS — Desert Hegemony
   // ─────────────────────────────────────────────────────────
@@ -197,6 +241,7 @@ const UNIT_DEFS = [
     buildTurns: 1,
     stackSize: 1,
     requiredBuilding: null,
+    techRequired: 'hunting',
   },
   {
     id: 'lizard_crocodile',
@@ -297,6 +342,27 @@ const UNIT_DEFS = [
     buildTurns: 2,
     stackSize: 1,
     requiredBuilding: 'dojo_1',
+  },
+
+  {
+    id: 'draig_bowman',
+    factionId: 'draig',
+    name: 'Dragon Bowman',
+    emoji: '🏹',
+    cardSpriteImg: 'assets/cards/units/draig_bowman.png',
+    description: 'Disciplined archers sworn to the Dragon code. Accurate and reliable.',
+    attack: 5,
+    defense: 2,
+    tier: 1,
+    maxHp: 8,
+    movement: 1,
+    upkeepGold: 1,
+    unitType: UNIT_TYPES.ARCHER,
+    cost: { gold: 35, honor: 4 },
+    buildTurns: 1,
+    stackSize: 2,
+    requiredBuilding: 'barracks',
+    techRequired: 'hunting',
   },
 
   // ─────────────────────────────────────────────────────────

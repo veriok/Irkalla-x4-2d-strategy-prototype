@@ -64,10 +64,18 @@ export function renderResourceBar() {
   // Income breakdown
   const breakdown = computeIncomeBreakdown(playerFactionId);
 
+  const RESEARCH_DEF = {
+    id: 'research',
+    name: 'Research',
+    emoji: '📚',
+    description: 'Accumulated knowledge. Spend to unlock technologies.',
+  };
+
   // Resource chips
   const allResources = [
     faction.resources.basic,
     ...faction.resources.advanced,
+    RESEARCH_DEF,
   ];
 
   resourceBarEl.innerHTML = allResources.map(res => {
@@ -80,8 +88,9 @@ export function renderResourceBar() {
     const tipLines   = info.sources.length > 0
       ? info.sources.map(s => `${s.label}: ${s.amount > 0 ? '+' : ''}${parseFloat(Number(s.amount).toFixed(2))}`).join('&#10;')
       : 'No income sources';
+    const isResearch = res.id === 'research';
 
-    return `<div class="resource-chip" title="${res.description}">
+    return `<div class="resource-chip${isResearch ? ' resource-chip--research' : ''}" title="${res.description}" ${isResearch ? 'id="research-resource-chip"' : ''}>
       <div class="r-row-top">
         <span class="r-icon">${res.emoji}</span>
         <span class="r-name">${res.name}</span>
@@ -92,4 +101,15 @@ export function renderResourceBar() {
       </div>
     </div>`;
   }).join('');
+
+  // Wire research chip click to open research modal (if available)
+  const researchChip = document.getElementById('research-resource-chip');
+  if (researchChip) {
+    researchChip.style.cursor = 'pointer';
+    researchChip.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('open-research-modal'));
+    });
+  }
 }
+
+document.addEventListener('technology-researched', () => renderResourceBar());

@@ -1,0 +1,227 @@
+/* ═══════════════════════════════════════════════════
+   RESEARCH MODAL
+   Full-viewport overlay for the tech tree.
+   Cards scoped within #research-modal.
+═══════════════════════════════════════════════════ */
+
+#research-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#research-modal-overlay[hidden] { display: none; }
+
+#research-modal {
+  --rmod-card-w: 52px;
+  --rmod-card-h: 78px;
+  --rmod-era-gap: 32px;
+  --rmod-card-gap: 10px;
+
+  background: var(--bg-panel);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 12px 64px rgba(0, 0, 0, 0.9);
+  width: 90vw;
+  max-width: 1100px;
+  height: 88vh;
+  max-height: 820px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Override card sizes inside the modal */
+#research-modal .game-card {
+  width: var(--rmod-card-w);
+  height: var(--rmod-card-h);
+}
+
+/* ── Header ─────────────────────────────────────── */
+#rmod-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-panel-alt);
+  flex-shrink: 0;
+}
+
+#rmod-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0;
+  white-space: nowrap;
+}
+
+#rmod-research-pool {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.rmod-balance {
+  font-size: 0.95rem;
+  color: var(--text);
+  font-weight: 600;
+}
+.rmod-income {
+  color: #4caf50;
+  font-size: 0.8rem;
+}
+.rmod-cost-multiplier {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+
+/* ── Body / scrollable tree ─────────────────────── */
+#rmod-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#rmod-tree-scroll {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  padding: 20px 24px 32px;
+}
+
+/* SVG overlay for connection lines — dimensions set dynamically in JS */
+#rmod-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* ── Era grid ───────────────────────────────────── */
+#rmod-tree-grid {
+  display: flex;
+  gap: var(--rmod-era-gap);
+  align-items: flex-start;
+  min-width: max-content;
+  position: relative;
+  z-index: 1;
+}
+
+.rmod-era-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: var(--rmod-card-w);
+}
+
+.rmod-era-grid {
+  display: grid;
+  column-gap: 10px;
+  row-gap: var(--rmod-card-gap);
+  align-items: start;
+}
+
+.rmod-era-header {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+/* ── Tech items ─────────────────────────────────── */
+.rmod-tech-name {
+  font-size: 8px;
+  text-align: center;
+  width: 100%;
+  line-height: 1.2;
+  color: var(--text);
+  word-break: break-word;
+  margin-bottom: 2px;
+  min-height: 18px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.rmod-tech-item {
+  display: flex;
+  flex-direction: column;
+  width: var(--rmod-card-w);
+  gap: 2px;
+}
+
+/* Unlock button — same width as card */
+.rmod-unlock-btn {
+  width: 100%;
+  font-size: 7px;
+  padding: 2px 0;
+  border-radius: 0 0 3px 3px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-dark);
+  color: var(--text);
+  transition: background 0.15s, border-color 0.15s;
+}
+.rmod-unlock-btn:hover:not(:disabled) {
+  background: var(--bg-panel-alt);
+  border-color: var(--accent);
+}
+.rmod-unlock-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rmod-unlocked-label {
+  font-size: 8px;
+  padding: 3px 0;
+  text-align: center;
+  color: #4caf50;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* Card state variants */
+.rmod-tech-item .game-card.tech-unlocked {
+  border-color: #4caf50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+}
+.rmod-tech-item .game-card.tech-available {
+  border-color: var(--accent);
+  box-shadow: 0 0 6px rgba(200, 149, 42, 0.35);
+}
+.rmod-tech-item .game-card.tech-locked {
+  opacity: 0.5;
+}
+.rmod-tech-item .game-card.tech-affordable {
+  border-color: var(--accent);
+}
+
+/* SVG connection lines */
+/* Polyline strokes */
+.rmod-line-unlocked  { stroke: #4caf50; stroke-opacity: 0.8; }
+.rmod-line-available { stroke: var(--accent, #c8952a); stroke-opacity: 0.8; }
+.rmod-line-locked    { stroke: #555; stroke-opacity: 0.55; }
+
+/* Arrow polygon fills */
+.rmod-arrow-unlocked  { fill: #4caf50; fill-opacity: 0.8; }
+.rmod-arrow-available { fill: var(--accent, #c8952a); fill-opacity: 0.8; }
+.rmod-arrow-locked    { fill: #555; fill-opacity: 0.55; }

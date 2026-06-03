@@ -20,6 +20,7 @@ import {
   spendResources,
   addResources,
   computeMilitiaMax,
+  getFaction,
 } from '../engine/game-state.js';
 import { FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
 import { getBiome } from '../data/biomes-data.js';
@@ -234,6 +235,7 @@ function _computeProvinceBreakdown(prov, playerFaction) {
   const advResId0 = playerFaction.resources.advanced?.[0]?.id;
   const advResId1 = playerFaction.resources.advanced?.[1]?.id;
   const factionResIds = new Set([
+    'research',
     playerFaction.resources.basic.id,
     ...(advResId0 ? [advResId0] : []),
     ...(advResId1 ? [advResId1] : []),
@@ -471,7 +473,9 @@ function _renderSlotActions(prov, loc, buildingId) {
   if (!bDef) { _renderRecruit(prov); return; }
 
   const installedIds = getInstalledBuildingIds(loc);
-  const allAvail   = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds);
+  const unlockedTechs = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
+  const allAvail   = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds)
+    .filter(b => !b.techRequired || unlockedTechs.includes(b.techRequired));
   const upgradeDef = allAvail.find(b => b.upgradeFromId === buildingId) ?? null;
 
   // Find upgrade blocked specifically by mainBuildingTier (all other requirements already met)
@@ -585,9 +589,10 @@ function _renderSlotActions(prov, loc, buildingId) {
 
 // ── Sidebar: empty slot (build menu) ─────────────────────
 function _renderEmptySlotBuildMenu(prov, loc) {
-  const installedIds = getInstalledBuildingIds(loc);
-  const available    = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds)
-    .filter(b => b.upgradeFromId === null);
+  const installedIds  = getInstalledBuildingIds(loc);
+  const unlockedTechs = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
+  const available     = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds)
+    .filter(b => b.upgradeFromId === null && (!b.techRequired || unlockedTechs.includes(b.techRequired)));
   const availableIds = new Set(available.map(b => b.id));
 
   // Tier-1 buildings blocked only by mainBuildingTier (all other prerequisites met)
@@ -857,16 +862,23 @@ function _renderRecruit(prov) {
   const faction   = FACTION_MAP[state.playerFactionId];
   const allRes    = faction ? [faction.resources.basic, ...faction.resources.advanced] : [];
 
+  const fs = getFaction(state.playerFactionId);
+  const unlockedTechs = fs?.unlockedTechs ?? [];
+  const obsoletedUnits = new Set(
+    (fs?.appliedTechEffects ?? []).flatMap(e => e.obsoleteUnits ?? [])
+  );
+
   const seen  = new Set();
   const units = [];
   for (const loc of prov.locations) {
     if (!loc.isControllable) continue;
     const installedIds = getInstalledBuildingIds(loc);
     for (const uDef of getRecruitableUnits(state.playerFactionId, installedIds, loc.type)) {
-      if (!seen.has(uDef.id)) {
-        seen.add(uDef.id);
-        units.push({ uDef, locationId: loc.id });
-      }
+      if (seen.has(uDef.id)) continue;
+      if (uDef.techRequired && !unlockedTechs.includes(uDef.techRequired)) continue;
+      if (obsoletedUnits.has(uDef.id)) continue;
+      seen.add(uDef.id);
+      units.push({ uDef, locationId: loc.id });
     }
   }
 

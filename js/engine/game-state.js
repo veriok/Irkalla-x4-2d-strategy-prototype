@@ -21,6 +21,7 @@
 import { FACTIONS, FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
+import { TECH_MAP } from '../data/techs-data.js';
 import { createProvince } from '../models/province.js';
 import {
   createArmy,
@@ -51,16 +52,20 @@ export const state = {
 // ─── Faction state factory ────────────────────────────────
 function createFactionState(faction) {
   // Build starting resource object from faction definition
-  const resources = { gold: 50 };   // everyone starts with 50 gold
+  const resources = { gold: 50, research: 0 };
   for (const adv of faction.resources.advanced) {
     resources[adv.id] = 20;
   }
   return {
-    id:             faction.id,
+    id:                    faction.id,
     resources,
-    isAI:           true,         // overridden for player faction during init
-    isEliminated:   false,
-    armySupplyCap:  9,            // max individual units per army (research can increase)
+    isAI:                  true,         // overridden for player faction during init
+    isEliminated:          false,
+    armySupplyCap:         9,
+    unlockedTechs:         [],           // string[] of unlocked tech ids
+    researchCostMultiplier: 1.0,         // *= 1.03 per unlock
+    appliedTechEffects:    [],           // effect objects from all unlocked techs
+    globalMilitiaBonus:    0,            // cumulative militia bonus from techs
   };
 }
 
@@ -206,7 +211,7 @@ export function getArmiesByFaction(factionId) {
 
 /**
  * Compute maximum militia count for a province.
- * Flat base of 3 + militiaBonus from all installed buildings.
+ * Flat base of 3 + militiaBonus from all installed buildings + faction tech bonus.
  */
 export function computeMilitiaMax(province) {
   if (province.isOcean) return 0;
@@ -217,6 +222,8 @@ export function computeMilitiaMax(province) {
       total += bDef?.militiaBonus ?? 0;
     }
   }
+  const fs = state.factions.get(province.ownerId);
+  total += fs?.globalMilitiaBonus ?? 0;
   return total;
 }
 
@@ -405,6 +412,44 @@ export function transferUnit(fromArmyId, toArmyId, typeId, count = 1) {
                        + (from.wounded ?? []).reduce((s, u) => s + u.count, 0);
   if (remainingUnits === 0) removeArmy(fromArmyId);
 
+  return true;
+}
+
+// ─── Research helpers ─────────────────────────────────────
+
+/** Get the actual cost to unlock a tech for a faction (base * multiplier, rounded up). */
+export function getEffectiveTechCost(factionId, baseCost) {
+  const fs = state.factions.get(factionId);
+  return Math.ceil(baseCost * (fs?.researchCostMultiplier ?? 1.0));
+}
+
+/**
+ * Unlock a technology for a faction.
+ * Spends research, updates faction tech state, and fires 'technology-researched' event.
+ * Returns true on success, false if cannot afford or tech already unlocked.
+ */
+export function unlockTech(factionId, techId) {
+  const techDef = TECH_MAP[techId];
+  if (!techDef) return false;
+
+  const fs = getFaction(factionId);
+  if (!fs) return false;
+  if (fs.unlockedTechs.includes(techId)) return false;
+
+  const cost = getEffectiveTechCost(factionId, techDef.baseCost);
+  if (!canAfford(factionId, { research: cost })) return false;
+
+  spendResources(factionId, { research: cost });
+  fs.unlockedTechs.push(techId);
+  fs.researchCostMultiplier = parseFloat((fs.researchCostMultiplier * 1.03).toFixed(6));
+  fs.appliedTechEffects.push(techDef);
+
+  // Apply cached state immediately so event listeners get clean data
+  if (techDef.militiaBonus) fs.globalMilitiaBonus += techDef.militiaBonus;
+
+  document.dispatchEvent(new CustomEvent('technology-researched', {
+    detail: { factionId, techId, techDef },
+  }));
   return true;
 }
 

@@ -19,6 +19,7 @@ import { renderResourceBar }   from './ui/resource-bar.js';
 import { renderArmyPanel, registerArmyPanelCallbacks } from './ui/army-panel.js';
 import { showProvincePanel, hideProvincePanel } from './ui/province-panel.js';
 import { refreshProvinceModal } from './ui/province-modal.js';
+import { showResearchModal, hideResearchModal, refreshResearchModal } from './ui/research-modal.js';
 import { initHotkeys } from './ui/hotkeys.js';
 import { initEndTurnButton }   from './ui/end-turn-btn.js';
 import { logTurn, logMessage } from './ui/event-log.js';
@@ -242,7 +243,24 @@ async function init() {
   // 12. End Turn button
   initEndTurnButton();
 
-  // 13. Hotkeys (ESC, m)
+  // 13. Research button + open-research-modal event (fired by resource chip click)
+  document.getElementById('research-btn')?.addEventListener('click', showResearchModal);
+  document.addEventListener('open-research-modal', showResearchModal);
+
+  // 14. Army panel: re-render immediately on tech unlock (unit stat changes)
+  document.addEventListener('technology-researched', ({ detail }) => {
+    if (detail?.techDef?.unitStatBonuses?.length) {
+      renderArmyPanel();
+    }
+  });
+
+  // 15. Province panel: re-render on tech unlock (income/militia changes)
+  document.addEventListener('technology-researched', () => {
+    if (state.selectedProvinceId) showProvincePanel(state.selectedProvinceId);
+    refreshProvinceModal();
+  });
+
+  // 16. Hotkeys (ESC, m)
   initHotkeys();
 
   // 13. Hook end-turn completion to refresh UI panels
@@ -273,6 +291,8 @@ function patchEndTurnCallback() {
       }
       // Refresh province modal if open
       refreshProvinceModal();
+      // Refresh research modal if open
+      refreshResearchModal();
     }
   }, 200);
 }

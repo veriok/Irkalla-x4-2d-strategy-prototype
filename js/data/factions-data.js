@@ -8,9 +8,12 @@
  *
  */
 
+import { RACE_IDS } from './enums.js';
+
 export const FACTIONS = [
   {
     id: 'dwarves',
+    raceId: RACE_IDS.DWARF,
     name: 'Kur-Malgal',           // "Realm of the Undying Forge" in faux-Babylonian
     fullName: 'Undead Dwarves',
     description:
@@ -36,6 +39,7 @@ export const FACTIONS = [
   },
   {
     id: 'elves',
+    raceId: RACE_IDS.ELF,
     name: 'Poleis tou Aethera',    // "City-States of the Aether" (faux-Greek)
     fullName: 'Elven City States',
     description:
@@ -60,6 +64,7 @@ export const FACTIONS = [
   },
   {
     id: 'lizards',
+    raceId: RACE_IDS.LIZARD,
     name: 'Khepri-Hegemony',       // Sun-disk reference (faux-Egyptian)
     fullName: 'Desert Hegemony',
     description:
@@ -84,6 +89,7 @@ export const FACTIONS = [
   },
   {
     id: 'draig',
+    raceId: RACE_IDS.HUMAN,
     name: 'Y Draig Goch',          // Welsh: "The Red Dragon"
     fullName: 'Humans — Dragon Worshippers',
     description:

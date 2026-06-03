@@ -35,6 +35,22 @@ import { logTurn, logBuild, logRecruit, logElimination } from '../ui/event-log.j
 // ─── Per-faction income calculation ──────────────────────
 
 /**
+ * Apply resourceYieldPercentBonuses from tech effects to an income object (mutates in place).
+ * Each tech's percent bonus stacks additively before multiplying.
+ */
+function _applyTechPercentBonuses(income, techEffects) {
+  const percentBonuses = {};
+  for (const eff of techEffects) {
+    for (const { resourceId, percent } of (eff.resourceYieldPercentBonuses ?? [])) {
+      percentBonuses[resourceId] = (percentBonuses[resourceId] ?? 0) + percent;
+    }
+  }
+  for (const [resId, pct] of Object.entries(percentBonuses)) {
+    if (income[resId]) income[resId] = parseFloat((income[resId] * (1 + pct / 100)).toFixed(2));
+  }
+}
+
+/**
  * Compute per-turn resource income for a faction.
  * Returns { [resourceId]: amount }
  */
@@ -43,22 +59,27 @@ export function computeIncome(factionId) {
   const faction = FACTION_MAP[factionId];
   if (!faction) return income;
 
+  const techEffects = getFaction(factionId)?.appliedTechEffects ?? [];
+
   // Base income: 3 gold per owned province
   const provinces = getProvincesByFaction(factionId);
   income.gold += provinces.length * 3;
 
-  // Building bonuses
+  // Building bonuses (includes tech per-building and per-category bonuses)
   for (const prov of provinces) {
     const biome = getBiome(prov.biomeId);
 
     for (const loc of prov.locations) {
       if (!loc.isControllable) continue;
-      const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, factionId);
+      const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, factionId, techEffects);
       for (const [res, amt] of Object.entries(bonuses)) {
         income[res] = (income[res] ?? 0) + Math.round(amt * biome.resourceMod);
       }
     }
   }
+
+  // Tech percent yield bonuses applied to total income
+  _applyTechPercentBonuses(income, techEffects);
 
   return income;
 }
@@ -71,6 +92,8 @@ export function computeIncomeBreakdown(factionId) {
   const breakdown = {};
   const faction   = FACTION_MAP[factionId];
   if (!faction) return breakdown;
+
+  const techEffects = getFaction(factionId)?.appliedTechEffects ?? [];
 
   function addSource(resId, label, amount) {
     if (!breakdown[resId]) breakdown[resId] = { total: 0, sources: [] };
@@ -86,7 +109,7 @@ export function computeIncomeBreakdown(factionId) {
 
     for (const loc of prov.locations) {
       if (!loc.isControllable) continue;
-      const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, factionId);
+      const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, factionId, techEffects);
       for (const [res, amt] of Object.entries(bonuses)) {
         const adjusted = parseFloat((amt * biome.resourceMod).toFixed(2));
         if (adjusted !== 0) {
@@ -97,6 +120,21 @@ export function computeIncomeBreakdown(factionId) {
 
     for (const [res, amt] of Object.entries(provTotals)) {
       if (amt !== 0) addSource(res, prov.name, amt);
+    }
+  }
+
+  // Tech percent yield bonuses — add as a named source
+  const percentBonuses = {};
+  for (const eff of techEffects) {
+    for (const { resourceId, percent } of (eff.resourceYieldPercentBonuses ?? [])) {
+      percentBonuses[resourceId] = (percentBonuses[resourceId] ?? 0) + percent;
+    }
+  }
+  for (const [resId, pct] of Object.entries(percentBonuses)) {
+    const base = breakdown[resId]?.total ?? 0;
+    if (base > 0) {
+      const bonus = parseFloat((base * (pct / 100)).toFixed(2));
+      if (bonus !== 0) addSource(resId, `Technology (+${pct}%)`, bonus);
     }
   }
 

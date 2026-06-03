@@ -18,9 +18,11 @@ for (const f of FACTIONS) {
   ALL_RES[f.resources.basic.id] = f.resources.basic;
   for (const r of f.resources.advanced) ALL_RES[r.id] = r;
 }
+ALL_RES['research'] = { id: 'research', name: 'Research', emoji: '📚' };
 
 const tooltipEl = document.getElementById('building-tooltip');
 const unitTooltipEl = document.getElementById('unit-tooltip');
+const techTooltipEl = document.getElementById('tech-tooltip');
 
 let _hideTimer = null;
 
@@ -281,7 +283,107 @@ window.addEventListener('scroll', () => {
   if (unitTooltipEl) unitTooltipEl.hidden = true;
 }, true);
 
+// ─── Tech tooltip ─────────────────────────────────────────
+
+export function showTechTooltip(techDef, anchorEl) {
+  if (!techTooltipEl || !techDef) return;
+  clearTimeout(_hideTimer);
+
+  techTooltipEl.innerHTML = _buildTechHtml(techDef);
+  techTooltipEl.hidden = false;
+
+  requestAnimationFrame(() => {
+    const rect = anchorEl.getBoundingClientRect();
+    const tw   = 220;
+    const th   = techTooltipEl.offsetHeight;
+
+    let left = rect.right + 8;
+    let top  = rect.top;
+
+    if (left + tw > window.innerWidth  - 8) left = rect.left - tw - 8;
+    if (top  + th > window.innerHeight - 8) top  = window.innerHeight - th - 8;
+    top = Math.max(8, top);
+
+    techTooltipEl.style.left = `${left}px`;
+    techTooltipEl.style.top  = `${top}px`;
+    techTooltipEl.classList.add('visible');
+  });
+}
+
+export function hideTechTooltip() {
+  if (!techTooltipEl) return;
+  techTooltipEl.classList.remove('visible');
+  _hideTimer = setTimeout(() => { techTooltipEl.hidden = true; }, 80);
+}
+
+function _buildTechHtml(techDef) {
+  const effectParts = [];
+
+  for (const { buildingId, bonusKey, amount } of (techDef.buildingBonuses ?? [])) {
+    const b = BUILDING_MAP[buildingId];
+    const r = ALL_RES[bonusKey];
+    if (b && r) effectParts.push(`${b.emoji} ${b.name}: ${r.emoji} +${amount}/turn ${r.name}`);
+  }
+
+  for (const { category, bonusKey, amount } of (techDef.buildingCategoryBonuses ?? [])) {
+    const r = ALL_RES[bonusKey];
+    const catLabel = category.charAt(0).toUpperCase() + category.slice(1);
+    if (r) effectParts.push(`🏗 ${catLabel} buildings: ${r.emoji} +${amount}/turn ${r.name}`);
+  }
+
+  for (const { unitId, unitType, stat, amount } of (techDef.unitStatBonuses ?? [])) {
+    const subject = unitId ? unitId : (unitType ? unitType.charAt(0).toUpperCase() + unitType.slice(1) : 'Units');
+    effectParts.push(`⚔ ${subject}: +${amount} ${stat.charAt(0).toUpperCase() + stat.slice(1)}`);
+  }
+
+  if ((techDef.unlockBuildings ?? []).length > 0) {
+    const names = techDef.unlockBuildings.map(id => {
+      const b = BUILDING_MAP[id];
+      return b ? `${b.emoji} ${b.name}` : id;
+    }).join(', ');
+    effectParts.push(`🔓 Unlocks: ${names}`);
+  }
+
+  if ((techDef.unlockUnits ?? []).length > 0) {
+    effectParts.push(`🔓 Unlocks unit: ${techDef.unlockUnits.join(', ')}`);
+  }
+
+  for (const { resourceId, percent } of (techDef.resourceYieldPercentBonuses ?? [])) {
+    const r = ALL_RES[resourceId];
+    if (r) effectParts.push(`📊 ${r.emoji} ${r.name}: +${percent}% income`);
+  }
+
+  if (techDef.militiaBonus) {
+    effectParts.push(`⚔ Militia max: +${techDef.militiaBonus}`);
+  }
+
+  const effectSection = effectParts.length > 0
+    ? `<div class="btt-section">${effectParts.map(e => `<div class="btt-row btt-bonus">▸ ${e}</div>`).join('')}</div>`
+    : '';
+
+  const quoteSection = techDef.quote
+    ? `<hr class="btt-hr"><div class="btt-lore">${techDef.quote}</div>`
+    : '';
+
+  return `
+    <div class="btt-header">${techDef.emoji ?? ''} ${techDef.name ?? ''}</div>
+    <div class="btt-desc">${techDef.description ?? ''}</div>
+    ${effectSection}
+    ${quoteSection}
+  `.trim();
+}
+
 // ─── HTML builder ─────────────────────────────────────────
+
+const CATEGORY_COLORS = {
+  trade:          '#b8860b',
+  administration: '#4a7abf',
+  exploration:    '#2e8b7a',
+  training:       '#b85c2a',
+  defensive:      '#6a7080',
+  worshipping:    '#7b52a8',
+  scientific:     '#3a8050',
+};
 
 function _buildHtml(bDef, opts = {}) {
   // Cost line(s)
@@ -326,6 +428,23 @@ function _buildHtml(bDef, opts = {}) {
     bonusParts.push(`⚔ +${bDef.militiaBonus} Militia max`);
   }
 
+  // Tech-applied bonuses for this specific building
+  const techEffects = state.factions?.get(state.playerFactionId)?.appliedTechEffects ?? [];
+  for (const eff of techEffects) {
+    for (const { buildingId, bonusKey, amount } of (eff.buildingBonuses ?? [])) {
+      if (buildingId === bDef.id) {
+        const r = ALL_RES[bonusKey];
+        if (r) bonusParts.push(`${r.emoji} +${amount}/turn ${r.name} <span class="btt-tech-tag">Tech</span>`);
+      }
+    }
+    for (const { category, bonusKey, amount } of (eff.buildingCategoryBonuses ?? [])) {
+      if (category === bDef.category) {
+        const r = ALL_RES[bonusKey];
+        if (r) bonusParts.push(`${r.emoji} +${amount}/turn ${r.name} <span class="btt-tech-tag">Tech</span>`);
+      }
+    }
+  }
+
   // Prerequisites (explicit ids + main-building tier gate)
   const prereqParts = (bDef.prerequisites ?? [])
     .filter(Boolean)
@@ -349,9 +468,12 @@ function _buildHtml(bDef, opts = {}) {
     ? `<span class="btt-faction">${bDef.factionId}</span>`
     : '';
 
+  const catColor = bDef.category ? (CATEGORY_COLORS[bDef.category] ?? 'var(--text-dim)') : null;
+
   return `
     <div class="btt-header">${bDef.emoji ?? ''} ${bDef.name ?? ''}${factionTag}</div>
     ${bDef.tier ? `<div class="btt-tier">Tier ${bDef.tier}</div>` : ''}
+    ${catColor ? `<div class="btt-category" style="color:${catColor}">◆ ${bDef.category.charAt(0).toUpperCase() + bDef.category.slice(1)}</div>` : ''}
     <div class="btt-desc">${bDef.description ?? ''}</div>
     <hr class="btt-hr">
     ${!opts.installed ? `

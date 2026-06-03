@@ -33,6 +33,7 @@ import {
 import { getLocationDefenseBonus } from '../models/location.js';
 import { flashCombat, flashConquest } from '../ui/map-view.js';
 import { logCapture, logMessage } from '../ui/event-log.js';
+import { getEffectiveUnitStats } from './tech-effects.js';
 import { playerCanSee } from './game-state.js';
 import { MONSTER_UNITS, BIOME_DEN_ENCOUNTER } from '../data/monsters-data.js';
 
@@ -158,13 +159,14 @@ function _estimateBorrowedStrengthBonus(primaryArmy, allDefArmies, unitMap, supp
   return bonus;
 }
 
-function _collectArmyUnits(army) {
+function _collectArmyUnits(army, factionId = null) {
   if (!army) return [];
   _ensureHpPools(army);
   const out = [];
   for (const [typeId, arr] of Object.entries(army.hp.active)) {
     const def = UNIT_MAP[typeId];
     if (!def) continue;
+    const { attack, defense } = getEffectiveUnitStats(typeId, factionId, UNIT_MAP);
     for (let i = 0; i < arr.length; i++) {
       if (arr[i] <= 0) continue;
       out.push({
@@ -173,8 +175,8 @@ function _collectArmyUnits(army) {
         typeId,
         hp: arr[i],
         maxHp: Math.max(1, def.maxHp ?? 10),
-        attack: def.attack ?? 0,
-        defense: def.defense ?? 0,
+        attack,
+        defense,
       });
     }
   }
@@ -414,9 +416,9 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   const totalRounds = 2 + ((attArmy.maxMoves ?? 1) === 2 ? 1 : 0);
 
   for (let roundNum = 1; roundNum <= totalRounds; roundNum++) {
-    const attackers = _collectArmyUnits(attArmy);
+    const attackers = _collectArmyUnits(attArmy, attArmy.factionId);
     const defenders = [
-      ..._collectArmyUnits(enemyDefArmy),
+      ..._collectArmyUnits(enemyDefArmy, enemyDefArmy?.factionId ?? null),
       ..._collectMilitiaUnits(militiaPool),
     ];
 
@@ -661,7 +663,7 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
   const ROUNDS = 3;
 
   for (let r = 1; r <= ROUNDS; r++) {
-    const armyUnits = _collectArmyUnits(army);
+    const armyUnits = _collectArmyUnits(army, army.factionId);
     const aliveEnemies = loc.denEnemies.hp.length;
 
     if (armyUnits.length === 0 || aliveEnemies === 0) break;

@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="style/map.css" />
   <link rel="stylesheet" href="style/animations.css" />
   <link rel="stylesheet" href="style/province-modal.css" />
+  <link rel="stylesheet" href="style/research-modal.css" />
 
   <!-- ES module import map: d3-delaunay from CDN -->
   <script type="importmap">
@@ -34,6 +35,7 @@
       Turn <span id="turn-number">1</span>
     </div>
     <button id="minimap-btn" class="btn-secondary">🗺 Map</button>
+    <button id="research-btn" class="btn-secondary">📚 Research</button>
     <button id="end-turn-btn" class="btn-primary">End Turn ⏭</button>
   </header>
 
@@ -140,6 +142,7 @@
   <!-- Building tooltip (shown on hover) -->
   <div id="building-tooltip" class="building-tooltip" hidden></div>
   <div id="unit-tooltip" class="unit-tooltip" hidden></div>
+  <div id="tech-tooltip" class="building-tooltip" hidden></div>
 
   <!-- ═══════════════════════════════════════════════════
        MODAL (game-over, confirm)
@@ -162,6 +165,23 @@
       <div class="tooltip-win-chance"></div>
       <div class="tooltip-def-bonus"></div>
       <div class="tooltip-casualties"></div>
+    </div>
+  </div>
+
+  <!-- Research Modal -->
+  <div id="research-modal-overlay" hidden>
+    <div id="research-modal">
+      <div id="rmod-header">
+        <h2 id="rmod-title">Research</h2>
+        <div id="rmod-research-pool"><!-- balance + income injected by JS --></div>
+        <button id="rmod-close" class="btn-secondary">✕ Close</button>
+      </div>
+      <div id="rmod-body">
+        <div id="rmod-tree-scroll">
+          <div id="rmod-tree-grid"><!-- era columns injected by JS --></div>
+          <svg id="rmod-lines" aria-hidden="true"></svg>
+        </div>
+      </div>
     </div>
   </div>
 

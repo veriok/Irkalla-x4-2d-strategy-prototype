@@ -9,7 +9,7 @@ import { FACTION_MAP } from '../data/factions-data.js';
 /** Location type metadata */
 export const LOCATION_TYPES = {
   main_settlement: {
-    name: 'Settlement',
+    name: 'Capital',
     emoji: '🏛️',
     isControllable: true,
     cardImg: 'assets/cards/locations/main_settlement.png',
@@ -111,13 +111,15 @@ export function getLocationDefenseBonus(location, buildingMap) {
 /**
  * Get per-turn resource bonuses from all buildings in a location.
  * Resolves the special `faction_primary_adv` key to the faction's first advanced resource.
+ * Also applies tech effect bonuses (per-building and per-category).
  * Returns { [resourceId]: totalAmount }
- * @param {Object} location
- * @param {Object} buildingMap
+ * @param {Object}   location
+ * @param {Object}   buildingMap
  * @param {string|null} factionId  — owner faction, used to resolve faction_primary_adv
+ * @param {Array}    techEffects   — appliedTechEffects from faction state
  * @returns {Object}
  */
-export function getLocationResourceBonuses(location, buildingMap, factionId = null) {
+export function getLocationResourceBonuses(location, buildingMap, factionId = null, techEffects = []) {
   const totals = {};
   for (const { buildingId } of location.buildings) {
     const def = buildingMap[buildingId];
@@ -143,6 +145,21 @@ export function getLocationResourceBonuses(location, buildingMap, factionId = nu
       totals[res] = (totals[res] ?? 0) + amt;
     }
   }
+
+  // Apply tech effect bonuses (per-building-id and per-building-category)
+  for (const eff of techEffects) {
+    for (const { buildingId, bonusKey, amount } of (eff.buildingBonuses ?? [])) {
+      if (location.buildings.some(b => b.buildingId === buildingId)) {
+        totals[bonusKey] = (totals[bonusKey] ?? 0) + amount;
+      }
+    }
+    for (const { category, bonusKey, amount } of (eff.buildingCategoryBonuses ?? [])) {
+      if (location.buildings.some(b => buildingMap[b.buildingId]?.category === category)) {
+        totals[bonusKey] = (totals[bonusKey] ?? 0) + amount;
+      }
+    }
+  }
+
   return totals;
 }
 

@@ -148,10 +148,14 @@ function renderResourceSummary(prov) {
   if (!playerFaction) { resourceSummaryEl.hidden = true; return; }
 
   const factionResIds = new Set([
+    'research',
     playerFaction.resources.basic.id,
     ...playerFaction.resources.advanced.map(r => r.id),
   ]);
-  const allResById = { [playerFaction.resources.basic.id]: playerFaction.resources.basic };
+  const allResById = {
+    research: { id: 'research', name: 'Research', emoji: '📚' },
+    [playerFaction.resources.basic.id]: playerFaction.resources.basic,
+  };
   for (const r of playerFaction.resources.advanced) allResById[r.id] = r;
 
   const totals = { gold: 3 };

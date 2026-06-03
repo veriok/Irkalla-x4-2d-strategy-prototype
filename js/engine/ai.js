@@ -12,7 +12,8 @@
  */
 
 import { state, getProvince, getArmy, getProvincesByFaction, getArmiesByFaction,
-         moveArmy, captureProvince, placeArmy, getArmiesInProvince, playerCanSee } from './game-state.js';
+         moveArmy, captureProvince, placeArmy, getArmiesInProvince, playerCanSee,
+         getFaction, unlockTech, getEffectiveTechCost, canAfford } from './game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { resolveCombat } from './combat.js';
 import { BUILDING_MAP, getBuildingsForLocation } from '../data/buildings-data.js';
@@ -21,6 +22,7 @@ import { armyAttackStrength, armyDefenseStrength, armySize, createArmy } from '.
 import { getInstalledBuildingIds } from '../models/location.js';
 import { enqueueProduction } from '../models/province.js';
 import { computeIncome } from './turn-engine.js';
+import { buildFactionTechTree } from '../data/techs-data.js';
 import { logMessage } from '../ui/event-log.js';
 
 // Small async delay between AI actions (lets UI update)
@@ -144,6 +146,26 @@ export async function runAI(factionId) {
     }
   }
 
+  // ── Priority 3.5: Research — unlock cheapest available tech ──
+  {
+    const fs = getFaction(factionId);
+    if (fs) {
+      const techTree = buildFactionTechTree(factionId);
+      const candidates = [];
+      for (const [slotId, techDef] of techTree.entries()) {
+        if (fs.unlockedTechs.includes(techDef.id)) continue;
+        const prereqsMet = (techDef.requires ?? []).every(r => fs.unlockedTechs.includes(r));
+        if (!prereqsMet) continue;
+        const cost = getEffectiveTechCost(factionId, techDef.baseCost);
+        if (canAfford(factionId, { research: cost })) candidates.push({ techDef, cost });
+      }
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => a.cost - b.cost);
+        unlockTech(factionId, candidates[0].techDef.id);
+      }
+    }
+  }
+
   // ── Priority 4 & 5: Build / Recruit ──
   const provinces = getProvincesByFaction(factionId);
   const faction   = FACTION_MAP[factionId];
@@ -153,8 +175,10 @@ export async function runAI(factionId) {
     for (const loc of prov.locations) {
       if (!loc.isControllable || prov.productionQueue.length >= 5) continue;
 
-      const installedIds = getInstalledBuildingIds(loc);
-      const available    = getBuildingsForLocation(factionId, loc.type, installedIds);
+      const installedIds  = getInstalledBuildingIds(loc);
+      const unlockedTechs = getFaction(factionId)?.unlockedTechs ?? [];
+      const available     = getBuildingsForLocation(factionId, loc.type, installedIds)
+        .filter(b => !b.techRequired || unlockedTechs.includes(b.techRequired));
 
       // Try to build cheapest available building
       const affordable = available.filter(b => {
