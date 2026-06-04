@@ -177,7 +177,7 @@ export async function runAI(factionId) {
 
       const installedIds  = getInstalledBuildingIds(loc);
       const unlockedTechs = getFaction(factionId)?.unlockedTechs ?? [];
-      const available     = getBuildingsForLocation(factionId, loc.type, installedIds)
+      const available     = getBuildingsForLocation(factionId, loc.type, installedIds, prov.isCoastal)
         .filter(b => !b.techRequired || unlockedTechs.includes(b.techRequired));
 
       // Try to build cheapest available building

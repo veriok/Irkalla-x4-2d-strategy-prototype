@@ -134,28 +134,56 @@ function showWorldGenPicker() {
 // ─── Faction picker ───────────────────────────────────────
 
 function buildFactionPickerEl(onPick) {
-  const grid = document.createElement('div');
-  grid.className = 'faction-picker';
+  const container = document.createElement('div');
+  container.className = 'faction-picker-container';
 
+  // Collect factions grouped by race, preserving insertion order
+  const raceOrder = [];
+  const raceGroups = {};
   for (const f of FACTIONS) {
-    const card = document.createElement('div');
-    card.className = 'faction-card';
-    card.style.setProperty('--fc', f.color);
-    card.innerHTML = `
-      <span class="faction-card-emoji">${f.emoji}</span>
-      <div class="faction-card-name">${f.name}</div>
-      <div class="faction-card-full">${f.fullName}</div>
-      <div class="faction-card-desc">${f.description}</div>
-      <div class="faction-card-play">📖 ${f.playstyle}</div>
-    `;
-    const btn = document.createElement('button');
-    btn.className = 'btn-primary';
-    btn.textContent = `Play as ${f.name}`;
-    btn.addEventListener('click', () => onPick(f.id));
-    card.appendChild(btn);
-    grid.appendChild(card);
+    if (!raceGroups[f.raceId]) { raceGroups[f.raceId] = []; raceOrder.push(f.raceId); }
+    raceGroups[f.raceId].push(f);
   }
-  return grid;
+
+  const raceNames = { dwarf: 'Dwarves', elf: 'Elves', lizard: 'Lizardmen', human: 'Humans' };
+
+  // Emit in row-major order so CSS Grid auto-placement fills correctly:
+  // Row 1: all race headers (4 columns)
+  // Row 2: first faction of each race (4 columns, equal height)
+  // Row 3: second faction of each race (4 columns, equal height)
+  for (const raceId of raceOrder) {
+    const header = document.createElement('div');
+    header.className = 'faction-race-header';
+    header.textContent = raceNames[raceId] ?? raceId;
+    container.appendChild(header);
+  }
+
+  const maxPerRace = Math.max(...raceOrder.map(r => raceGroups[r].length));
+  for (let i = 0; i < maxPerRace; i++) {
+    for (const raceId of raceOrder) {
+      const f = raceGroups[raceId][i];
+      if (!f) { container.appendChild(document.createElement('div')); continue; }
+
+      const card = document.createElement('div');
+      card.className = 'faction-card';
+      card.style.setProperty('--fc', f.color);
+      card.innerHTML = `
+        <span class="faction-card-emoji">${f.emoji}</span>
+        <div class="faction-card-name">${f.name}</div>
+        <div class="faction-card-full">${f.fullName}</div>
+        <div class="faction-card-desc">${f.description}</div>
+        <div class="faction-card-play">📖 ${f.playstyle}</div>
+      `;
+      const btn = document.createElement('button');
+      btn.className = 'btn-primary faction-card-btn';
+      btn.textContent = `Play as ${f.name}`;
+      btn.addEventListener('click', () => onPick(f.id));
+      card.appendChild(btn);
+      container.appendChild(card);
+    }
+  }
+
+  return container;
 }
 
 function showFactionPicker() {

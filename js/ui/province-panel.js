@@ -33,7 +33,7 @@ import {
   showProvinceStatusTooltip, hideProvinceStatusTooltip,
 } from './tooltips.js';
 import { createCard } from './card-renderer.js';
-import { showProvinceModal } from './province-modal.js';
+import { showProvinceModal, renderProvinceActionBar } from './province-modal.js';
 
 const emptyEl         = document.getElementById('province-panel-empty');
 const contentEl       = document.getElementById('province-panel-content');
@@ -146,6 +146,9 @@ export function showProvincePanel(provinceId) {
     }
   }
 
+  // Province action bar (player-owned provinces only, under core/yields)
+  _renderPanelActionBar(prov);
+
   // Location cards (display-only)
   renderLocations(prov);
 
@@ -176,6 +179,25 @@ export function hideProvincePanel() {
 document.addEventListener('province-modal-closed', e => {
   showProvincePanel(e.detail.provinceId);
 });
+
+// ─── Province action bar (panel) ──────────────────────────
+let _panelActionBarEl = null;
+
+function _renderPanelActionBar(prov) {
+  // Lazily create and insert the container after province-core-row
+  if (!_panelActionBarEl) {
+    _panelActionBarEl = document.createElement('div');
+    _panelActionBarEl.id = 'province-panel-action-bar';
+    coreRowEl?.insertAdjacentElement('afterend', _panelActionBarEl);
+  }
+  _panelActionBarEl.innerHTML = '';
+  _panelActionBarEl.hidden = true;
+
+  if (prov.ownerId !== state.playerFactionId || prov.visibility !== 'visible') return;
+
+  renderProvinceActionBar(prov, _panelActionBarEl, () => showProvincePanel(prov.id));
+  _panelActionBarEl.hidden = _panelActionBarEl.children.length === 0;
+}
 
 // ─── Resource summary ─────────────────────────────────────
 function renderResourceSummary(prov) {
@@ -253,7 +275,7 @@ function renderProvinceStatusEffects(prov) {
     if (!def) continue;
     const chip = document.createElement('span');
     chip.className = 'pmod-effect-chip';
-    chip.innerHTML = `<span class="pmod-effect-icon">${def.icon}</span><span class="pmod-effect-turns">${effect.turnsRemaining}t</span>`;
+    chip.innerHTML = `<span class="pmod-effect-icon">${def.icon}</span>${(effect.stacks ?? 1) > 1 ? `<span class="pmod-effect-stacks">×${effect.stacks}</span>` : ''}<span class="pmod-effect-turns">${effect.turnsRemaining === -1 ? '∞' : effect.turnsRemaining + 't'}</span>`;
     chip.addEventListener('mouseenter', () => showProvinceStatusTooltip(effect, chip));
     chip.addEventListener('mouseleave', hideProvinceStatusTooltip);
     chipRow.appendChild(chip);

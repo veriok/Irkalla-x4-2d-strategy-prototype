@@ -10,6 +10,7 @@ import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { MONSTER_UNITS } from '../data/monsters-data.js';
 import { BUILDING_MAP, LOCATION_MAIN_CHAIN } from '../data/buildings-data.js';
+import { UNITS } from '../data/units-data.js';
 import { LOCATION_TYPES } from '../models/location.js';
 import { state } from '../engine/game-state.js';
 import { TRAIT_MAP } from '../data/traits-data.js';
@@ -390,9 +391,12 @@ function _buildTechHtml(techDef) {
     effectParts.push(`🔓 Unlocks: ${names}`);
   }
 
-  if ((techDef.unlockUnits ?? []).length > 0) {
-    effectParts.push(`🔓 Unlocks unit: ${techDef.unlockUnits.join(', ')}`);
-  }
+  // First unit unlocked by this tech for the player's faction (capped at 1 to avoid clutter)
+  const unlockedUnits = UNITS.filter(u =>
+    u.techRequired === techDef.id &&
+    !u.isMilitia &&
+    u.factionId === state.playerFactionId
+  ).slice(0, 1);
 
   for (const { resourceId, percent } of (techDef.resourceYieldPercentBonuses ?? [])) {
     const r = ALL_RES[resourceId];
@@ -412,6 +416,15 @@ function _buildTechHtml(techDef) {
     ? `<div class="btt-section">${effectParts.map(e => `<div class="btt-row btt-bonus">▸ ${e}</div>`).join('')}</div>`
     : '';
 
+  const unitMiniSection = unlockedUnits.length > 0
+    ? `<div class="btt-section"><div class="btt-label">Unlocks Unit</div>${unlockedUnits.map(u => {
+        const imgHtml = u.cardSpriteImg
+          ? `<img src="${u.cardSpriteImg}" onerror="this.style.display='none'" style="width:32px;height:48px;object-fit:cover;border-radius:3px;flex-shrink:0;">`
+          : `<span style="font-size:20px;width:32px;display:inline-block;text-align:center">${u.emoji ?? '⚔'}</span>`;
+        return `<div class="btt-unit-mini">${imgHtml}<div class="btt-unit-mini-info"><div class="btt-unit-mini-name">${u.name}</div><div class="btt-unit-mini-stats">⚔${u.attack} 🛡${u.defense} ❤${u.maxHp} · ${u.unitType}</div></div></div>`;
+      }).join('')}</div>`
+    : '';
+
   const quoteSection = techDef.quote
     ? `<hr class="btt-hr"><div class="btt-lore">${techDef.quote}</div>`
     : '';
@@ -420,6 +433,7 @@ function _buildTechHtml(techDef) {
     <div class="btt-header">${techDef.emoji ?? ''} ${techDef.name ?? ''}</div>
     <div class="btt-desc">${techDef.description ?? ''}</div>
     ${effectSection}
+    ${unitMiniSection}
     ${quoteSection}
   `.trim();
 }
@@ -434,6 +448,7 @@ const CATEGORY_COLORS = {
   defensive:      '#6a7080',
   worshipping:    '#7b52a8',
   scientific:     '#3a8050',
+  industrial:     '#8b5c2a',
 };
 
 function _buildHtml(bDef, opts = {}) {
@@ -496,6 +511,16 @@ function _buildHtml(bDef, opts = {}) {
     }
   }
 
+  // Units recruitable with this building (for player's faction, tech already unlocked or no tech needed)
+  const _playerTechs = state.factions?.get(state.playerFactionId)?.unlockedTechs ?? [];
+  const recruitableByBuilding = UNITS.filter(u => {
+    if (u.isMilitia || u.factionId !== state.playerFactionId) return false;
+    if (u.techRequired && !_playerTechs.includes(u.techRequired)) return false;
+    const req = u.requiredBuilding;
+    if (Array.isArray(req)) return req.includes(bDef.id);
+    return req === bDef.id;
+  });
+
   // Prerequisites (explicit ids + main-building tier gate)
   const prereqParts = (bDef.prerequisites ?? [])
     .filter(Boolean)
@@ -537,6 +562,11 @@ function _buildHtml(bDef, opts = {}) {
       <div class="btt-label">Bonuses</div>
       ${bonusParts.map(b => `<div class="btt-row btt-bonus">▸ ${b}</div>`).join('')}
     </div>` : ''}
+    ${recruitableByBuilding.length > 0 ? `
+    <div class="btt-section">
+      <div class="btt-label">Allows Recruitment</div>
+      ${recruitableByBuilding.map(u => `<div class="btt-row btt-bonus">▸ ${u.emoji ?? '⚔'} ${u.name} (⚔${u.attack} 🛡${u.defense})</div>`).join('')}
+    </div>` : ''}
     ${prereqParts.length > 0 ? `
     <div class="btt-section btt-prereq">
       <div class="btt-label">Requires</div>
@@ -558,15 +588,20 @@ function _resolveTraits(traitIds) {
  * @param {Array} effects
  * @returns {string[]}
  */
-export function renderEffectLines(effects = []) {
+export function renderEffectLines(effects = [], multiplier = 1) {
   return effects.map(eff => {
     if (eff.type === 'income_percent') {
-      const sign = eff.percent >= 0 ? '+' : '';
+      const total = (eff.percent ?? 0) * multiplier;
+      const sign = total >= 0 ? '+' : '';
       if (eff.resourceId === 'all') {
-        return `📊 All income: ${sign}${eff.percent}%`;
+        return `📊 All income: ${sign}${total}%`;
       }
       const r = ALL_RES[eff.resourceId];
-      return `📊 ${r?.emoji ?? ''} ${r?.name ?? eff.resourceId}: ${sign}${eff.percent}%`;
+      return `📊 ${r?.emoji ?? ''} ${r?.name ?? eff.resourceId}: ${sign}${total}%`;
+    }
+    if (eff.type === 'defense_percent') {
+      const total = (eff.amount ?? 0) * multiplier;
+      return `🛡 Defense: +${total}%`;
     }
     return null;
   }).filter(Boolean);
@@ -585,17 +620,19 @@ export function showProvinceStatusTooltip(effect, anchorEl) {
   if (!def) return;
   clearTimeout(_hideTimer);
 
-  const effectLines = renderEffectLines(def.effects ?? []);
+  const stacks = effect.stacks ?? 1;
+  const stackLabel = stacks > 1 ? ` (×${stacks})` : '';
+  const effectLines = renderEffectLines(def.effects ?? [], stacks);
   const effectSection = effectLines.length > 0
-    ? `<hr class="btt-hr"><div class="btt-section">${effectLines.map(l => `<div class="btt-row btt-cost">▸ ${l}</div>`).join('')}</div>`
+    ? `<hr class="btt-hr"><div class="btt-section">${effectLines.map(l => `<div class="btt-row btt-bonus">▸ ${l}</div>`).join('')}</div>`
     : '';
 
   tooltipEl.innerHTML = `
-    <div class="btt-header">${def.icon} ${def.label}</div>
+    <div class="btt-header">${def.icon} ${def.label}${stackLabel}</div>
     <div class="btt-desc">${def.description ?? ''}</div>
     ${effectSection}
     <hr class="btt-hr">
-    <div class="btt-row" style="color:var(--text-muted)">${effect.turnsRemaining} turn${effect.turnsRemaining !== 1 ? 's' : ''} remaining</div>
+    <div class="btt-row" style="color:var(--text-muted)">${effect.turnsRemaining === -1 ? 'Permanent' : `${effect.turnsRemaining} turn${effect.turnsRemaining !== 1 ? 's' : ''} remaining`}</div>
   `.trim();
 
   tooltipEl.hidden = false;

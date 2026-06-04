@@ -15,6 +15,7 @@ import {
   getArmySupplyCap,
   addCombatReport,
   rollTreasure,
+  getFaction,
 } from './game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { UNIT_MAP, getMilitiaUnitIdForFaction } from '../data/units-data.js';
@@ -33,11 +34,27 @@ import {
 import { getLocationDefenseBonus } from '../models/location.js';
 import { flashCombat, flashConquest } from '../ui/map-view.js';
 import { logCapture, logMessage } from '../ui/event-log.js';
-import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense } from './tech-effects.js';
+import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense, getSiegeExpertReduction } from './tech-effects.js';
+import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { playerCanSee } from './game-state.js';
 import { MONSTER_UNITS, BIOME_DEN_ENCOUNTER } from '../data/monsters-data.js';
 
 const WOUND_CHANCE = 0.45;
+
+/**
+ * Build a unit-death callback for a faction's onUnitDeath handler.
+ * Returns a function (typeId, army) -> boolean (true = resurrect/wound instead of destroy).
+ */
+function _makeDestroyCallback(factionData, province, gameState) {
+  if (!factionData?.onUnitDeath) return null;
+  return (typeId, army) => {
+    const unitDef = UNIT_MAP[typeId];
+    if (!unitDef) return false;
+    const fakeUnit = { ...unitDef };  // shallow copy so callback can set _resurrect
+    factionData.onUnitDeath(fakeUnit, province, army, gameState);
+    return fakeUnit._resurrect === true;
+  };
+}
 
 function _d6() { return Math.floor(Math.random() * 6) + 1; }
 function _d8() { return Math.floor(Math.random() * 8) + 1; }
@@ -166,7 +183,7 @@ function _collectArmyUnits(army, factionId = null) {
   for (const [typeId, arr] of Object.entries(army.hp.active)) {
     const def = UNIT_MAP[typeId];
     if (!def) continue;
-    const { attack, defense } = getEffectiveUnitStats(typeId, factionId, UNIT_MAP);
+    const { attack, defense } = getEffectiveUnitStats(typeId, factionId, UNIT_MAP, army);
     for (let i = 0; i < arr.length; i++) {
       if (arr[i] <= 0) continue;
       out.push({
@@ -228,7 +245,12 @@ function _pickTarget(attacker, enemies, bestChance, targetIsDefender, defenderFl
   return sorted[0] ?? enemies[Math.floor(Math.random() * enemies.length)];
 }
 
-function _applyBatchDamageToArmy(army, damageMap, woundChance = WOUND_CHANCE) {
+/**
+ * @param {Function|null} onDestroyUnit  (typeId, army) => boolean
+ *   Called when a unit would be permanently destroyed (after normal wound chance fails).
+ *   If it returns true the unit is wounded instead (soul resurrection, etc.).
+ */
+function _applyBatchDamageToArmy(army, damageMap, woundChance = WOUND_CHANCE, onDestroyUnit = null) {
   if (!army) return { destroyed: 0, wounded: 0, hpLost: 0 };
   _ensureHpPools(army);
 
@@ -257,7 +279,9 @@ function _applyBatchDamageToArmy(army, damageMap, woundChance = WOUND_CHANCE) {
       if (after <= 0) {
         arr.splice(hit.idx, 1);
         destroyed++;
-        if (Math.random() < woundChance) {
+        const naturallyWounded = Math.random() < woundChance;
+        const resurrected = !naturallyWounded && (onDestroyUnit?.(typeId, army) === true);
+        if (naturallyWounded || resurrected) {
           army.hp.wounded[typeId] = army.hp.wounded[typeId] ?? [];
           army.hp.wounded[typeId].push(Math.max(1, Math.round(maxHp * 0.15)));
           wounded++;
@@ -389,7 +413,18 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   const biome = getBiome(targetP.biomeId);
   const terrainMod = 1 + (biome?.terrainDefBonus ?? 0);
   const fortBonus = targetP.locations.reduce((sum, loc) => sum + getLocationDefenseBonus(loc, BUILDING_MAP), 0);
-  const defenderFlatBonus = Math.max(0, Math.round((biome?.terrainDefBonus ?? 0) * 10 + fortBonus * 12));
+  // Province status defense bonuses
+  let statusDefensePercent = 0;
+  for (const se of (targetP.statusEffects ?? [])) {
+    const def = PROVINCE_STATUS_MAP[se.type];
+    for (const eff of (def?.effects ?? [])) {
+      if (eff.type === 'defense_percent') statusDefensePercent += (eff.amount ?? 0) * (se.stacks ?? 1);
+    }
+  }
+  const statusDefMult = 1 + statusDefensePercent / 100;
+  // Siege Expert trait reduces the defender's fortification/terrain bonus
+  const siegeReduction = getSiegeExpertReduction(attArmy, UNIT_MAP);
+  const defenderFlatBonus = Math.max(0, Math.round(((biome?.terrainDefBonus ?? 0) * 10 + fortBonus * 12) * siegeReduction * statusDefMult));
 
   // Sea attack penalty: -20% when attacking FROM shallow ocean
   const attackerOriginProv = getProvince(attArmy.provinceId);
@@ -459,8 +494,12 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     const attDamage = _sumDamage(damageToDef);
     const defDamage = _sumDamage(damageToAtt);
 
-    const attApply = _applyBatchDamageToArmy(attArmy, damageToAtt, WOUND_CHANCE);
-    const defArmyApply = _applyBatchDamageToArmy(enemyDefArmy, damageToDef, WOUND_CHANCE);
+    const attWoundChance = Math.min(0.95, WOUND_CHANCE + (getFaction(attArmy.factionId)?.woundChanceBonus ?? 0));
+    const defWoundChance = enemyDefArmy ? Math.min(0.95, WOUND_CHANCE + (getFaction(enemyDefArmy.factionId)?.woundChanceBonus ?? 0)) : WOUND_CHANCE;
+    const attDestroyCallback = _makeDestroyCallback(attFaction, targetP, state);
+    const defDestroyCallback = _makeDestroyCallback(defFaction, targetP, state);
+    const attApply = _applyBatchDamageToArmy(attArmy, damageToAtt, attWoundChance, attDestroyCallback);
+    const defArmyApply = _applyBatchDamageToArmy(enemyDefArmy, damageToDef, defWoundChance, defDestroyCallback);
     const defMilitiaApply = _applyBatchDamageToMilitia(militiaPool, damageToDef);
 
     const attDestroyed = attApply.destroyed;
@@ -553,10 +592,13 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     if (stillEnemyArmies.length === 0) {
       if (!targetP.isOcean) {
         const prevOwner = targetP.ownerId;
-        captureProvince(targetProvinceId, attArmy.factionId);
+        // Pass battle result so faction callbacks (soul gain, clans raid) can use it
+        captureProvince(targetProvinceId, attArmy.factionId, {
+          defeatedUnitCount: defLostTotal,
+          attackerFactionId: attArmy.factionId,
+        });
         if (targetP.militia) targetP.militia.current = 0;
         if (prevOwner !== attArmy.factionId) {
-    
           if (playerCanSee(targetProvinceId)) logCapture(attFaction?.name ?? attArmy.factionId, targetP.name);
         }
       }
@@ -568,10 +610,6 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   } else if (getArmy(attackerArmyId)) {
     const army = getArmy(attackerArmyId);
     if (army) army.movesLeft = Math.max(0, army.movesLeft - 1);
-  }
-
-  if (outcome === 'attacker' && attArmy.factionId === 'draig') {
-    addResources('draig', { honor: 5 });
   }
 
   return result;

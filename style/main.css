@@ -402,19 +402,36 @@ body {
 /* ═══════════════════════════════════════════════════
    FACTION PICKER
 ═══════════════════════════════════════════════════ */
-.modal-wide { max-width: 640px !important; }
+.modal-wide { max-width: 960px !important; }
 
-.faction-picker {
+/* Faction picker: flat 4-column grid; headers row-1, cards rows 2-3 */
+.faction-picker-container {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin: 0 auto;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px 12px;
+  align-items: stretch;
 }
+.faction-race-header {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  align-self: end;
+}
+/* faction-picker and faction-race-group no longer used */
+.faction-picker { display: contents; }
 .faction-card {
   border: 2px solid var(--fc, var(--border));
   border-radius: 8px;
   padding: 12px;
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;          /* prevent grid blowout */
+  overflow-wrap: break-word;
   transition: background 0.15s, box-shadow 0.15s;
   cursor: pointer;
 }
@@ -424,7 +441,7 @@ body {
 .faction-card-full   { font-size: 10px; color: var(--text-muted); font-style: italic; margin-bottom: 6px; }
 .faction-card-desc   { font-size: 11px; color: var(--text); margin-bottom: 6px; line-height: 1.4; }
 .faction-card-play   { font-size: 10px; color: var(--fc, var(--text-muted)); margin-bottom: 8px; line-height: 1.4; }
-.faction-card .btn-primary { width: 100%; font-size: 12px; padding: 5px 8px; }
+.faction-card-btn    { width: 100%; font-size: 12px; padding: 5px 8px; margin-top: auto; }
 
 /* ═══════════════════════════════════════════════════
    PROVINCE HOVER TOOLTIP
@@ -1039,4 +1056,107 @@ body {
 /* Map section pan cursors */
 #map-section        { cursor: grab; }
 #map-section.panning { cursor: grabbing; }
+
+/* ═══════════════════════════════════════════════════
+   PROVINCE / ARMY ACTION BARS
+═══════════════════════════════════════════════════ */
+.province-action-bar-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 6px 0 3px;
+}
+
+.action-bar {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.action-bar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 7px;
+  min-width: 52px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  color: var(--text);
+  font-family: var(--font-main);
+  transition: border-color 0.1s, background 0.1s;
+}
+
+.action-bar-btn:hover:not(:disabled):not(.action-bar-btn--disabled) {
+  border-color: var(--accent);
+  color: var(--text-bright);
+}
+
+.action-bar-btn--disabled,
+.action-bar-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.action-bar-btn--active {
+  border-color: var(--accent);
+  background: rgba(200, 149, 42, 0.12);
+  color: var(--accent);
+}
+
+.action-bar-btn--icon-only {
+  min-width: 40px;
+  padding: 6px 8px;
+}
+
+.action-bar-btn__icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.action-bar-btn__label {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.action-bar-btn__cost {
+  font-size: 8px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════
+   TECH TOOLTIP — UNIT MINI CARD
+═══════════════════════════════════════════════════ */
+.btt-unit-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-top: 1px solid var(--border);
+}
+
+.btt-unit-mini-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.btt-unit-mini-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+
+.btt-unit-mini-stats {
+  font-size: 10px;
+  color: var(--text-muted);
+}
 

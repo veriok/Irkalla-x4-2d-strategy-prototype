@@ -19,6 +19,7 @@
  */
 
 import { FACTIONS, FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
+import { RACE_MAP } from '../data/races-data.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
@@ -52,25 +53,60 @@ export const state = {
 
 // ─── Faction state factory ────────────────────────────────
 function createFactionState(faction) {
-  // Build starting resource object from faction definition
-  const resources = { gold: 50, research: 0 };
-  for (const adv of faction.resources.advanced) {
-    resources[adv.id] = 20;
-  }
+  // Build starting resource object: use startingResources if defined, else default
+  const resources = faction.startingResources
+    ? { ...faction.startingResources }
+    : { gold: 50, research: 0, ...Object.fromEntries(faction.resources.advanced.map(r => [r.id, 20])) };
+
+  // Human race gets +1 supply cap baseline
+  const race = RACE_MAP[faction.raceId];
+  const supplyCap = 6 + (race?.baseArmySupplyCapBonus ?? 0);
+
   return {
     id:                    faction.id,
+    raceId:                faction.raceId,
     resources,
     isAI:                  true,         // overridden for player faction during init
     isEliminated:          false,
-    armySupplyCap:         6,
+    armySupplyCap:         supplyCap,
     unlockedTechs:         [],           // string[] of unlocked tech ids
-    researchCostMultiplier: 1.0,         // *= 1.03 per unlock
+    researchCostMultiplier: 1.0,         // *= 1.03 per unlock (may be reduced by tech)
     appliedTechEffects:    [],           // effect objects from all unlocked techs
     globalMilitiaBonus:    0,            // cumulative militia bonus from techs
+    woundChanceBonus:      0,            // additional wound-instead-of-destroy chance (necromantic_arts)
   };
 }
 
 // ─── World initialisation ─────────────────────────────────
+/**
+ * Default faction per race used by the map generator quadrants.
+ * When the player picks a different faction of the same race, we substitute it in.
+ */
+const DEFAULT_FACTION_PER_RACE = {
+  dwarf:  'kur_margal',
+  elf:    'poleis_aethera',
+  lizard: 'sutekh_ra',
+  human:  'draig_goch',
+};
+
+/**
+ * Determine which 4 factions are playing this game.
+ * Always one per race. Player may pick either faction of their race.
+ * AI opponents always use the default faction of each other race.
+ */
+function getPlayingFactions(playerFactionId) {
+  const playerFaction = FACTION_MAP[playerFactionId];
+  const playingIds = [];
+  for (const [raceId, defaultId] of Object.entries(DEFAULT_FACTION_PER_RACE)) {
+    if (raceId === playerFaction.raceId) {
+      playingIds.push(playerFactionId); // player's chosen faction, even if not default
+    } else {
+      playingIds.push(defaultId);
+    }
+  }
+  return playingIds;
+}
+
 /**
  * Initialise the game world from map-generator output.
  *
@@ -91,11 +127,15 @@ export function initWorld(provinceDataArr, playerFactionId) {
   state.winner = null;
   state.playerFactionId = playerFactionId;
 
-  // Initialise faction states
-  for (const faction of FACTIONS) {
+  const playingFactionIds = getPlayingFactions(playerFactionId);
+
+  // Initialise faction states for the 4 playing factions only
+  for (const factionId of playingFactionIds) {
+    const faction = FACTION_MAP[factionId];
+    if (!faction) continue;
     const fs = createFactionState(faction);
-    fs.isAI = faction.id !== playerFactionId;
-    state.factions.set(faction.id, fs);
+    fs.isAI = factionId !== playerFactionId;
+    state.factions.set(factionId, fs);
   }
 
   // Build province map from raw data
@@ -104,8 +144,18 @@ export function initWorld(provinceDataArr, playerFactionId) {
     state.provinces.set(province.id, province);
   }
 
+  // Faction substitution: if player chose a non-default faction,
+  // replace the default faction's provinces with the player's faction
+  const playerFactionData = FACTION_MAP[playerFactionId];
+  const defaultForPlayerRace = DEFAULT_FACTION_PER_RACE[playerFactionData?.raceId];
+  if (defaultForPlayerRace && defaultForPlayerRace !== playerFactionId) {
+    for (const province of state.provinces.values()) {
+      if (province.ownerId === defaultForPlayerRace) province.ownerId = playerFactionId;
+      if (province.coreOf  === defaultForPlayerRace) province.coreOf  = playerFactionId;
+    }
+  }
+
   // Only keep faction ownership for the single capital province; all others → neutral
-  // Ocean provinces keep their 'ocean' ownerId and are never reassigned.
   for (const province of state.provinces.values()) {
     if (province.ownerId !== 'neutral' && province.ownerId !== 'ocean' && !province.isCapital) {
       province.ownerId = 'neutral';
@@ -118,7 +168,6 @@ export function initWorld(provinceDataArr, playerFactionId) {
       const faction = FACTION_MAP[province.ownerId];
       if (!faction) continue;
 
-      // Starting army: 2 basic units for the faction
       const startingUnits = getStartingUnits(province.ownerId);
       const army = createArmy(province.ownerId, province.id, startingUnits);
       state.armies.set(army.id, army);
@@ -136,7 +185,7 @@ export function initWorld(provinceDataArr, playerFactionId) {
     }
   }
 
-  // Initialise militia for all land provinces (after buildings are installed)
+  // Initialise militia for all land provinces
   for (const province of state.provinces.values()) {
     if (province.isOcean) continue;
     const max = computeMilitiaMax(province);
@@ -151,15 +200,16 @@ export function initWorld(provinceDataArr, playerFactionId) {
   }
 }
 
-/** Starting unit composition per faction (2 basic units) */
+/** Export for AI module to know which factions are in play */
+export function getPlayingFactionIds() {
+  return [...state.factions.keys()];
+}
+
+/** Starting unit composition per faction — derived from faction data */
 function getStartingUnits(factionId) {
-  const unitsByFaction = {
-    dwarves: [{ typeId: 'dwarf_undead_levy', count: 3 }],
-    elves:   [{ typeId: 'elf_hoplite',       count: 3 }],
-    lizards: [{ typeId: 'lizard_skink',      count: 3 }],
-    draig:   [{ typeId: 'draig_warrior',     count: 3 }],
-  };
-  return unitsByFaction[factionId] ?? [];
+  const faction = FACTION_MAP[factionId];
+  if (!faction?.startingUnits) return [];
+  return faction.startingUnits.map(u => ({ typeId: u.unitId, count: u.count }));
 }
 
 // ─── Province helpers ─────────────────────────────────────
@@ -290,29 +340,61 @@ export function spendResources(factionId, cost) {
 
 // ─── Province ownership ───────────────────────────────────
 
-/** Transfer a province to a new owner. Clears all pending production queues. */
-export function captureProvince(provinceId, newOwnerId) {
+/**
+ * Transfer a province to a new owner. Clears pending production queues.
+ * @param {string} provinceId
+ * @param {string} newOwnerId
+ * @param {Object} battleResult  — optional combat result { defeatedUnitCount, ... }
+ */
+export function captureProvince(provinceId, newOwnerId, battleResult = {}) {
   const province = getProvince(provinceId);
   if (!province) return;
-  if (province.isOcean) return;   // ocean cannot be captured
+  if (province.isOcean) return;
 
-  // Set ownership first — lifecycle hooks read province.ownerId
   province.ownerId = newOwnerId;
-  // Clear queued production — the previous owner's builds/units should not
-  // complete for the new owner.
   province.productionQueue = [];
-
-  // Discard all pending status effects — they belonged to the previous occupant.
-  // onRemove is NOT called here; coreOf updates only happen when effects expire naturally
-  // (via tickProvinceStatuses) to avoid incorrectly assigning coreOf mid-conquest.
   province.statusEffects = [];
 
-  // Apply new_conquest penalty unless the new owner is re-taking their own core province
   if (province.coreOf !== newOwnerId) {
     const def = PROVINCE_STATUS_MAP['new_conquest'];
-    const effect = { type: 'new_conquest', turnsRemaining: 10 };
+    // conquest_penalty_reduction tech effect (e.g. mercenary_contracts)
+    const fs = state.factions.get(newOwnerId);
+    let conquestTurns = 10;
+    for (const te of (fs?.appliedTechEffects ?? [])) {
+      for (const eff of (te.effects ?? [])) {
+        if (eff.type === 'conquest_penalty_reduction') conquestTurns -= (eff.turnsReduction ?? 0);
+      }
+    }
+    conquestTurns = Math.max(1, conquestTurns);
+    const effect = { type: 'new_conquest', turnsRemaining: conquestTurns };
     province.statusEffects.push(effect);
     def?.onApply?.(province, state);
+  }
+
+  // Faction reactive event — e.g. Kur-Margal gains souls, Clans raid buildings
+  const factionData = FACTION_MAP[newOwnerId];
+  factionData?.onProvinceCapture?.(battleResult, province, state);
+
+  // Apply raid destruction flags set by Clans onProvinceCapture
+  _applyRaidDestruction(province);
+}
+
+/** Apply building/location destruction flags left by raid effects */
+function _applyRaidDestruction(province) {
+  for (const loc of (province.locations ?? [])) {
+    if (loc._raidDestroyed) {
+      loc.buildings = [];
+      loc.type = 'ruins';
+      loc.isControllable = false;
+      delete loc._raidDestroyed;
+    } else if (loc._raidDownlevel) {
+      // Remove the highest-tier building in this location
+      if (loc.buildings && loc.buildings.length > 0) {
+        loc.buildings.sort((a, b) => (b.slotIndex ?? 0) - (a.slotIndex ?? 0));
+        loc.buildings.pop();
+      }
+      delete loc._raidDownlevel;
+    }
   }
 }
 
@@ -470,11 +552,26 @@ export function unlockTech(factionId, techId) {
 
   spendResources(factionId, { research: cost });
   fs.unlockedTechs.push(techId);
-  fs.researchCostMultiplier = parseFloat((fs.researchCostMultiplier * 1.03).toFixed(6));
+
+  // Apply research multiplier — may be reduced by philosophical_school tech effect
+  const baseGrowth = 1.03;
+  const reductionEff = fs.appliedTechEffects.find(e =>
+    (e.effects ?? []).some(ef => ef.type === 'research_multiplier_reduction')
+  );
+  const growthRate = reductionEff
+    ? (reductionEff.effects.find(ef => ef.type === 'research_multiplier_reduction')?.multiplier ?? 0.024)
+    : (baseGrowth - 1);
+  fs.researchCostMultiplier = parseFloat((fs.researchCostMultiplier * (1 + growthRate)).toFixed(6));
+
   fs.appliedTechEffects.push(techDef);
 
   // Apply cached state immediately so event listeners get clean data
   if (techDef.militiaBonus) fs.globalMilitiaBonus += techDef.militiaBonus;
+
+  // Accumulate wound chance bonus (necromantic_arts)
+  if (techDef.woundChanceBonus) {
+    fs.woundChanceBonus = (fs.woundChanceBonus ?? 0) + techDef.woundChanceBonus;
+  }
 
   document.dispatchEvent(new CustomEvent('technology-researched', {
     detail: { factionId, techId, techDef },
@@ -492,21 +589,21 @@ export function unlockTech(factionId, techId) {
 export function checkElimination() {
   const newlyEliminated = [];
 
-  for (const faction of FACTIONS) {
-    if (state.eliminated.has(faction.id)) continue;
-    const capitals = getCapitals(faction.id);
+  for (const factionId of state.factions.keys()) {
+    if (state.eliminated.has(factionId)) continue;
+    const capitals = getCapitals(factionId);
     if (capitals.length === 0) {
-      state.eliminated.add(faction.id);
-      const fs = state.factions.get(faction.id);
+      state.eliminated.add(factionId);
+      const fs = state.factions.get(factionId);
       if (fs) fs.isEliminated = true;
-      newlyEliminated.push(faction.id);
+      newlyEliminated.push(factionId);
     }
   }
 
   // Check for winner: only one non-eliminated faction remains
-  const surviving = FACTIONS.filter(f => !state.eliminated.has(f.id));
+  const surviving = [...state.factions.keys()].filter(id => !state.eliminated.has(id));
   if (surviving.length === 1) {
-    state.winner = surviving[0].id;
+    state.winner = surviving[0];
   }
 
   return newlyEliminated;

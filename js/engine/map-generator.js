@@ -18,6 +18,7 @@
 import { Delaunay } from 'd3-delaunay';
 import { getBiome } from '../data/biomes-data.js';
 import { BIOME_DEN_ENCOUNTER, MONSTER_UNITS } from '../data/monsters-data.js';
+import { FACTION_MAP } from '../data/factions-data.js';
 import { LOCATION_BASE_SLOTS, LOCATION_STARTING_BUILDING, LOCATION_TYPES } from '../models/location.js';
 
 // ─── Map size configurations ──────────────────────────────
@@ -89,25 +90,25 @@ function pickWeighted(rng, weights) {
 }
 
 // ─── Biome from faction identity ──────────────────────────
-// Capitals always get the faction's canonical biome; non-capitals use a weighted spread.
-function biomeForFaction(faction, rng, isCapital = false) {
-  switch (faction) {
-    case 'dwarves': return isCapital ? 'mountains' : (rng() < 0.65 ? 'mountains' : 'tundra');
-    case 'elves':   return isCapital ? 'coastal'   : (rng() < 0.55 ? 'coastal'   : 'forest');
-    case 'lizards': return isCapital ? 'desert'    : (rng() < 0.65 ? 'desert'    : 'plains');
-    case 'draig':   return isCapital ? 'tundra'    : (rng() < 0.55 ? 'tundra'    : 'forest');
-    case 'neutral': {
-      const r = rng();
-      if (r < 0.22) return 'plains';
-      if (r < 0.40) return 'forest';
-      if (r < 0.55) return 'swamp';
-      if (r < 0.70) return 'desert';
-      if (r < 0.82) return 'mountains';
-      if (r < 0.92) return 'tundra';
-      return 'coastal';
-    }
-    default: return 'plains';
+// Uses faction data biomePrefs; capitals get primary, non-capitals get weighted spread.
+// Primary biome: 65% chance; secondary: 35% chance.
+const BIOME_SECONDARY_WEIGHT = 0.35;
+function biomeForFaction(factionId, rng, isCapital = false) {
+  if (factionId === 'neutral') {
+    const r = rng();
+    if (r < 0.22) return 'plains';
+    if (r < 0.40) return 'forest';
+    if (r < 0.55) return 'swamp';
+    if (r < 0.70) return 'desert';
+    if (r < 0.82) return 'mountains';
+    if (r < 0.92) return 'tundra';
+    return 'coastal';
   }
+  const faction = FACTION_MAP[factionId];
+  const primary   = faction?.biomePrefs?.primary   ?? 'plains';
+  const secondary = faction?.biomePrefs?.secondary ?? 'forest';
+  if (isCapital) return primary;
+  return rng() < (1 - BIOME_SECONDARY_WEIGHT) ? primary : secondary;
 }
 
 // ─── Pangea seed generation ───────────────────────────────
@@ -142,11 +143,12 @@ function generateSeeds_pangea(rng, cfg) {
     }
   }
 
-  // Four faction quadrants within the ellipse
-  scatter(factPerFaction, cx - ax * 0.50, cy - ay * 0.40, ax * 0.22, 'dwarves');  // NW
-  scatter(factPerFaction, cx + ax * 0.50, cy - ay * 0.40, ax * 0.22, 'elves');    // NE
-  scatter(factPerFaction, cx + ax * 0.50, cy + ay * 0.40, ax * 0.22, 'lizards'); // SE
-  scatter(factPerFaction, cx - ax * 0.50, cy + ay * 0.40, ax * 0.22, 'draig');   // SW
+  // Four faction quadrants within the ellipse (one per race, default factions)
+  // kur_margal = dwarf NW, poleis_aethera = elf NE, sutekh_ra = lizard SE, draig_goch = human SW
+  scatter(factPerFaction, cx - ax * 0.50, cy - ay * 0.40, ax * 0.22, 'kur_margal');       // NW
+  scatter(factPerFaction, cx + ax * 0.50, cy - ay * 0.40, ax * 0.22, 'poleis_aethera');   // NE
+  scatter(factPerFaction, cx + ax * 0.50, cy + ay * 0.40, ax * 0.22, 'sutekh_ra');        // SE
+  scatter(factPerFaction, cx - ax * 0.50, cy + ay * 0.40, ax * 0.22, 'draig_goch');       // SW
 
   // Neutral in centre band
   for (let i = 0; i < neutralCount; i++) {
@@ -457,17 +459,17 @@ export function generateMap(seed, svgEl, mapType = 'pangea', worldSize = 'medium
     });
   }
 
-  // ── Ensure elf capital is on an actual ocean-adjacent province ──
-  // If the capital seed landed inland, relocate it to the nearest coastal province
-  // (preferring other elf provinces first, then neutral ones).
+  // ── Ensure elf faction capital is on an actual ocean-adjacent province ──
+  // (elves need coastal capital for shipyard access)
   {
-    const elfCap = provinceData.find(p => p.startingFactionId === 'elves' && p.isCapital);
+    const ELF_FACTION = 'poleis_aethera';  // default elf faction that needs coastal capital
+    const elfCap = provinceData.find(p => p.startingFactionId === ELF_FACTION && p.isCapital);
     if (elfCap && !elfCap.isCoastal) {
       const [ecx, ecy] = elfCap.centroid;
       const dist2 = p => (p.centroid[0] - ecx) ** 2 + (p.centroid[1] - ecy) ** 2;
 
       const candidate =
-        provinceData.filter(p => p.startingFactionId === 'elves' && !p.isCapital && p.isCoastal)
+        provinceData.filter(p => p.startingFactionId === ELF_FACTION && !p.isCapital && p.isCoastal)
                     .sort((a, b) => dist2(a) - dist2(b))[0] ??
         provinceData.filter(p => p.startingFactionId === 'neutral' && p.isCoastal)
                     .sort((a, b) => dist2(a) - dist2(b))[0];
@@ -476,7 +478,7 @@ export function generateMap(seed, svgEl, mapType = 'pangea', worldSize = 'medium
         // Move capital flag to the coastal province
         elfCap.isCapital            = false;
         candidate.isCapital         = true;
-        candidate.startingFactionId = 'elves';
+        candidate.startingFactionId = ELF_FACTION;
 
         // Old capital falls back to forest (inland elf territory)
         elfCap.biomeId   = 'forest';

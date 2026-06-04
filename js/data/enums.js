@@ -19,17 +19,36 @@ export const RACE_IDS = Object.freeze({
   HUMAN:  'human',
 });
 
+export const FACTION_IDS = Object.freeze({
+  KUR_MARGAL:          'kur_margal',
+  IRON_FREEHOLDS:      'iron_freeholds',
+  DRAIG_GOCH:          'draig_goch',
+  AURIC_EMPIRE:        'auric_empire',
+  POLEIS_AETHERA:      'poleis_aethera',
+  ARCHONATE_GREYHAVEN: 'archonate_greyhaven',
+  SUTEKH_RA:           'sutekh_ra',
+  CLANS_FIRST_SCALE:   'clans_first_scale',
+});
+
 export const RESOURCE_IDS = Object.freeze({
   GOLD:           'gold',
   RESEARCH:       'research',
-  SOUL_ESSENCE:   'soul_essence',
-  FORGE_IRON:     'forge_iron',
-  TIMBER:         'timber',
-  PHILOSOPHY:     'philosophy',
-  GRAIN:          'grain',
-  FAITH:          'faith',
-  HONOR:          'honor',
+  // Dwarf race + factions
+  RUNES:          'runes',
+  SOULS:          'souls',
+  SCHEMATICS:     'schematics',
+  // Human race + factions
+  PRESTIGE:       'prestige',
   DRAGON_ESSENCE: 'dragon_essence',
+  CONTRACTS:      'contracts',
+  // Elf race + factions
+  AETHER:         'aether',
+  PHILOSOPHY:     'philosophy',
+  TRIBUTE:        'tribute',
+  // Lizard race + factions
+  ANCIENT_LORE:   'ancient_lore',
+  FAITH:          'faith',
+  BEASTS:         'beasts',
 });
 
 export const BUILDING_CATEGORIES = Object.freeze({
@@ -40,6 +59,7 @@ export const BUILDING_CATEGORIES = Object.freeze({
   DEFENSIVE:      'defensive',
   WORSHIPPING:    'worshipping',
   SCIENTIFIC:     'scientific',
+  INDUSTRIAL:     'industrial',
 });
 
 export const TECH_ERAS = Object.freeze({

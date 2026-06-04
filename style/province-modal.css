@@ -168,6 +168,12 @@
   font-weight: bold;
 }
 
+.pmod-effect-stacks {
+  font-size: 9px;
+  color: var(--accent);
+  font-weight: bold;
+}
+
 #pmod-close {
   flex-shrink: 0;
   align-self: center;

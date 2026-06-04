@@ -7,9 +7,10 @@
 
 import { state, getProvince, getArmiesByFaction, getArmiesInProvince, selectArmy,
          startArmyMove, splitArmy, transferUnit,
-         getArmySupplyCap } from '../engine/game-state.js';
+         getArmySupplyCap, getFaction } from '../engine/game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
+import { FACTION_IDS } from '../data/enums.js';
 import { armySize, armyWoundedCount } from '../models/army.js';
 import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense } from '../engine/tech-effects.js';
 import { showReachableProvinces, renderArmyIcons, renderAllProvinces, cancelArmyMoveAndClear } from './map-view.js';
@@ -191,6 +192,9 @@ export function renderArmyPanel() {
       card.appendChild(splitBtn);
     }
 
+    // ── Army Action Bar ───────────────────────────────────────
+    _renderArmyActionBar(army, card);
+
     // Click card to select
     card.addEventListener('click', () => {
       selectArmy(army.id);
@@ -201,6 +205,71 @@ export function renderArmyPanel() {
 
     armyListEl.appendChild(card);
   }
+}
+
+// ── Army Action Bar ───────────────────────────────────────────
+
+function _getArmyActions(army) {
+  const actions = [];
+  const fs = getFaction(army.factionId);
+
+  if (army.factionId === FACTION_IDS.DRAIG_GOCH) {
+    const hasCodeOfHonor = fs?.unlockedTechs?.includes('code_of_honor');
+    if (hasCodeOfHonor) {
+      const isActive = (army.statusEffects ?? []).some(s => s.type === 'code_of_honor_stance');
+      actions.push({
+        emoji: '🐉',
+        label: 'Code of Honor',
+        description: isActive
+          ? 'Code of Honor is active — +2 ATK / -1 DEF next battle (consumed on combat)'
+          : 'Invoke the Dragon Code: +2 ATK / -1 DEF for next battle',
+        enabled: !isActive,
+        disabledReason: 'Already active',
+        isActive,
+        doAction: () => {
+          army.statusEffects = army.statusEffects ?? [];
+          army.statusEffects.push({ type: 'code_of_honor_stance' });
+          renderArmyPanel();
+        },
+      });
+    }
+  }
+
+  return actions;
+}
+
+function _renderArmyActionBar(army, containerEl) {
+  const actions = _getArmyActions(army);
+  if (actions.length === 0) return;
+
+  const label = document.createElement('div');
+  label.className = 'province-action-bar-label';
+  label.style.marginTop = '6px';
+  label.textContent = 'Army Actions';
+  containerEl.appendChild(label);
+
+  const bar = document.createElement('div');
+  bar.className = 'action-bar';
+
+  for (const action of actions) {
+    const btn = document.createElement('button');
+    btn.className = `action-bar-btn${!action.enabled ? ' action-bar-btn--disabled' : ''}${action.isActive ? ' action-bar-btn--active' : ''}`;
+    btn.disabled = !action.enabled;
+    btn.title = action.enabled ? action.description : action.disabledReason;
+    btn.innerHTML = `
+      <span class="action-bar-btn__icon">${action.emoji}</span>
+      <span class="action-bar-btn__label">${action.label}</span>
+    `;
+    if (action.enabled) {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        action.doAction();
+      });
+    }
+    bar.appendChild(btn);
+  }
+
+  containerEl.appendChild(bar);
 }
 
 // ── Unit card helper ─────────────────────────────────────────

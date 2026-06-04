@@ -93,6 +93,8 @@ export function createArmy(factionId, provinceId, units = []) {
     attackedThisTurn: false,
     movesLeft: 1,
     maxMoves: 1,
+    hasHero: false,          // placeholder for future hero system
+    statusEffects: [],       // army-scope statuses (rune bonuses, code of honor, etc.)
   };
 
   for (const { typeId, count } of units) {
@@ -314,6 +316,13 @@ export function regenArmyHp(army, unitMap = UNIT_MAP, pct = 0.2) {
     const maxHp = _maxHp(typeId, unitMap);
     const halfHp = Math.ceil(maxHp * 0.5);
     const gain = Math.max(1, Math.round(maxHp * pct));
+    const unitDef = unitMap[typeId];
+    // no_heal trait: wounded mercenaries don't recover — they are destroyed
+    const hasNoHeal = (unitDef?.traitIds ?? []).some(t => t === 'no_heal');
+    if (hasNoHeal) {
+      army.hp.wounded[typeId] = []; // purge all wounded (they perish)
+      continue;
+    }
     const survivors = [];
     let promoted = 0;
     for (let i = 0; i < arr.length; i++) {

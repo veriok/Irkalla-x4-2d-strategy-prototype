@@ -50,12 +50,47 @@ import {
   showProvinceStatusTooltip, hideProvinceStatusTooltip,
 } from './tooltips.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
+import { FACTION_IDS } from '../data/enums.js';
+import { ARMY_STATUS_MAP } from '../data/army-status-data.js';
+import { accumulateBuildCostModifiers, BUILDING_MAP as _BMAP } from '../data/buildings-data.js';
 import { TECH_MAP } from '../data/techs-data.js';
 import { getEffectiveUnitStats } from '../engine/tech-effects.js';
 import { resolveMonsterDenCombat } from '../engine/combat.js';
 import { renderArmyPanel } from './army-panel.js';
 import { showResearchModalAndHighlight } from './research-modal.js';
 import { showDenCombatReportModal } from './modal.js';
+
+// ─── Build cost modifier helper ───────────────────────────
+/** Apply faction build cost modifiers (e.g. Clans +50% buildings). Returns { cost, buildTurns } */
+function _effectiveBuildingCost(bDef) {
+  const factionId = state.playerFactionId;
+  const faction   = FACTION_MAP[factionId];
+  const fs        = getFaction(factionId);
+  const { buildingMultiplier, timePenalty } = accumulateBuildCostModifiers(
+    faction?.effects ?? [],
+    fs?.appliedTechEffects ?? []
+  );
+  const cost = {};
+  for (const [res, amt] of Object.entries(bDef.cost ?? {})) {
+    cost[res] = Math.ceil(amt * buildingMultiplier);
+  }
+  return { cost, buildTurns: bDef.buildTurns + timePenalty };
+}
+
+/** Apply faction location build cost modifiers. */
+function _effectiveLocationCost(baseCost, baseTurns) {
+  const faction   = FACTION_MAP[state.playerFactionId];
+  const fs        = getFaction(state.playerFactionId);
+  const { locationMultiplier, timePenalty } = accumulateBuildCostModifiers(
+    faction?.effects ?? [],
+    fs?.appliedTechEffects ?? []
+  );
+  const cost = {};
+  for (const [res, amt] of Object.entries(baseCost)) {
+    cost[res] = Math.ceil(amt * locationMultiplier);
+  }
+  return { cost, buildTurns: baseTurns + timePenalty };
+}
 
 // ─── DOM refs ─────────────────────────────────────────────
 const overlayEl      = document.getElementById('province-modal-overlay');
@@ -206,6 +241,7 @@ function _renderHeader(prov) {
     defChip.title = [
       `Biome (${biome.name}): +${Math.round(defStats.biome * 100)}%`,
       defStats.buildings > 0 ? `Buildings: +${Math.round(defStats.buildings * 100)}%` : null,
+      defStats.status  > 0 ? `Fortifications: +${Math.round(defStats.status  * 100)}%` : null,
     ].filter(Boolean).join('\n');
     statsRowEl.appendChild(defChip);
 
@@ -226,7 +262,7 @@ function _renderHeader(prov) {
           if (!def) continue;
           const chip = document.createElement('span');
           chip.className = 'pmod-effect-chip';
-          chip.innerHTML = `<span class="pmod-effect-icon">${def.icon}</span><span class="pmod-effect-turns">${effect.turnsRemaining}t</span>`;
+          chip.innerHTML = `<span class="pmod-effect-icon">${def.icon}</span>${(effect.stacks ?? 1) > 1 ? `<span class="pmod-effect-stacks">×${effect.stacks}</span>` : ''}<span class="pmod-effect-turns">${effect.turnsRemaining === -1 ? '∞' : effect.turnsRemaining + 't'}</span>`;
           chip.addEventListener('mouseenter', () => showProvinceStatusTooltip(effect, chip));
           chip.addEventListener('mouseleave', hideProvinceStatusTooltip);
           effectsEl.appendChild(chip);
@@ -320,15 +356,18 @@ function _computeProvinceBreakdown(prov, playerFaction) {
     allModifiers.push({ label: biome.name, percent: biomePercent });
   }
 
-  for (const statusEffect of (prov.statusEffects ?? [])) {
-    const def = PROVINCE_STATUS_MAP[statusEffect.type];
-    for (const eff of (def?.effects ?? [])) {
+  for (const se of (prov.statusEffects ?? [])) {
+    const def = PROVINCE_STATUS_MAP[se.type];
+    if (!def) continue;
+    const stacks = se.stacks ?? 1;
+    for (const eff of (def.effects ?? [])) {
       if (eff.type !== 'income_percent') continue;
+      const percent = (eff.percent ?? 0) * stacks;
       if (eff.resourceId === 'all') {
-        allModifiers.push({ label: def.label, percent: eff.percent });
+        allModifiers.push({ label: def.label, percent });
       } else {
         if (!resModifiers[eff.resourceId]) resModifiers[eff.resourceId] = [];
-        resModifiers[eff.resourceId].push({ label: def.label, percent: eff.percent });
+        resModifiers[eff.resourceId].push({ label: def.label, percent });
       }
     }
   }
@@ -361,7 +400,19 @@ function _computeDefenseStats(prov) {
       if (bDef?.bonuses?.defense) buildingDef += bDef.bonuses.defense;
     }
   }
-  return { biome: biome.terrainDefBonus ?? 0, buildings: buildingDef, total: (biome.terrainDefBonus ?? 0) + buildingDef };
+  let statusDef = 0;
+  for (const se of (prov.statusEffects ?? [])) {
+    const def = PROVINCE_STATUS_MAP[se.type];
+    for (const eff of (def?.effects ?? [])) {
+      if (eff.type === 'defense_percent') statusDef += (eff.amount ?? 0) / 100 * (se.stacks ?? 1);
+    }
+  }
+  return {
+    biome:     biome.terrainDefBonus ?? 0,
+    buildings: buildingDef,
+    status:    statusDef,
+    total:     (biome.terrainDefBonus ?? 0) + buildingDef + statusDef,
+  };
 }
 
 // ─── Location rows (all visible, slots inline) ────────────
@@ -541,7 +592,7 @@ function _renderSlotActions(prov, loc, buildingId) {
 
   const installedIds = getInstalledBuildingIds(loc);
   const unlockedTechs = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
-  const allAvail   = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds)
+  const allAvail   = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal)
     .filter(b => !b.techRequired || unlockedTechs.includes(b.techRequired));
   const upgradeDef = allAvail.find(b => b.upgradeFromId === buildingId) ?? null;
 
@@ -571,8 +622,9 @@ function _renderSlotActions(prov, loc, buildingId) {
     const alreadyQueued = prov.productionQueue?.some(
       item => item.type === 'building' && item.id === upgradeDef.id
     );
-    const costStr = _costStr(upgradeDef.cost, allRes);
-    const affordable = canAfford(state.playerFactionId, upgradeDef.cost);
+    const { cost: effCost, buildTurns: effTurns } = _effectiveBuildingCost(upgradeDef);
+    const costStr = _costStr(effCost, allRes);
+    const affordable = canAfford(state.playerFactionId, effCost);
 
     const row = _makeActionRow({
       cardOpts: {
@@ -583,14 +635,14 @@ function _renderSlotActions(prov, loc, buildingId) {
         fallbackSub: '',
       },
       name: `↑ ${upgradeDef.name}`,
-      costLabel: `${costStr} · ${upgradeDef.buildTurns}t`,
+      costLabel: `${costStr} · ${effTurns}t`,
       hint: alreadyQueued ? 'Already queued' : queueFull ? 'Queue full' : !affordable ? "Can't afford" : '',
       disabled: alreadyQueued || queueFull || !affordable,
       affordable,
       onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(upgradeDef, el, { locationType: loc.type })); el.addEventListener('mouseleave', hideBuildingTooltip); },
       onClick: () => {
-        if (!spendResources(state.playerFactionId, upgradeDef.cost)) return;
-        enqueueProduction(prov, { type: 'building', id: upgradeDef.id, locationId: loc.id, turnsRemaining: upgradeDef.buildTurns });
+        if (!spendResources(state.playerFactionId, effCost)) return;
+        enqueueProduction(prov, { type: 'building', id: upgradeDef.id, locationId: loc.id, turnsRemaining: effTurns });
         renderResourceBar();
         _render();
       },
@@ -658,7 +710,7 @@ function _renderSlotActions(prov, loc, buildingId) {
 function _renderEmptySlotBuildMenu(prov, loc) {
   const installedIds  = getInstalledBuildingIds(loc);
   const unlockedTechs = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
-  const available     = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds)
+  const available     = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal)
     .filter(b => b.upgradeFromId === null && (!b.techRequired || unlockedTechs.includes(b.techRequired)));
   const availableIds = new Set(available.map(b => b.id));
 
@@ -952,9 +1004,8 @@ function _renderRecruit(prov) {
   for (const loc of prov.locations) {
     if (!loc.isControllable) continue;
     const installedIds = getInstalledBuildingIds(loc);
-    for (const uDef of getRecruitableUnits(state.playerFactionId, installedIds, loc.type)) {
+    for (const uDef of getRecruitableUnits(state.playerFactionId, installedIds, loc.type, unlockedTechs)) {
       if (seen.has(uDef.id)) continue;
-      if (uDef.techRequired && !unlockedTechs.includes(uDef.techRequired)) continue;
       if (obsoletedUnits.has(uDef.id)) continue;
       seen.add(uDef.id);
       units.push({ uDef, locationId: loc.id });
@@ -1069,6 +1120,28 @@ function _renderQueue(prov) {
       card.appendChild(turnsEl);
       slot.appendChild(card);
 
+      // Auric Empire: Rush button (5 Contracts per turn remaining)
+      if (state.playerFactionId === FACTION_IDS.AURIC_EMPIRE && i === 0 && item.turnsRemaining > 0) {
+        const rushCost = 5 * item.turnsRemaining;
+        const contracts = getFaction(state.playerFactionId)?.resources?.contracts ?? 0;
+        const canRush = contracts >= rushCost;
+        const rushBtn = document.createElement('button');
+        rushBtn.className = `card-action-btn card-action-btn--rush ${canRush ? '' : 'card-action-btn--disabled'}`;
+        rushBtn.textContent = `Rush (${rushCost}📜)`;
+        rushBtn.disabled = !canRush;
+        rushBtn.title = canRush ? `Complete immediately for ${rushCost} Contracts` : `Need ${rushCost} Contracts (have ${contracts})`;
+        rushBtn.addEventListener('click', () => {
+          if (!canRush) return;
+          const fs = getFaction(state.playerFactionId);
+          if (!fs) return;
+          fs.resources.contracts = Math.max(0, (fs.resources.contracts ?? 0) - rushCost);
+          item.turnsRemaining = 0;
+          renderResourceBar();
+          _render();
+        });
+        slot.appendChild(rushBtn);
+      }
+
       const cancelBtn = document.createElement('button');
       cancelBtn.className   = 'card-action-btn card-action-btn--cancel';
       cancelBtn.textContent = 'Cancel';
@@ -1090,6 +1163,127 @@ function _renderQueue(prov) {
 
     queueSlotsEl.appendChild(slot);
   }
+}
+
+// ─── Faction-specific province actions ───────────────────
+
+/**
+ * Build province action descriptors for a player-owned province.
+ * Returns an array of { emoji, label, costLabel, description, enabled, disabledReason, doAction }.
+ * Caller must wrap doAction with their own refresh callback.
+ * @param {Object} prov
+ * @param {Function} onRefresh  — called after action is performed
+ */
+export function collectProvinceActions(prov, onRefresh) {
+  const factionId = state.playerFactionId;
+  if (prov.ownerId !== factionId || prov.visibility !== 'visible') return [];
+
+  const fs = getFaction(factionId);
+  const actions = [];
+
+  if (factionId === FACTION_IDS.ARCHONATE_GREYHAVEN) {
+    const hasEternalPhalanx = fs?.unlockedTechs?.includes('eternal_phalanx');
+    const cost = hasEternalPhalanx ? 2 : 3;
+    const leviesAdded = hasEternalPhalanx ? 3 : 2;
+    const tribute = fs?.resources?.tribute ?? 0;
+    const conscriptDef = PROVINCE_STATUS_MAP['conscript_strain'];
+    const existingConscript = prov.statusEffects.find(s => s.type === 'conscript_strain');
+    const currentStacks = existingConscript?.stacks ?? 0;
+    const maxStacks = conscriptDef?.maxStacks ?? 3;
+    const nextPercent = (currentStacks + 1) * (conscriptDef?.effects?.[0]?.percent ?? -20);
+    const canDo = tribute >= cost && currentStacks < maxStacks;
+    actions.push({
+      emoji: '🪖',
+      label: 'Conscript',
+      costLabel: `${cost} Tribute → +${leviesAdded} [${currentStacks}/${maxStacks}]`,
+      description: `Instantly add ${leviesAdded} levies. Conscript strain: ${nextPercent}% all income total.`,
+      enabled: canDo,
+      disabledReason: currentStacks >= maxStacks ? 'Maximum conscription reached' : `Need ${cost} Tribute (have ${tribute})`,
+      doAction: () => {
+        if (!canDo) return;
+        fs.resources.tribute = Math.max(0, tribute - cost);
+        if (prov.militia) {
+          const max = computeMilitiaMax(prov);
+          prov.militia.current = Math.min(prov.militia.current + leviesAdded, max + leviesAdded);
+        }
+        const inst = prov.statusEffects.find(s => s.type === 'conscript_strain');
+        const shouldAdd = conscriptDef?.onApply?.(prov, null, inst) ?? true;
+        if (shouldAdd && !inst?._updated) {
+          prov.statusEffects.push({ type: 'conscript_strain', ...(conscriptDef._defaults ?? {}), stacks: 1, turnsRemaining: 5 });
+        }
+        if (inst) delete inst._updated;
+        renderResourceBar();
+        onRefresh();
+      },
+    });
+  }
+
+  if (factionId === FACTION_IDS.IRON_FREEHOLDS) {
+    const hasEngineeringMastery = fs?.unlockedTechs?.includes('engineering_mastery');
+    const cost = hasEngineeringMastery ? 5 : 10;
+    const schematics = fs?.resources?.schematics ?? 0;
+    const existing = prov.statusEffects.find(s => s.type === 'freehold_fortification');
+    const currentStacks = existing?.stacks ?? 0;
+    const maxStacks = PROVINCE_STATUS_MAP['freehold_fortification']?.maxStacks ?? 3;
+    const canDo = schematics >= cost && currentStacks < maxStacks;
+    actions.push({
+      emoji: '🔒',
+      label: 'Fortify',
+      costLabel: `${cost} Schematics [${currentStacks}/${maxStacks}]`,
+      description: `+${(currentStacks + 1) * 10}% province defense after fortify (permanent until conquered).`,
+      enabled: canDo,
+      disabledReason: currentStacks >= maxStacks ? 'Maximum fortification reached' : `Need ${cost} Schematics (have ${schematics})`,
+      doAction: () => {
+        if (!canDo) return;
+        fs.resources.schematics = Math.max(0, schematics - cost);
+        const def = PROVINCE_STATUS_MAP['freehold_fortification'];
+        const inst = prov.statusEffects.find(s => s.type === 'freehold_fortification');
+        const shouldAdd = def?.onApply?.(prov, null, inst) ?? true;
+        if (shouldAdd && !inst?._updated) {
+          prov.statusEffects.push({ type: 'freehold_fortification', ...(def._defaults ?? {}), stacks: 1, turnsRemaining: -1 });
+        }
+        if (inst) delete inst._updated;
+        renderResourceBar();
+        onRefresh();
+      },
+    });
+  }
+
+  return actions;
+}
+
+/**
+ * Render province action bar into a container — icon-only buttons, full info in tooltip.
+ * @param {Object}   prov
+ * @param {Element}  containerEl
+ * @param {Function} onRefresh
+ */
+export function renderProvinceActionBar(prov, containerEl, onRefresh) {
+  const actions = collectProvinceActions(prov, onRefresh);
+  if (actions.length === 0) return;
+
+  const header = document.createElement('div');
+  header.className = 'province-action-bar-label';
+  header.textContent = 'Province Actions';
+  containerEl.appendChild(header);
+
+  const bar = document.createElement('div');
+  bar.className = 'action-bar';
+
+  for (const action of actions) {
+    const btn = document.createElement('button');
+    btn.className = `action-bar-btn action-bar-btn--icon-only${action.enabled ? '' : ' action-bar-btn--disabled'}`;
+    btn.disabled = !action.enabled;
+    // All text goes into native tooltip — icon is the only visible element
+    const costLine = action.costLabel ? `\nCost: ${action.costLabel}` : '';
+    const reasonLine = !action.enabled ? `\n⚠ ${action.disabledReason}` : '';
+    btn.title = `${action.label}\n${action.description}${costLine}${reasonLine}`;
+    btn.innerHTML = `<span class="action-bar-btn__icon">${action.emoji}</span>`;
+    if (action.enabled) btn.addEventListener('click', action.doAction);
+    bar.appendChild(btn);
+  }
+
+  containerEl.appendChild(bar);
 }
 
 // ─── Helpers ──────────────────────────────────────────────

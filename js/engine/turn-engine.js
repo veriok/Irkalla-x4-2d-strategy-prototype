@@ -97,15 +97,18 @@ export function computeProvinceIncomeBreakdown(province, factionId) {
     allModifiers.push({ label: biome.name, percent: biomePercent });
   }
 
-  for (const statusEffect of (province.statusEffects ?? [])) {
-    const def = PROVINCE_STATUS_MAP[statusEffect.type];
-    for (const eff of (def?.effects ?? [])) {
+  for (const se of (province.statusEffects ?? [])) {
+    const def = PROVINCE_STATUS_MAP[se.type];
+    if (!def) continue;
+    const stacks = se.stacks ?? 1;
+    for (const eff of (def.effects ?? [])) {
       if (eff.type !== 'income_percent') continue;
+      const percent = (eff.percent ?? 0) * stacks;
       if (eff.resourceId === 'all') {
-        allModifiers.push({ label: def.label, percent: eff.percent });
+        allModifiers.push({ label: def.label, percent });
       } else {
         if (!resModifiers[eff.resourceId]) resModifiers[eff.resourceId] = [];
-        resModifiers[eff.resourceId].push({ label: def.label, percent: eff.percent });
+        resModifiers[eff.resourceId].push({ label: def.label, percent });
       }
     }
   }
@@ -212,19 +215,80 @@ export function computeFactionUpkeep(factionId) {
  * Apply income for all factions.
  */
 function collectIncome() {
-  for (const faction of FACTIONS) {
-    if (state.eliminated.has(faction.id)) continue;
-    const income = computeIncome(faction.id);
-    addResources(faction.id, income);
+  for (const factionId of state.factions.keys()) {
+    if (state.eliminated.has(factionId)) continue;
+    const income = computeIncome(factionId);
+    addResources(factionId, income);
   }
 }
 
 function collectUpkeep() {
-  for (const faction of FACTIONS) {
-    if (state.eliminated.has(faction.id)) continue;
-    const upkeep = computeFactionUpkeep(faction.id);
-    if (upkeep > 0) addResources(faction.id, { gold: -upkeep });
+  for (const factionId of state.factions.keys()) {
+    if (state.eliminated.has(factionId)) continue;
+    const upkeep = computeFactionUpkeep(factionId);
+    if (upkeep > 0) addResources(factionId, { gold: -upkeep });
+
+    // Army statusEffect upkeep (rune bonuses, beast upkeep)
+    _collectArmyStatusUpkeep(factionId);
   }
+}
+
+/** Deduct per-turn upkeep for army-scope statusEffects with an upkeep field */
+function _collectArmyStatusUpkeep(factionId) {
+  const fs = state.factions.get(factionId);
+  if (!fs) return;
+
+  for (const army of getArmiesByFaction(factionId)) {
+    const toRemove = [];
+    for (const status of (army.statusEffects ?? [])) {
+      if (!status.upkeep) continue;
+      const { resourceId, amount } = status.upkeep;
+      if ((fs.resources[resourceId] ?? 0) >= amount) {
+        fs.resources[resourceId] = Math.max(0, (fs.resources[resourceId] ?? 0) - amount);
+      } else {
+        // Cannot afford upkeep — remove the status
+        toRemove.push(status);
+      }
+    }
+    if (toRemove.length > 0) {
+      army.statusEffects = army.statusEffects.filter(s => !toRemove.includes(s));
+    }
+
+    // Beast upkeep: MONSTER units cost upkeepBeasts/turn
+    let beastUpkeep = 0;
+    for (const { typeId, count } of (army.units ?? [])) {
+      const uDef = UNIT_MAP[typeId];
+      if (!uDef) continue;
+      beastUpkeep += (uDef.upkeepBeasts ?? 0) * count;
+    }
+    if (beastUpkeep > 0) {
+      addResources(factionId, { beasts: -beastUpkeep });
+    }
+
+    // Tick army statusEffects with turnsRemaining
+    if (army.statusEffects) {
+      army.statusEffects = army.statusEffects.filter(s => {
+        if (s.turnsRemaining === undefined) return true;  // permanent
+        s.turnsRemaining--;
+        return s.turnsRemaining > 0;
+      });
+    }
+  }
+}
+
+/**
+ * Get effective stack size for a unit, including stackSizeBonuses from techs.
+ */
+function _getEffectiveStackSize(unitId, factionId) {
+  const uDef = UNIT_MAP[unitId];
+  let size = uDef?.stackSize ?? 1;
+  const techEffects = getFaction(factionId)?.appliedTechEffects ?? [];
+  for (const eff of techEffects) {
+    for (const bonus of (eff.stackSizeBonuses ?? [])) {
+      if (bonus.unitId === unitId) size += bonus.amount;
+    }
+  }
+  return Math.max(1, size);
 }
 
 // ─── Production queue tick ────────────────────────────────
@@ -276,10 +340,11 @@ function tickProductionQueues(factionId) {
             army = createArmy(factionId, prov.id, []);
             placeArmy(army);
           }
+          const effectiveStackSize = _getEffectiveStackSize(item.id, factionId);
           const cap       = getArmySupplyCap(factionId);
           const available = cap - armyTotalCount(army);
-          const toAdd     = Math.min(uDef.stackSize, Math.max(0, available));
-          const overflow  = uDef.stackSize - toAdd;
+          const toAdd     = Math.min(effectiveStackSize, Math.max(0, available));
+          const overflow  = effectiveStackSize - toAdd;
 
           if (toAdd > 0) {
             addArmyUnits(army, item.id, toAdd, UNIT_MAP);
@@ -291,7 +356,7 @@ function tickProductionQueues(factionId) {
             placeArmy(overflowArmy);
           }
 
-          if (faction && playerCanSee(prov.id)) logRecruit(faction.name, uDef.name, uDef.stackSize, prov.name);
+          if (faction && playerCanSee(prov.id)) logRecruit(faction.name, uDef.name, effectiveStackSize, prov.name);
         }
 
       } else if (item.type === 'demolish') {
@@ -339,6 +404,7 @@ function tickProvinceStatuses() {
   for (const province of state.provinces.values()) {
     if (province.isOcean || !province.statusEffects?.length) continue;
     province.statusEffects = province.statusEffects.filter(effect => {
+      if (effect.turnsRemaining === -1) return true;  // permanent
       effect.turnsRemaining--;
       if (effect.turnsRemaining <= 0) {
         PROVINCE_STATUS_MAP[effect.type]?.onRemove?.(province, state);
@@ -370,20 +436,20 @@ export async function endTurn(onComplete) {
   tickProductionQueues(state.playerFactionId);
 
   // ── AI phases ──
-  for (const faction of FACTIONS) {
-    if (faction.id === state.playerFactionId) continue;
-    if (state.eliminated.has(faction.id)) continue;
+  for (const factionId of state.factions.keys()) {
+    if (factionId === state.playerFactionId) continue;
+    if (state.eliminated.has(factionId)) continue;
     if (state.winner) break;
 
-    const fs = getFaction(faction.id);
+    const fs = getFaction(factionId);
     if (!fs?.isAI) continue;
 
-    tickProductionQueues(faction.id);
-    resetArmyMoves(faction.id);
+    tickProductionQueues(factionId);
+    resetArmyMoves(factionId);
 
     // Run AI logic for this faction (imported lazily)
     const { runAI } = await import('./ai.js');
-    await runAI(faction.id);
+    await runAI(factionId);
   }
 
   // ── Income (after all actions) ──
