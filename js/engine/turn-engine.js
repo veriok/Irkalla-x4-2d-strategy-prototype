@@ -14,6 +14,7 @@
 import { state, addResources, getProvincesByFaction, getArmiesByFaction,
          checkElimination, getFaction, computeMilitiaMax,
          getArmiesInProvince } from './game-state.js';
+import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
@@ -51,6 +52,82 @@ function _applyTechPercentBonuses(income, techEffects) {
 }
 
 /**
+ * Compute per-province income breakdown for a single province.
+ *
+ * Returns { [resId]: { flatTotal, modifiers: [{label, percent}], total } }
+ *
+ * - flatTotal:  province base (3 gold) + building bonuses with tech effects, RAW (no biome/status applied)
+ * - modifiers:  biome % + active status effect income_percent entries, additive
+ * - total:      flatTotal × max(0, 1 + sum(modifier percents) / 100)
+ *
+ * Filters to resources relevant to factionId.
+ * Used by computeIncome, computeIncomeBreakdown, and province-panel income chips.
+ */
+export function computeProvinceIncomeBreakdown(province, factionId) {
+  const faction = FACTION_MAP[factionId];
+  if (!faction) return {};
+
+  const techEffects = getFaction(factionId)?.appliedTechEffects ?? [];
+  const biome = getBiome(province.biomeId);
+
+  const factionResIds = new Set([
+    faction.resources.basic.id,
+    ...faction.resources.advanced.map(r => r.id),
+    'research',
+  ]);
+
+  // ── Flat income (province base + buildings, no modifiers) ──
+  const flatTotals = { gold: 3 };
+  for (const loc of province.locations) {
+    if (!loc.isControllable) continue;
+    const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, factionId, techEffects);
+    for (const [res, amt] of Object.entries(bonuses)) {
+      if (factionResIds.has(res) && amt !== 0) {
+        flatTotals[res] = parseFloat(((flatTotals[res] ?? 0) + amt).toFixed(2));
+      }
+    }
+  }
+
+  // ── Modifiers (biome + status effects) ───────────────────
+  const allModifiers = []; // apply to every resource
+  const resModifiers = {}; // per specific resourceId
+
+  const biomePercent = Math.round((biome.resourceMod - 1) * 100);
+  if (biomePercent !== 0) {
+    allModifiers.push({ label: biome.name, percent: biomePercent });
+  }
+
+  for (const statusEffect of (province.statusEffects ?? [])) {
+    const def = PROVINCE_STATUS_MAP[statusEffect.type];
+    for (const eff of (def?.effects ?? [])) {
+      if (eff.type !== 'income_percent') continue;
+      if (eff.resourceId === 'all') {
+        allModifiers.push({ label: def.label, percent: eff.percent });
+      } else {
+        if (!resModifiers[eff.resourceId]) resModifiers[eff.resourceId] = [];
+        resModifiers[eff.resourceId].push({ label: def.label, percent: eff.percent });
+      }
+    }
+  }
+
+  // ── Build result ─────────────────────────────────────────
+  const result = {};
+  for (const [resId, flatTotal] of Object.entries(flatTotals)) {
+    if (!factionResIds.has(resId)) continue;
+    if (flatTotal === 0) continue;
+
+    const modifiers    = [...allModifiers, ...(resModifiers[resId] ?? [])];
+    const combinedPct  = modifiers.reduce((s, m) => s + m.percent, 0);
+    const factor       = Math.max(0, 1 + combinedPct / 100);
+    const total        = parseFloat((flatTotal * factor).toFixed(2));
+
+    result[resId] = { flatTotal, modifiers, total };
+  }
+
+  return result;
+}
+
+/**
  * Compute per-turn resource income for a faction.
  * Returns { [resourceId]: amount }
  */
@@ -60,25 +137,15 @@ export function computeIncome(factionId) {
   if (!faction) return income;
 
   const techEffects = getFaction(factionId)?.appliedTechEffects ?? [];
+  const provinces   = getProvincesByFaction(factionId);
 
-  // Base income: 3 gold per owned province
-  const provinces = getProvincesByFaction(factionId);
-  income.gold += provinces.length * 3;
-
-  // Building bonuses (includes tech per-building and per-category bonuses)
   for (const prov of provinces) {
-    const biome = getBiome(prov.biomeId);
-
-    for (const loc of prov.locations) {
-      if (!loc.isControllable) continue;
-      const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, factionId, techEffects);
-      for (const [res, amt] of Object.entries(bonuses)) {
-        income[res] = (income[res] ?? 0) + Math.round(amt * biome.resourceMod);
-      }
+    const pbd = computeProvinceIncomeBreakdown(prov, factionId);
+    for (const [res, data] of Object.entries(pbd)) {
+      income[res] = (income[res] ?? 0) + Math.round(data.total);
     }
   }
 
-  // Tech percent yield bonuses applied to total income
   _applyTechPercentBonuses(income, techEffects);
 
   return income;
@@ -87,6 +154,9 @@ export function computeIncome(factionId) {
 /**
  * Compute per-turn resource income breakdown for a faction.
  * Returns { [resourceId]: { total: number, sources: [{label, amount}] } }
+ *
+ * Each province appears as a single post-modifier entry.
+ * Tech percent bonuses and upkeep are added as faction-level entries.
  */
 export function computeIncomeBreakdown(factionId) {
   const breakdown = {};
@@ -101,29 +171,15 @@ export function computeIncomeBreakdown(factionId) {
     breakdown[resId].sources.push({ label, amount });
   }
 
-  const provinces = getProvincesByFaction(factionId);
-
-  for (const prov of provinces) {
-    const biome = getBiome(prov.biomeId);
-    const provTotals = { gold: 3 };
-
-    for (const loc of prov.locations) {
-      if (!loc.isControllable) continue;
-      const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, factionId, techEffects);
-      for (const [res, amt] of Object.entries(bonuses)) {
-        const adjusted = parseFloat((amt * biome.resourceMod).toFixed(2));
-        if (adjusted !== 0) {
-          provTotals[res] = parseFloat(((provTotals[res] ?? 0) + adjusted).toFixed(2));
-        }
-      }
-    }
-
-    for (const [res, amt] of Object.entries(provTotals)) {
-      if (amt !== 0) addSource(res, prov.name, amt);
+  for (const prov of getProvincesByFaction(factionId)) {
+    const pbd = computeProvinceIncomeBreakdown(prov, factionId);
+    for (const [res, data] of Object.entries(pbd)) {
+      const rounded = parseFloat(data.total.toFixed(2));
+      if (rounded !== 0) addSource(res, prov.name, rounded);
     }
   }
 
-  // Tech percent yield bonuses — add as a named source
+  // Tech percent yield bonuses — applied to faction total
   const percentBonuses = {};
   for (const eff of techEffects) {
     for (const { resourceId, percent } of (eff.resourceYieldPercentBonuses ?? [])) {
@@ -274,6 +330,25 @@ function tickProductionQueues(factionId) {
   }
 }
 
+// ─── Province status effect tick 
+/**
+ * Decrement all province status effects by 1 turn.
+ * Effects that reach 0 are removed and their onRemove hook is fired.
+ */
+function tickProvinceStatuses() {
+  for (const province of state.provinces.values()) {
+    if (province.isOcean || !province.statusEffects?.length) continue;
+    province.statusEffects = province.statusEffects.filter(effect => {
+      effect.turnsRemaining--;
+      if (effect.turnsRemaining <= 0) {
+        PROVINCE_STATUS_MAP[effect.type]?.onRemove?.(province, state);
+        return false;
+      }
+      return true;
+    });
+  }
+}
+
 // ─── Army move reset ──────────────────────────────────────
 
 function resetArmyMoves(factionId) {
@@ -318,6 +393,9 @@ export async function endTurn(onComplete) {
   // ── Advance turn ──
   state.turn++;
   logTurn(state.turn);
+
+  // ── Tick province status effects
+  tickProvinceStatuses();
 
   // ── Replenish militia (+1 per province per turn, starting the turn after combat) ──
   for (const province of state.provinces.values()) {

@@ -15,6 +15,7 @@ import {
   addResources,
   computeMilitiaMax,
 } from '../engine/game-state.js';
+import { computeProvinceIncomeBreakdown } from '../engine/turn-engine.js';
 import { FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
 import { getBiome } from '../data/biomes-data.js';
 import {
@@ -24,8 +25,13 @@ import {
 import { dequeueProduction } from '../models/province.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP, getMilitiaUnitIdForFaction } from '../data/units-data.js';
+import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { renderResourceBar } from './resource-bar.js';
-import { showUnitTooltip, hideUnitTooltip, showLocationTooltip, hideLocationTooltip } from './tooltips.js';
+import {
+  showUnitTooltip, hideUnitTooltip,
+  showLocationTooltip, hideLocationTooltip,
+  showProvinceStatusTooltip, hideProvinceStatusTooltip,
+} from './tooltips.js';
 import { createCard } from './card-renderer.js';
 import { showProvinceModal } from './province-modal.js';
 
@@ -40,7 +46,10 @@ const resourceSummaryEl = document.getElementById('province-resource-summary');
 const recruitSectionEl  = document.getElementById('recruit-section');
 const queueSectionEl    = document.getElementById('production-queue-section');
 const queueListEl       = document.getElementById('production-queue-list');
-const militiaInfoEl     = document.getElementById('province-militia-info');
+const militiaInfoEl        = document.getElementById('province-militia-info');
+const coreInfoEl           = document.getElementById('province-core-info');
+const coreRowEl            = document.getElementById('province-core-row');
+const statusEffectsEl      = document.getElementById('province-status-effects');
 
 export function showProvincePanel(provinceId) {
   const prov = getProvince(provinceId);
@@ -61,6 +70,9 @@ export function showProvincePanel(provinceId) {
   ownerBadgeEl.textContent  = faction.name;
   ownerBadgeEl.style.color       = faction.textColor ?? faction.color;
   ownerBadgeEl.style.borderColor = faction.color;
+
+  // Clear legacy core info in header (no longer used)
+  if (coreInfoEl) coreInfoEl.innerHTML = '';
 
   // Ocean provinces: hide all gameplay sections
   if (prov.isOcean) {
@@ -106,11 +118,31 @@ export function showProvincePanel(provinceId) {
   const isPlayerProvince = prov.ownerId === state.playerFactionId;
   const isVisible        = prov.visibility === 'visible';
 
-  // Resource summary chips
+  // Resource summary chips (post-modifier income)
   if (isPlayerProvince && isVisible) {
     renderResourceSummary(prov);
   } else {
     resourceSummaryEl.hidden = true;
+  }
+
+  // Core province info — below income row
+  if (coreRowEl) {
+    coreRowEl.innerHTML = '';
+    if (prov.coreOf !== null) {
+      const coreFaction = FACTION_MAP[prov.coreOf];
+      if (coreFaction) {
+        const isPlayerCore = prov.coreOf === state.playerFactionId;
+        coreRowEl.textContent   = `🏠 Core: ${coreFaction.emoji ?? ''} ${coreFaction.name}`;
+        coreRowEl.style.color      = coreFaction.textColor ?? coreFaction.color ?? '';
+        coreRowEl.style.fontWeight = isPlayerCore ? 'bold' : 'normal';
+        coreRowEl.style.fontSize   = '0.75em';
+        coreRowEl.hidden = false;
+      } else {
+        coreRowEl.hidden = true;
+      }
+    } else {
+      coreRowEl.hidden = true;
+    }
   }
 
   // Location cards (display-only)
@@ -118,6 +150,9 @@ export function showProvincePanel(provinceId) {
 
   // Recruit section hidden — all recruitment in modal
   if (recruitSectionEl) recruitSectionEl.hidden = true;
+
+  // Status effects (above production queue, only if any active)
+  renderProvinceStatusEffects(prov);
 
   // Production queue: cancel-only
   renderProductionQueue(prov);
@@ -143,38 +178,23 @@ document.addEventListener('province-modal-closed', e => {
 
 // ─── Resource summary ─────────────────────────────────────
 function renderResourceSummary(prov) {
-  const biome         = getBiome(prov.biomeId);
   const playerFaction = FACTION_MAP[state.playerFactionId];
   if (!playerFaction) { resourceSummaryEl.hidden = true; return; }
 
-  const factionResIds = new Set([
-    'research',
-    playerFaction.resources.basic.id,
-    ...playerFaction.resources.advanced.map(r => r.id),
-  ]);
   const allResById = {
     research: { id: 'research', name: 'Research', emoji: '📚' },
     [playerFaction.resources.basic.id]: playerFaction.resources.basic,
   };
   for (const r of playerFaction.resources.advanced) allResById[r.id] = r;
 
-  const totals = { gold: 3 };
-  for (const loc of prov.locations) {
-    if (!loc.isControllable) continue;
-    const bonuses = getLocationResourceBonuses(loc, BUILDING_MAP, state.playerFactionId);
-    for (const [res, amt] of Object.entries(bonuses)) {
-      if (!factionResIds.has(res)) continue;
-      totals[res] = (totals[res] ?? 0) + Math.round(amt * biome.resourceMod);
-    }
-  }
-
-  const chips = Object.entries(totals).filter(([, amt]) => amt > 0);
+  const breakdown = computeProvinceIncomeBreakdown(prov, state.playerFactionId);
+  const chips = Object.entries(breakdown).filter(([, data]) => data.total > 0);
   if (chips.length === 0) { resourceSummaryEl.hidden = true; return; }
 
   resourceSummaryEl.innerHTML = chips
-    .map(([resId, amt]) => {
+    .map(([resId, data]) => {
       const resDef = allResById[resId];
-      return `<span class="province-res-chip">${resDef?.emoji ?? ''} <strong>+${amt}</strong>/t</span>`;
+      return `<span class="province-res-chip">${resDef?.emoji ?? ''} <strong>+${parseFloat(data.total.toFixed(1))}</strong>/t</span>`;
     })
     .join('');
   resourceSummaryEl.hidden = false;
@@ -208,6 +228,38 @@ function renderLocations(prov) {
   }
 
   locationListEl.appendChild(cardRow);
+}
+
+// ─── Province status effects ──────────────────────────────
+function renderProvinceStatusEffects(prov) {
+  if (!statusEffectsEl) return;
+  statusEffectsEl.innerHTML = '';
+  const effects = prov.visibility === 'visible' ? (prov.statusEffects ?? []) : [];
+  if (effects.length === 0) {
+    statusEffectsEl.hidden = true;
+    return;
+  }
+
+  const label = document.createElement('h3');
+  label.textContent = '⚠ Province Statuses';
+  statusEffectsEl.appendChild(label);
+
+  const chipRow = document.createElement('div');
+  chipRow.style.cssText = 'display:flex;gap:6px;padding:2px 0;';
+
+  for (const effect of effects) {
+    const def = PROVINCE_STATUS_MAP[effect.type];
+    if (!def) continue;
+    const chip = document.createElement('span');
+    chip.className = 'pmod-effect-chip';
+    chip.innerHTML = `<span class="pmod-effect-icon">${def.icon}</span><span class="pmod-effect-turns">${effect.turnsRemaining}t</span>`;
+    chip.addEventListener('mouseenter', () => showProvinceStatusTooltip(effect, chip));
+    chip.addEventListener('mouseleave', hideProvinceStatusTooltip);
+    chipRow.appendChild(chip);
+  }
+
+  statusEffectsEl.appendChild(chipRow);
+  statusEffectsEl.hidden = false;
 }
 
 // ─── Production queue (cancel-only) ───────────────────────

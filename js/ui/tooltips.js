@@ -7,6 +7,7 @@
  */
 
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
+import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { MONSTER_UNITS } from '../data/monsters-data.js';
 import { BUILDING_MAP, LOCATION_MAIN_CHAIN } from '../data/buildings-data.js';
 import { LOCATION_TYPES } from '../models/location.js';
@@ -257,23 +258,33 @@ export const hideBiomeTooltip = hideBuildingTooltip;
  * Show an income breakdown tooltip for a single resource.
  * @param {string}  resName   — display name e.g. "Gold"
  * @param {string}  resEmoji  — emoji
- * @param {{ label: string, amount: number }[]} sources
- * @param {number}  total
+ * @param {{ flat: [{label,amount}], modifiers: [{label,percent}], total: number }} breakdown
  * @param {Element} anchorEl
  */
-export function showIncomeBreakdownTooltip(resName, resEmoji, sources, total, anchorEl) {
+export function showIncomeBreakdownTooltip(resName, resEmoji, breakdown, anchorEl) {
   if (!tooltipEl) return;
   clearTimeout(_hideTimer);
 
-  const lines = sources.map(s => {
+  const { flat = [], modifiers = [], total = 0 } = breakdown ?? {};
+
+  const flatLines = flat.map(s => {
     const display = parseFloat(Number(s.amount).toFixed(2));
     return `<div class="btt-row ${s.amount >= 0 ? 'btt-bonus' : 'btt-cost'}">▸ ${s.label}: ${s.amount >= 0 ? '+' : ''}${display}</div>`;
   }).join('');
 
-  const totalDisplay = parseFloat(Number(total).toFixed(2));
+  const modSection = modifiers.length > 0 ? `
+    <hr class="btt-hr">
+    <div class="btt-label" style="opacity:0.6">Modifiers</div>
+    ${modifiers.map(m => {
+      const sign = m.percent >= 0 ? '+' : '';
+      return `<div class="btt-row ${m.percent >= 0 ? 'btt-bonus' : 'btt-cost'}">▸ ${m.label}: ${sign}${m.percent}%</div>`;
+    }).join('')}` : '';
+
+  const totalDisplay = parseFloat(Number(total).toFixed(1));
   tooltipEl.innerHTML = `
     <div class="btt-header">${resEmoji ?? ''} ${resName} Income</div>
-    <div class="btt-section">${lines || '<div class="btt-row" style="color:var(--text-muted)">No sources</div>'}</div>
+    <div class="btt-section">${flatLines || '<div class="btt-row" style="color:var(--text-muted)">No sources</div>'}</div>
+    ${modSection}
     <hr class="btt-hr">
     <div class="btt-row"><strong>Total: +${totalDisplay}/turn</strong></div>
   `.trim();
@@ -525,3 +536,68 @@ function _resolveTraits(traitIds) {
     .map(id => TRAIT_MAP[id])
     .filter(Boolean);
 }
+
+// ─── Effect line renderer
+/**
+ * Convert a structured effects array into human-readable HTML strings.
+ * Used by province status tooltips and can be reused for army/faction tooltips.
+ * @param {Array} effects
+ * @returns {string[]}
+ */
+export function renderEffectLines(effects = []) {
+  return effects.map(eff => {
+    if (eff.type === 'income_percent') {
+      const sign = eff.percent >= 0 ? '+' : '';
+      if (eff.resourceId === 'all') {
+        return `📊 All income: ${sign}${eff.percent}%`;
+      }
+      const r = ALL_RES[eff.resourceId];
+      return `📊 ${r?.emoji ?? ''} ${r?.name ?? eff.resourceId}: ${sign}${eff.percent}%`;
+    }
+    return null;
+  }).filter(Boolean);
+}
+
+// ─── Province status effect tooltip
+
+/**
+ * Show a tooltip for a province status effect chip.
+ * @param {{ type: string, turnsRemaining: number }} effect
+ * @param {Element} anchorEl
+ */
+export function showProvinceStatusTooltip(effect, anchorEl) {
+  if (!tooltipEl) return;
+  const def = PROVINCE_STATUS_MAP[effect.type];
+  if (!def) return;
+  clearTimeout(_hideTimer);
+
+  const effectLines = renderEffectLines(def.effects ?? []);
+  const effectSection = effectLines.length > 0
+    ? `<hr class="btt-hr"><div class="btt-section">${effectLines.map(l => `<div class="btt-row btt-cost">▸ ${l}</div>`).join('')}</div>`
+    : '';
+
+  tooltipEl.innerHTML = `
+    <div class="btt-header">${def.icon} ${def.label}</div>
+    <div class="btt-desc">${def.description ?? ''}</div>
+    ${effectSection}
+    <hr class="btt-hr">
+    <div class="btt-row" style="color:var(--text-muted)">${effect.turnsRemaining} turn${effect.turnsRemaining !== 1 ? 's' : ''} remaining</div>
+  `.trim();
+
+  tooltipEl.hidden = false;
+  requestAnimationFrame(() => {
+    const rect = anchorEl.getBoundingClientRect();
+    const tw   = 220;
+    const th   = tooltipEl.offsetHeight;
+    let left = rect.right + 8;
+    let top  = rect.top;
+    if (left + tw > window.innerWidth  - 8) left = rect.left - tw - 8;
+    if (top  + th > window.innerHeight - 8) top  = window.innerHeight - th - 8;
+    top = Math.max(8, top);
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top  = `${top}px`;
+    tooltipEl.classList.add('visible');
+  });
+}
+
+export const hideProvinceStatusTooltip = hideBuildingTooltip;

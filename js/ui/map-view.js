@@ -211,6 +211,12 @@ function renderProvince(prov, path) {
   path.className.baseVal = `owner-${prov.ownerId}` +
     (state.selectedProvinceId === prov.id ? ' selected' : '');
 
+  // Bold label for player's core provinces
+  const labelEl = document.getElementById(`label_${prov.id}`);
+  if (labelEl) {
+    labelEl.style.fontWeight = prov.coreOf === state.playerFactionId ? 'bold' : '';
+  }
+
   // Reachable highlight
   if (state.movingArmyId) {
     const movingArmy = getArmy(state.movingArmyId);

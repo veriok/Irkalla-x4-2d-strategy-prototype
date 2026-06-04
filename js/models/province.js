@@ -34,6 +34,10 @@ export function createProvince(raw) {
     // militia (local defenders — initialised by game-state.initWorld)
     militia:         { current: 0, lastCombatTurn: null },
 
+    // core province tracking
+    coreOf:          null,   // factionId | null — which faction has core claim; never 'neutral'
+    statusEffects:   [],     // [{ type: string, turnsRemaining: number }]
+
     // visibility (from player's perspective, updated by fog-of-war.js)
     // 'visible' | 'explored' | 'unexplored'
     visibility:      'unexplored',

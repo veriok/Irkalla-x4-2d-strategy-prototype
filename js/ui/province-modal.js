@@ -47,7 +47,9 @@ import {
   showLocationTooltip, hideLocationTooltip,
   showBiomeTooltip, hideBiomeTooltip,
   showIncomeBreakdownTooltip, hideIncomeBreakdownTooltip,
+  showProvinceStatusTooltip, hideProvinceStatusTooltip,
 } from './tooltips.js';
+import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { TECH_MAP } from '../data/techs-data.js';
 import { resolveMonsterDenCombat } from '../engine/combat.js';
 import { renderArmyPanel } from './army-panel.js';
@@ -60,6 +62,7 @@ const nameEl         = document.getElementById('pmod-province-name');
 const subEl          = document.getElementById('pmod-province-sub');
 const incomeChipsEl  = document.getElementById('pmod-income-chips');
 const statsRowEl     = document.getElementById('pmod-stats-row');
+const effectsEl      = document.getElementById('pmod-effects');
 const flagImgEl      = document.getElementById('pmod-flag-img');
 const flagEmojiEl    = document.getElementById('pmod-flag-emoji');
 const locCardsEl     = document.getElementById('pmod-loc-cards');
@@ -95,6 +98,7 @@ export function hideProvinceModal() {
   hideLocationTooltip();
   hideBiomeTooltip();
   hideIncomeBreakdownTooltip();
+  hideProvinceStatusTooltip();
 
   // Refresh the side panel so queue changes are reflected immediately
   if (closedId) {
@@ -180,9 +184,9 @@ function _renderHeader(prov) {
       const resDef = allResById[resId];
       const chip = document.createElement('span');
       chip.className = 'pmod-res-chip';
-      chip.innerHTML = `${resDef?.emoji ?? ''} <strong>+${Math.round(info.total)}</strong>/t`;
+      chip.innerHTML = `${resDef?.emoji ?? ''} <strong>+${parseFloat(info.total.toFixed(1))}</strong>/t`;
       chip.addEventListener('mouseenter', () =>
-        showIncomeBreakdownTooltip(resDef?.name ?? resId, resDef?.emoji ?? '', info.sources, info.total, chip)
+        showIncomeBreakdownTooltip(resDef?.name ?? resId, resDef?.emoji ?? '', info, chip)
       );
       chip.addEventListener('mouseleave', hideIncomeBreakdownTooltip);
       incomeChipsEl.appendChild(chip);
@@ -204,15 +208,44 @@ function _renderHeader(prov) {
     ].filter(Boolean).join('\n');
     statsRowEl.appendChild(defChip);
 
-    const resMod  = biome.resourceMod ?? 1;
-    const resDiff = Math.round((resMod - 1) * 100);
-    const resChip = document.createElement('span');
-    resChip.className = 'pmod-stat-chip';
-    resChip.textContent = resDiff === 0
-      ? `📊 Income: ×1.0`
-      : `📊 Income: ${resDiff > 0 ? '+' : ''}${resDiff}%`;
-    resChip.title = `Biome modifier: all building income ×${resMod.toFixed(2)}`;
-    statsRowEl.appendChild(resChip);
+    // Status effects display
+    if (effectsEl) {
+      effectsEl.innerHTML = '';
+      const visibleEffects = prov.visibility === 'visible' ? (prov.statusEffects ?? []) : [];
+      if (visibleEffects.length === 0) {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'pmod-effect-icon';
+        placeholder.title = 'No active effects';
+        placeholder.style.opacity = '0.3';
+        placeholder.textContent = '✨';
+        effectsEl.appendChild(placeholder);
+      } else {
+        for (const effect of visibleEffects) {
+          const def = PROVINCE_STATUS_MAP[effect.type];
+          if (!def) continue;
+          const chip = document.createElement('span');
+          chip.className = 'pmod-effect-chip';
+          chip.innerHTML = `<span class="pmod-effect-icon">${def.icon}</span><span class="pmod-effect-turns">${effect.turnsRemaining}t</span>`;
+          chip.addEventListener('mouseenter', () => showProvinceStatusTooltip(effect, chip));
+          chip.addEventListener('mouseleave', hideProvinceStatusTooltip);
+          effectsEl.appendChild(chip);
+        }
+      }
+    }
+
+    // Core province badge
+    if (prov.coreOf !== null && prov.visibility !== 'unexplored') {
+      const coreFaction = FACTION_MAP[prov.coreOf];
+      if (coreFaction) {
+        const coreBadge = document.createElement('span');
+        coreBadge.className = 'pmod-stat-chip pmod-core-badge';
+        const isPlayerCore = prov.coreOf === state.playerFactionId;
+        coreBadge.style.fontWeight = isPlayerCore ? 'bold' : 'normal';
+        coreBadge.style.color = coreFaction.textColor ?? coreFaction.color ?? '';
+        coreBadge.textContent = `Core: ${coreFaction.emoji ?? ''} ${coreFaction.name}`;
+        statsRowEl.appendChild(coreBadge);
+      }
+    }
 
     if (prov.militia && prov.visibility === 'visible') {
       const max  = computeMilitiaMax(prov);
@@ -234,9 +267,7 @@ function _renderHeader(prov) {
 }
 
 function _computeProvinceBreakdown(prov, playerFaction) {
-  const biome = getBiome(prov.biomeId);
-  const mod   = biome.resourceMod ?? 1;
-
+  const biome     = getBiome(prov.biomeId);
   const advResId0 = playerFaction.resources.advanced?.[0]?.id;
   const advResId1 = playerFaction.resources.advanced?.[1]?.id;
   const factionResIds = new Set([
@@ -246,23 +277,22 @@ function _computeProvinceBreakdown(prov, playerFaction) {
     ...(advResId1 ? [advResId1] : []),
   ]);
 
-  // Per-resource accumulator keyed by building name so duplicates are grouped.
-  // bySource: Map<name, { amount, count }>
-  const acc = {};
-  function addSource(resId, name, amount) {
+  // ── Flat sources (raw, no modifiers) ─────────────────────
+  // Keyed by building name to group duplicates.
+  const flatAcc = {}; // resId → Map<name, { amount, count }>
+  function addFlat(resId, name, amount) {
     if (!factionResIds.has(resId)) return;
-    if (!acc[resId]) acc[resId] = { total: 0, bySource: new Map() };
-    acc[resId].total = parseFloat((acc[resId].total + amount).toFixed(2));
-    const entry = acc[resId].bySource.get(name);
+    if (!flatAcc[resId]) flatAcc[resId] = new Map();
+    const entry = flatAcc[resId].get(name);
     if (entry) {
       entry.amount = parseFloat((entry.amount + amount).toFixed(2));
       entry.count += 1;
     } else {
-      acc[resId].bySource.set(name, { amount, count: 1 });
+      flatAcc[resId].set(name, { amount, count: 1 });
     }
   }
 
-  addSource('gold', 'Province base', 3);
+  addFlat('gold', 'Province base', 3);
 
   for (const loc of prov.locations) {
     if (!loc.isControllable) continue;
@@ -275,23 +305,49 @@ function _computeProvinceBreakdown(prov, playerFaction) {
         if (key === 'faction_primary_adv')   resId = advResId0;
         if (key === 'faction_secondary_adv') resId = advResId1;
         if (!resId) continue;
-        const adjusted = parseFloat((val * mod).toFixed(2));
-        if (adjusted !== 0) addSource(resId, bDef.name, adjusted);
+        if (val !== 0) addFlat(resId, bDef.name, parseFloat(val.toFixed(2)));
       }
     }
   }
 
-  // Convert to the { total, sources: [{label, amount}] } shape the tooltip expects
-  const breakdown = {};
-  for (const [resId, data] of Object.entries(acc)) {
-    breakdown[resId] = {
-      total: data.total,
-      sources: Array.from(data.bySource.entries()).map(([name, { amount, count }]) => ({
-        label: count > 1 ? `${name} ×${count}` : name,
-        amount,
-      })),
-    };
+  // ── Modifiers (biome + status effects) ───────────────────
+  const allModifiers = [];
+  const resModifiers = {};
+
+  const biomePercent = Math.round((biome.resourceMod - 1) * 100);
+  if (biomePercent !== 0) {
+    allModifiers.push({ label: biome.name, percent: biomePercent });
   }
+
+  for (const statusEffect of (prov.statusEffects ?? [])) {
+    const def = PROVINCE_STATUS_MAP[statusEffect.type];
+    for (const eff of (def?.effects ?? [])) {
+      if (eff.type !== 'income_percent') continue;
+      if (eff.resourceId === 'all') {
+        allModifiers.push({ label: def.label, percent: eff.percent });
+      } else {
+        if (!resModifiers[eff.resourceId]) resModifiers[eff.resourceId] = [];
+        resModifiers[eff.resourceId].push({ label: def.label, percent: eff.percent });
+      }
+    }
+  }
+
+  // ── Build result ─────────────────────────────────────────
+  const breakdown = {};
+  for (const [resId, byName] of Object.entries(flatAcc)) {
+    const flat = Array.from(byName.entries()).map(([name, { amount, count }]) => ({
+      label:  count > 1 ? `${name} ×${count}` : name,
+      amount,
+    }));
+    const flatTotal   = parseFloat(flat.reduce((s, e) => s + e.amount, 0).toFixed(2));
+    const modifiers   = [...allModifiers, ...(resModifiers[resId] ?? [])];
+    const combinedPct = modifiers.reduce((s, m) => s + m.percent, 0);
+    const factor      = Math.max(0, 1 + combinedPct / 100);
+    const total       = parseFloat((flatTotal * factor).toFixed(2));
+
+    breakdown[resId] = { flat, flatTotal, modifiers, total };
+  }
+
   return breakdown;
 }
 

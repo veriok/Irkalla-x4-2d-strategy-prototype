@@ -19,6 +19,7 @@
  */
 
 import { FACTIONS, FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
+import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
 import { TECH_MAP } from '../data/techs-data.js';
@@ -140,6 +141,13 @@ export function initWorld(provinceDataArr, playerFactionId) {
     if (province.isOcean) continue;
     const max = computeMilitiaMax(province);
     province.militia = { current: max, lastCombatTurn: null };
+  }
+
+  // Set core province for all starting faction territories
+  for (const province of state.provinces.values()) {
+    if (province.ownerId !== 'neutral' && province.ownerId !== 'ocean') {
+      province.coreOf = province.ownerId;
+    }
   }
 }
 
@@ -287,10 +295,25 @@ export function captureProvince(provinceId, newOwnerId) {
   const province = getProvince(provinceId);
   if (!province) return;
   if (province.isOcean) return;   // ocean cannot be captured
+
+  // Set ownership first — lifecycle hooks read province.ownerId
   province.ownerId = newOwnerId;
   // Clear queued production — the previous owner's builds/units should not
   // complete for the new owner.
   province.productionQueue = [];
+
+  // Discard all pending status effects — they belonged to the previous occupant.
+  // onRemove is NOT called here; coreOf updates only happen when effects expire naturally
+  // (via tickProvinceStatuses) to avoid incorrectly assigning coreOf mid-conquest.
+  province.statusEffects = [];
+
+  // Apply new_conquest penalty unless the new owner is re-taking their own core province
+  if (province.coreOf !== newOwnerId) {
+    const def = PROVINCE_STATUS_MAP['new_conquest'];
+    const effect = { type: 'new_conquest', turnsRemaining: 10 };
+    province.statusEffects.push(effect);
+    def?.onApply?.(province, state);
+  }
 }
 
 // ─── Army placement ───────────────────────────────────────
