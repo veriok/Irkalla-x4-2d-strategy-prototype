@@ -118,8 +118,8 @@ const STONE_AGE = [
     era: TECH_ERAS.STONE, col: 1, row: 0,
     baseCost: 60, requires: ['agriculture'],
     quote: '"The clay remembers the hands that shaped it long after they have turned to dust."',
-    description: 'Fired clay vessels allow food storage and trade. Hamlets can grow into Villages.',
-    unlockBuildings: ['mercantile_2'],
+    description: 'Fired clay vessels allow food storage and trade. Hamlets can grow into Villages; Settlements can build the Grand Hall.',
+    unlockBuildings: ['mercantile_2', 'town_hall_2'],
   },
   {
     id: 'animal_husbandry', name: 'Animal Husbandry', emoji: '🐄',

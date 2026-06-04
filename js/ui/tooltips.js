@@ -62,7 +62,7 @@ export function hideBuildingTooltip() {
   _hideTimer = setTimeout(() => { tooltipEl.hidden = true; }, 80);
 }
 
-export function showUnitTooltip(uDef, factionDef, anchorEl, currentHp = null, maxHpOverride = null) {
+export function showUnitTooltip(uDef, factionDef, anchorEl, currentHp = null, maxHpOverride = null, effectiveAtk = null, effectiveDef = null) {
   if (!unitTooltipEl || !uDef || !anchorEl) return;
 
   clearTimeout(_hideTimer);
@@ -85,10 +85,24 @@ export function showUnitTooltip(uDef, factionDef, anchorEl, currentHp = null, ma
   const stats = document.createElement('div');
   stats.className = 'unit-tooltip__stats';
 
-  const attack = document.createElement('div');
-  attack.textContent = `Attack: ${uDef.attack ?? 0}`;
-  const defense = document.createElement('div');
-  defense.textContent = `Defense: ${uDef.defense ?? 0}`;
+  const baseAtk = uDef.attack ?? 0;
+  const baseDef = uDef.defense ?? 0;
+  const showAtk = effectiveAtk ?? baseAtk;
+  const showDef = effectiveDef ?? baseDef;
+
+  function _statEl(label, effective, base) {
+    const el = document.createElement('div');
+    if (effective === base) {
+      el.textContent = `${label}: ${effective}`;
+    } else {
+      const color = effective > base ? '#4aaa77' : '#c04040';
+      el.innerHTML = `${label}: <span style="color:${color};font-weight:bold">${effective}</span> <span style="color:var(--text-muted);font-size:0.85em">(base ${base})</span>`;
+    }
+    return el;
+  }
+
+  const attack  = _statEl('Attack',  showAtk, baseAtk);
+  const defense = _statEl('Defense', showDef, baseDef);
   const type = document.createElement('div');
   type.textContent = `Type: ${uDef.unitType ?? 'infantry'}`;
   const hp = document.createElement('div');

@@ -10,7 +10,8 @@ import { state, getProvince, getArmiesByFaction, getArmiesInProvince, selectArmy
          getArmySupplyCap } from '../engine/game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
-import { armySize, armyWoundedCount, armyAttackStrength, armyDefenseStrength } from '../models/army.js';
+import { armySize, armyWoundedCount } from '../models/army.js';
+import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense } from '../engine/tech-effects.js';
 import { showReachableProvinces, renderArmyIcons, renderAllProvinces, cancelArmyMoveAndClear } from './map-view.js';
 import { showModal, hideModal } from './modal.js';
 import { createCard } from './card-renderer.js';
@@ -73,9 +74,10 @@ export function renderArmyPanel() {
       const uDef = UNIT_MAP[typeId];
       const hpArr = (army.hp?.active?.[typeId] ?? []).slice();
       while (hpArr.length < count) hpArr.push(uDef?.maxHp ?? 10);
+      const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(typeId, army.factionId, UNIT_MAP);
       for (let i = 0; i < count; i++) {
         const currentHp = hpArr[i] ?? (uDef?.maxHp ?? 10);
-        const unitCard = _makeUnitCard(uDef, false, faction, currentHp);
+        const unitCard = _makeUnitCard(uDef, false, faction, currentHp, effAtk, effDef);
         if (hasSiblings) {
           // Draggable even if it would empty this army — empty army is removed on drop
           unitCard.draggable = true;
@@ -97,9 +99,10 @@ export function renderArmyPanel() {
       const uDef = UNIT_MAP[typeId];
       const hpArr = (army.hp?.wounded?.[typeId] ?? []).slice();
       while (hpArr.length < count) hpArr.push(Math.max(1, Math.floor((uDef?.maxHp ?? 10) * 0.2)));
+      const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(typeId, army.factionId, UNIT_MAP);
       for (let i = 0; i < count; i++) {
         const currentHp = hpArr[i] ?? Math.max(1, Math.floor((uDef?.maxHp ?? 10) * 0.2));
-        unitsEl.appendChild(_makeUnitCard(uDef, true, faction, currentHp));
+        unitsEl.appendChild(_makeUnitCard(uDef, true, faction, currentHp, effAtk, effDef));
       }
     }
     card.appendChild(unitsEl);
@@ -132,8 +135,8 @@ export function renderArmyPanel() {
     const healthy  = armySize(army);
     const wounded  = armyWoundedCount(army);
     const cap      = getArmySupplyCap(army.factionId);
-    const atk      = Math.round(armyAttackStrength(army, UNIT_MAP));
-    const def      = Math.round(armyDefenseStrength(army, UNIT_MAP));
+    const atk      = Math.round(getEffectiveArmyAttack(army, army.factionId, UNIT_MAP));
+    const def      = Math.round(getEffectiveArmyDefense(army, army.factionId, UNIT_MAP));
     const supplyUsed = healthy + wounded;
 
     const statsRow = document.createElement('div');
@@ -202,7 +205,7 @@ export function renderArmyPanel() {
 
 // ── Unit card helper ─────────────────────────────────────────
 
-function _makeUnitCard(uDef, wounded, factionDef, currentHp = null) {
+function _makeUnitCard(uDef, wounded, factionDef, currentHp = null, effectiveAtk = null, effectiveDef = null) {
   const c = createCard({
     variant: 'unit',
     wounded,
@@ -222,7 +225,7 @@ function _makeUnitCard(uDef, wounded, factionDef, currentHp = null) {
   hpOverlay.style.height = `${missingPct}%`;
   c.appendChild(hpOverlay);
 
-  c.addEventListener('mouseenter', () => showUnitTooltip(uDef, factionDef, c, hpNow, maxHp));
+  c.addEventListener('mouseenter', () => showUnitTooltip(uDef, factionDef, c, hpNow, maxHp, effectiveAtk, effectiveDef));
   c.addEventListener('mouseleave', hideUnitTooltip);
   return c;
 }

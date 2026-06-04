@@ -62,7 +62,7 @@ function createFactionState(faction) {
     resources,
     isAI:                  true,         // overridden for player faction during init
     isEliminated:          false,
-    armySupplyCap:         9,
+    armySupplyCap:         6,
     unlockedTechs:         [],           // string[] of unlocked tech ids
     researchCostMultiplier: 1.0,         // *= 1.03 per unlock
     appliedTechEffects:    [],           // effect objects from all unlocked techs
@@ -188,7 +188,7 @@ export function getArmiesInProvince(provinceId) {
 
 /** Supply cap for a faction (hook for future research upgrades). */
 export function getArmySupplyCap(factionId) {
-  return state.factions.get(factionId)?.armySupplyCap ?? 9;
+  return state.factions.get(factionId)?.armySupplyCap ?? 6;
 }
 
 /** Add a combat report (newest first, capped at 50). */

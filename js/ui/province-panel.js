@@ -122,6 +122,7 @@ export function showProvincePanel(provinceId) {
   if (isPlayerProvince && isVisible) {
     renderResourceSummary(prov);
   } else {
+    resourceSummaryEl.innerHTML = '';
     resourceSummaryEl.hidden = true;
   }
 

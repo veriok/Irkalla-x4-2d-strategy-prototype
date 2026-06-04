@@ -71,7 +71,7 @@ const GENERIC_CHAINS = [
     allowedLocTypes: ['main_settlement'],
     tier: 3, upgradeFromId: 'town_hall_2',
     category: BUILDING_CATEGORIES.ADMINISTRATION,
-    techRequired: null,
+    techRequired: 'monarchy',
     cost: { gold: 240 }, buildTurns: 8,
     bonuses: { gold: 20, faction_primary_adv: 2, growthSlots: 3, research: 2 },
     prerequisites: ['town_hall_2'],
@@ -295,7 +295,7 @@ const GENERIC_CHAINS = [
     allowedLocTypes: ['fort'],
     tier: 3, upgradeFromId: 'fortress_1',
     category: BUILDING_CATEGORIES.DEFENSIVE,
-    techRequired: null,
+    techRequired: 'castle_construction',
     cost: { gold: 180 }, buildTurns: 6,
     bonuses: { defense: 0.20, growthSlots: 1 },
     prerequisites: ['fortress_1'],
@@ -343,7 +343,7 @@ const GENERIC_CHAINS = [
     allowedLocTypes: ['main_settlement'],
     tier: 3, upgradeFromId: 'scriptorium',
     category: BUILDING_CATEGORIES.SCIENTIFIC,
-    techRequired: null,
+    techRequired: 'universities',
     cost: { gold: 160 }, buildTurns: 4,
     bonuses: { research: 3 },
     prerequisites: ['scriptorium'],
@@ -795,11 +795,12 @@ export function getBuildingsForLocation(factionId, locationType, existingBuildin
     if (existingBuildingIds.includes(b.id)) return false;
     if (b.upgradeFromId && !existingBuildingIds.includes(b.upgradeFromId)) return false;
     if (!b.prerequisites.every(pId => existingBuildingIds.includes(pId))) return false;
-    // Require the location's main building to be at the specified tier
+    // Require the location's main building to be at or above the specified tier
+    // (upgrading replaces the lower-tier building, so tier 2 satisfies a tier-1 requirement)
     if (b.mainBuildingTier != null) {
       const chain = LOCATION_MAIN_CHAIN[locationType];
-      const requiredId = chain?.[b.mainBuildingTier - 1];
-      if (requiredId && !existingBuildingIds.includes(requiredId)) return false;
+      const satisfied = chain?.slice(b.mainBuildingTier - 1).some(id => existingBuildingIds.includes(id));
+      if (!satisfied) return false;
     }
     // Hide buildings that have been superseded (a higher tier is already installed)
     const isSuperseded = BUILDINGS.some(

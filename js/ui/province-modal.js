@@ -51,6 +51,7 @@ import {
 } from './tooltips.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { TECH_MAP } from '../data/techs-data.js';
+import { getEffectiveUnitStats } from '../engine/tech-effects.js';
 import { resolveMonsterDenCombat } from '../engine/combat.js';
 import { renderArmyPanel } from './army-panel.js';
 import { showResearchModalAndHighlight } from './research-modal.js';
@@ -982,15 +983,16 @@ function _renderRecruit(prov) {
     const row = document.createElement('div');
     row.className = 'pmod-recruit-row';
 
+    const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(uDef.id, state.playerFactionId, UNIT_MAP);
     const card = createCard({
       variant: 'unit',
       backgroundSrc: faction?.unitCardBgImg ?? null,
       foregroundSrc: uDef.cardSpriteImg ?? null,
       fallbackIcon: uDef.emoji ?? '⚔',
       fallbackName: uDef.name,
-      fallbackSub: `⚔${uDef.attack} 🛡${uDef.defense}`,
+      fallbackSub: `⚔${effAtk} 🛡${effDef}`,
     });
-    card.addEventListener('mouseenter', () => showUnitTooltip(uDef, faction, card));
+    card.addEventListener('mouseenter', () => showUnitTooltip(uDef, faction, card, null, null, effAtk, effDef));
     card.addEventListener('mouseleave', hideUnitTooltip);
     row.appendChild(card);
 

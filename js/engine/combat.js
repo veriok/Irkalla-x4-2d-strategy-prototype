@@ -33,7 +33,7 @@ import {
 import { getLocationDefenseBonus } from '../models/location.js';
 import { flashCombat, flashConquest } from '../ui/map-view.js';
 import { logCapture, logMessage } from '../ui/event-log.js';
-import { getEffectiveUnitStats } from './tech-effects.js';
+import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense } from './tech-effects.js';
 import { playerCanSee } from './game-state.js';
 import { MONSTER_UNITS, BIOME_DEN_ENCOUNTER } from '../data/monsters-data.js';
 
@@ -46,7 +46,7 @@ function _clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 function _pickBestDefenderArmy(defArmies) {
   if (!defArmies || defArmies.length === 0) return null;
   return [...defArmies].sort((a, b) => {
-    const byDef = armyDefenseStrength(b, UNIT_MAP) - armyDefenseStrength(a, UNIT_MAP);
+    const byDef = getEffectiveArmyDefense(b, b.factionId, UNIT_MAP) - getEffectiveArmyDefense(a, a.factionId, UNIT_MAP);
     if (byDef !== 0) return byDef;
     return armySize(b) - armySize(a);
   })[0];
@@ -396,8 +396,8 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   const isSeaAttack = !!(attackerOriginProv?.isOcean && attackerOriginProv?.oceanType === 'shallow');
   const seaPenalty  = isSeaAttack ? 0.8 : 1.0;
 
-  const attackerStrengthPre = Math.round(armyAttackStrength(attArmy, UNIT_MAP) * seaPenalty);
-  const defenderArmyDefensePre = enemyDefArmy ? armyDefenseStrength(enemyDefArmy, UNIT_MAP) : 0;
+  const attackerStrengthPre = Math.round(getEffectiveArmyAttack(attArmy, attArmy.factionId, UNIT_MAP) * seaPenalty);
+  const defenderArmyDefensePre = enemyDefArmy ? getEffectiveArmyDefense(enemyDefArmy, enemyDefArmy.factionId, UNIT_MAP) : 0;
   const defenderMilitiaDefensePre = _militiaDefense(militiaPool);
   const defenderStrengthPre = Math.round((defenderArmyDefensePre + defenderMilitiaDefensePre) * terrainMod + fortBonus * 10);
 
@@ -492,8 +492,8 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   }
 
   if (outcome === 'inconclusive') {
-    const attNow = armyAttackStrength(attArmy, UNIT_MAP) + armyDefenseStrength(attArmy, UNIT_MAP);
-    const defNow = (enemyDefArmy ? armyAttackStrength(enemyDefArmy, UNIT_MAP) + armyDefenseStrength(enemyDefArmy, UNIT_MAP) : 0)
+    const attNow = getEffectiveArmyAttack(attArmy, attArmy.factionId, UNIT_MAP) + getEffectiveArmyDefense(attArmy, attArmy.factionId, UNIT_MAP);
+    const defNow = (enemyDefArmy ? getEffectiveArmyAttack(enemyDefArmy, enemyDefArmy.factionId, UNIT_MAP) + getEffectiveArmyDefense(enemyDefArmy, enemyDefArmy.factionId, UNIT_MAP) : 0)
       + _militiaDefense(militiaPool);
     const ratio = defNow > 0 ? attNow / defNow : (attNow > 0 ? 2 : 0.5);
     if (ratio >= 1.1) outcome = 'attacker';
@@ -599,8 +599,8 @@ export function estimateCombat(attackerArmyId, targetProvinceId) {
   const enemyDefArmy = _pickBestDefenderArmy(enemyArmies);
   const militiaPool = _militiaPoolForProvince(targetP);
 
-  const attStr = armyAttackStrength(attArmy, UNIT_MAP) * seaPenalty
-    + armyDefenseStrength(attArmy, UNIT_MAP);
+  const attStr = getEffectiveArmyAttack(attArmy, attArmy.factionId, UNIT_MAP) * seaPenalty
+    + getEffectiveArmyDefense(attArmy, attArmy.factionId, UNIT_MAP);
   let borrowedStrengthBonus = 0;
   if (enemyDefArmy && enemyArmies.length > 1) {
     borrowedStrengthBonus = _estimateBorrowedStrengthBonus(
@@ -612,7 +612,7 @@ export function estimateCombat(attackerArmyId, targetProvinceId) {
   }
 
   const defArmy = enemyDefArmy
-    ? armyAttackStrength(enemyDefArmy, UNIT_MAP) + armyDefenseStrength(enemyDefArmy, UNIT_MAP) + borrowedStrengthBonus
+    ? getEffectiveArmyAttack(enemyDefArmy, enemyDefArmy.factionId, UNIT_MAP) + getEffectiveArmyDefense(enemyDefArmy, enemyDefArmy.factionId, UNIT_MAP) + borrowedStrengthBonus
     : 0;
   const defStr = Math.round((defArmy + _militiaDefense(militiaPool)) * terrainMod + fortBonus * 10);
 
