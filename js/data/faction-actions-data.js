@@ -55,7 +55,7 @@ export const FACTION_ACTIONS = {
   conscript_levies: {
     id: 'conscript_levies',
     label: 'Conscript Levies',
-    icon: '🪖',
+    icon: '📣',
     description: 'Spend Tribute to instantly raise levies in a province. Applies Conscription Strain.',
     hintTechId: null,
   },
@@ -63,7 +63,7 @@ export const FACTION_ACTIONS = {
   fortify_province: {
     id: 'fortify_province',
     label: 'Fortify Province',
-    icon: '🔒',
+    icon: '🔧',
     description: 'Spend Schematics to apply a Freehold Fortification to a province.',
     hintTechId: null,
   },

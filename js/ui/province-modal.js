@@ -28,12 +28,10 @@ import {
   LOCATION_TYPES,
   LOCATION_BUILD_COSTS,
   LOCATION_BUILD_TURNS,
-  LOCATION_BASE_SLOTS,
   LOCATION_CLEAR_COSTS,
   LOCATION_CLEAR_TECH_REQ,
   getInstalledBuildingIds,
   getAvailableBuildingSlots,
-  getLocationResourceBonuses,
 } from '../models/location.js';
 import { enqueueProduction, dequeueProduction } from '../models/province.js';
 import { BUILDING_MAP, getBuildingsForLocation, getBuildingsForFaction, LOCATION_MAIN_CHAIN } from '../data/buildings-data.js';
@@ -52,8 +50,8 @@ import {
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { FACTION_IDS } from '../data/enums.js';
 import { isFactionActionUnlocked } from '../engine/faction-actions.js';
-import { ARMY_STATUS_MAP } from '../data/army-status-data.js';
-import { accumulateBuildCostModifiers, BUILDING_MAP as _BMAP } from '../data/buildings-data.js';
+import { FACTION_ACTIONS } from '../data/faction-actions-data.js';
+import { accumulateBuildCostModifiers } from '../data/buildings-data.js';
 import { TECH_MAP } from '../data/techs-data.js';
 import { getEffectiveUnitStats } from '../engine/tech-effects.js';
 import { resolveMonsterDenCombat } from '../engine/combat.js';
@@ -1175,7 +1173,7 @@ function _renderQueue(prov) {
  * @param {Object} prov
  * @param {Function} onRefresh  — called after action is performed
  */
-export function collectProvinceActions(prov, onRefresh) {
+function collectProvinceActions(prov, onRefresh) {
   const factionId = state.playerFactionId;
   if (prov.ownerId !== factionId || prov.visibility !== 'visible') return [];
 
@@ -1194,7 +1192,7 @@ export function collectProvinceActions(prov, onRefresh) {
     const nextPercent = (currentStacks + 1) * (conscriptDef?.effects?.[0]?.percent ?? -20);
     const canDo = tribute >= cost && currentStacks < maxStacks;
     actions.push({
-      emoji: '🪖',
+      emoji: FACTION_ACTIONS.conscript_levies.icon,
       label: 'Conscript',
       costLabel: `${cost} Tribute → +${leviesAdded} [${currentStacks}/${maxStacks}]`,
       description: `Instantly add ${leviesAdded} levies. Conscript strain: ${nextPercent}% all income total.`,
@@ -1228,7 +1226,7 @@ export function collectProvinceActions(prov, onRefresh) {
     const maxStacks = PROVINCE_STATUS_MAP['freehold_fortification']?.maxStacks ?? 3;
     const canDo = schematics >= cost && currentStacks < maxStacks;
     actions.push({
-      emoji: '🔒',
+      emoji: FACTION_ACTIONS.fortify_province.icon,
       label: 'Fortify',
       costLabel: `${cost} Schematics [${currentStacks}/${maxStacks}]`,
       description: `+${(currentStacks + 1) * 10}% province defense after fortify (permanent until conquered).`,

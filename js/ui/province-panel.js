@@ -20,7 +20,6 @@ import { FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
 import { getBiome } from '../data/biomes-data.js';
 import {
   LOCATION_TYPES,
-  getLocationResourceBonuses,
 } from '../models/location.js';
 import { dequeueProduction } from '../models/province.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
