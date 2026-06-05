@@ -326,6 +326,8 @@ body {
 .army-faction-icon { font-size: 18px; }
 .army-location { font-size: 11px; color: var(--text-muted); }
 .army-units { margin-top: 5px; }
+/* Shrink cards just enough so 6 fit inside the army-card's 220px content width (6×34+5×3=219px) */
+.army-units.card-grid--6 { --card-w: 34px; --card-h: 51px; }
 .unit-chip {
   font-size: 11px;
   background: var(--bg-dark);

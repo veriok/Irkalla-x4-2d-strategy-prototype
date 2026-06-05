@@ -23,7 +23,7 @@ import { RACE_MAP } from '../data/races-data.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
-import { TECH_MAP } from '../data/techs-data.js';
+import { TECH_MAP, resolveTechBaseCost } from '../data/techs-data.js';
 import { createProvince } from '../models/province.js';
 import {
   createArmy,
@@ -96,12 +96,15 @@ const DEFAULT_FACTION_PER_RACE = {
  */
 function getPlayingFactions(playerFactionId) {
   const playerFaction = FACTION_MAP[playerFactionId];
+  const allFactions = Object.values(FACTION_MAP);
   const playingIds = [];
-  for (const [raceId, defaultId] of Object.entries(DEFAULT_FACTION_PER_RACE)) {
+  for (const raceId of Object.keys(DEFAULT_FACTION_PER_RACE)) {
     if (raceId === playerFaction.raceId) {
-      playingIds.push(playerFactionId); // player's chosen faction, even if not default
+      playingIds.push(playerFactionId);
     } else {
-      playingIds.push(defaultId);
+      const raceFactions = allFactions.filter(f => f.raceId === raceId);
+      const pick = raceFactions[Math.floor(Math.random() * raceFactions.length)];
+      playingIds.push(pick.id);
     }
   }
   return playingIds;
@@ -514,9 +517,18 @@ export function transferUnit(fromArmyId, toArmyId, typeId, count = 1) {
   const totalTo = armyTotalCount(to);
   if (totalTo + count > cap) return false;
 
+  // Capture source fatigue before transfer (moves already spent)
+  const movesUsed = Math.max(0, (from.maxMoves ?? 1) - (from.movesLeft ?? 0));
+
   // Transfer active units with HP preserved
   const ok = transferActiveUnits(from, to, typeId, count, UNIT_MAP);
   if (!ok) return false;
+
+  // Transferred units bring their fatigue — reduce destination movesLeft accordingly
+  if (movesUsed > 0) {
+    to.movesLeft = Math.max(0, to.movesLeft - movesUsed);
+    if (to.movesLeft === 0) markArmyMoved(to);
+  }
 
   // If the source army is now empty, remove it
   const remainingUnits = from.units.reduce((s, u) => s + u.count, 0)
@@ -547,7 +559,7 @@ export function unlockTech(factionId, techId) {
   if (!fs) return false;
   if (fs.unlockedTechs.includes(techId)) return false;
 
-  const cost = getEffectiveTechCost(factionId, techDef.baseCost);
+  const cost = getEffectiveTechCost(factionId, resolveTechBaseCost(techDef));
   if (!canAfford(factionId, { research: cost })) return false;
 
   spendResources(factionId, { research: cost });
@@ -609,6 +621,11 @@ export function checkElimination() {
       state.eliminated.add(factionId);
       const fs = state.factions.get(factionId);
       if (fs) fs.isEliminated = true;
+      for (const p of getProvincesByFaction(factionId)) {
+        p.ownerId = 'neutral';
+        p.productionQueue = [];
+        p.statusEffects = [];
+      }
       newlyEliminated.push(factionId);
     }
   }

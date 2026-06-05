@@ -785,6 +785,11 @@ export const TECH_MAP = Object.fromEntries(TECHS.map(t => [t.id, t]));
  * Returns Map<baseSlotId, resolvedTechDef>.
  * Faction override > race override > default.
  */
+/** Resolve baseCost for a tech, falling back to the replaced tech's cost for replacement techs. */
+export function resolveTechBaseCost(techDef) {
+  return techDef.baseCost ?? TECH_MAP[techDef.replacesId]?.baseCost;
+}
+
 export function buildFactionTechTree(factionId) {
   const factionDef = FACTION_MAP[factionId];
   const raceId = factionDef?.raceId;

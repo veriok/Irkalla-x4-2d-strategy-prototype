@@ -19,7 +19,7 @@ export function initEndTurnButton() {
   btn.addEventListener('click', handleEndTurn);
 }
 
-async function handleEndTurn() {
+export async function handleEndTurn() {
   if (state.phase !== 'player') return;
   state.phase = 'ai';
 

@@ -7,7 +7,7 @@
 
 import { state, getFaction, canAfford, unlockTech, getEffectiveTechCost } from '../engine/game-state.js';
 import { computeIncome } from '../engine/turn-engine.js';
-import { TECH_MAP, buildFactionTechTree } from '../data/techs-data.js';
+import { TECH_MAP, buildFactionTechTree, resolveTechBaseCost } from '../data/techs-data.js';
 import { createCard, getTechCardImage } from './card-renderer.js';
 import { TECH_ERAS } from '../data/enums.js';
 import { showTechTooltip, hideTechTooltip } from './tooltips.js';
@@ -157,7 +157,7 @@ function _makeTechItem(techDef, fs, techTree) {
   const unlocked  = fs.unlockedTechs.includes(techDef.id);
   const req = TECH_MAP[techDef.replacesId ?? techDef.id]?.requires;
   const prereqsMet = !req || fs.unlockedTechs.includes(req);
-  const cost      = getEffectiveTechCost(state.playerFactionId, techDef.baseCost);
+  const cost      = getEffectiveTechCost(state.playerFactionId, resolveTechBaseCost(techDef));
   const affordable = canAfford(state.playerFactionId, { research: cost });
 
   let cardClass = 'tech-locked';
@@ -198,7 +198,7 @@ function _makeTechItem(techDef, fs, techTree) {
       btn.textContent = missingDef ? `Req: ${missingDef.name}` : 'Requires tech';
       if (missingId) {
         btn.classList.add('rmod-req-btn');
-        btn.addEventListener('click', () => showResearchModalAndHighlight(missingId));
+        btn.addEventListener('click', () => showResearchModalAndHighlight(missingDef.id));
       } else {
         btn.disabled = true;
       }

@@ -222,7 +222,10 @@ function _renderHeader(prov) {
   incomeChipsEl.innerHTML = '';
   const playerFaction = FACTION_MAP[state.playerFactionId];
   if (playerFaction && prov.ownerId === state.playerFactionId) {
-    const allResById = { [playerFaction.resources.basic.id]: playerFaction.resources.basic };
+    const allResById = {
+      research: { id: 'research', name: 'Research', emoji: '📚' },
+      [playerFaction.resources.basic.id]: playerFaction.resources.basic,
+    };
     for (const r of playerFaction.resources.advanced) allResById[r.id] = r;
 
     const breakdown = _computeProvinceBreakdown(prov, playerFaction);
@@ -249,11 +252,15 @@ function _renderHeader(prov) {
     const totalDefPct = Math.round(defStats.total * 100);
     const defChip = document.createElement('span');
     defChip.className = 'pmod-stat-chip';
-    defChip.textContent = `🛡 Defense: +${totalDefPct}%`;
+    const defSign = totalDefPct >= 0 ? '+' : '';
+    defChip.textContent = `🛡 Defense: ${defSign}${totalDefPct}%`;
+    const biomePct = Math.round(defStats.biome * 100);
+    const bldgPct  = Math.round(defStats.buildings * 100);
+    const fortPct  = Math.round(defStats.status * 100);
     defChip.title = [
-      `Biome (${biome.name}): +${Math.round(defStats.biome * 100)}%`,
-      defStats.buildings > 0 ? `Buildings: +${Math.round(defStats.buildings * 100)}%` : null,
-      defStats.status  > 0 ? `Fortifications: +${Math.round(defStats.status  * 100)}%` : null,
+      `Biome (${biome.name}): ${biomePct >= 0 ? '+' : ''}${biomePct}%`,
+      defStats.buildings !== 0 ? `Buildings: ${bldgPct >= 0 ? '+' : ''}${bldgPct}%` : null,
+      defStats.status    !== 0 ? `Fortifications: ${fortPct >= 0 ? '+' : ''}${fortPct}%` : null,
     ].filter(Boolean).join('\n');
     statsRowEl.appendChild(defChip);
 
@@ -479,6 +486,17 @@ function _renderLocationRows(prov) {
             fallbackName: bDef?.name ?? buildingId,
             fallbackSub: '',
           });
+          if (isPlayerProvince && bDef) {
+            const unlockedTechs = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
+            const avail = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal)
+              .filter(b => !b.techRequired || unlockedTechs.includes(b.techRequired));
+            if (avail.some(b => b.upgradeFromId === buildingId)) {
+              const badge = document.createElement('span');
+              badge.className = 'game-card__upgrade-badge';
+              badge.textContent = '↑';
+              card.appendChild(badge);
+            }
+          }
           if (bDef) {
             card.addEventListener('mouseenter', () => showBuildingTooltip(bDef, card, { installed: true }));
             card.addEventListener('mouseleave', hideBuildingTooltip);

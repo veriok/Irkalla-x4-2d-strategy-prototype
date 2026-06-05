@@ -122,7 +122,7 @@ const GENERIC_CHAINS = [
     allowedLocTypes: ['village'],
     tier: 3, upgradeFromId: 'mercantile_2',
     category: BUILDING_CATEGORIES.TRADE,
-    techRequired: null,
+    techRequired: 'trade_networks',
     cost: { gold: 250 }, buildTurns: 5,
     bonuses: { gold: 10, growthSlots: 2 },
     prerequisites: ['mercantile_2'],
