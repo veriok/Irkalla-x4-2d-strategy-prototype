@@ -22,7 +22,7 @@ import { armyAttackStrength, armyDefenseStrength, armySize, createArmy } from '.
 import { getInstalledBuildingIds } from '../models/location.js';
 import { enqueueProduction } from '../models/province.js';
 import { computeIncome } from './turn-engine.js';
-import { buildFactionTechTree } from '../data/techs-data.js';
+import { buildFactionTechTree, TECH_MAP } from '../data/techs-data.js';
 import { logMessage } from '../ui/event-log.js';
 
 // Small async delay between AI actions (lets UI update)
@@ -154,7 +154,8 @@ export async function runAI(factionId) {
       const candidates = [];
       for (const [slotId, techDef] of techTree.entries()) {
         if (fs.unlockedTechs.includes(techDef.id)) continue;
-        const prereqsMet = (techDef.requires ?? []).every(r => fs.unlockedTechs.includes(r));
+        const req = TECH_MAP[techDef.replacesId ?? techDef.id]?.requires;
+        const prereqsMet = !req || fs.unlockedTechs.includes(req);
         if (!prereqsMet) continue;
         const cost = getEffectiveTechCost(factionId, techDef.baseCost);
         if (canAfford(factionId, { research: cost })) candidates.push({ techDef, cost });

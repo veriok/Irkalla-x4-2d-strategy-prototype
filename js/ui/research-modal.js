@@ -16,10 +16,10 @@ const overlayEl   = document.getElementById('research-modal-overlay');
 const closeBtn    = document.getElementById('rmod-close');
 const poolEl      = document.getElementById('rmod-research-pool');
 const treeGridEl  = document.getElementById('rmod-tree-grid');
-const svgLines    = document.getElementById('rmod-lines');
 const scrollEl    = document.getElementById('rmod-tree-scroll');
 
-let _isOpen = false;
+let _isOpen     = false;
+let _activeEra  = TECH_ERAS.STONE;
 
 // ── Public API ────────────────────────────────────────────
 
@@ -40,6 +40,10 @@ export function refreshResearchModal() {
 }
 
 export function showResearchModalAndHighlight(techId) {
+  const techEra = TECH_MAP[techId]?.era ?? TECH_ERAS.STONE;
+  if (techEra !== _activeEra) {
+    _activeEra = techEra;
+  }
   showResearchModal();
   requestAnimationFrame(() => {
     const el = overlayEl.querySelector(`[data-tech-id="${techId}"]`);
@@ -73,25 +77,21 @@ function _render() {
   `;
 
   _renderTree(techTree, fs);
-
-  // Draw lines after layout settles
-  requestAnimationFrame(() => _drawLines(techTree, fs));
+  _applyActiveEra();
 }
 
 // ── Tree layout ───────────────────────────────────────────
 
-const ERA_ORDER = [TECH_ERAS.STONE, TECH_ERAS.BRONZE, TECH_ERAS.IRON];
-const ERA_LABELS = {
-  [TECH_ERAS.STONE]:  '⚪ Stone Age',
-  [TECH_ERAS.BRONZE]: '🟠 Bronze Age',
-  [TECH_ERAS.IRON]:   '⚫ Iron Age',
-};
+const ERA_ORDER = [
+  TECH_ERAS.STONE, TECH_ERAS.BRONZE, TECH_ERAS.IRON,
+  TECH_ERAS.SILVER, TECH_ERAS.GOLD, TECH_ERAS.MITHRIL,
+];
 
 function _renderTree(techTree, fs) {
   treeGridEl.innerHTML = '';
 
-  const byEra = { [TECH_ERAS.STONE]: [], [TECH_ERAS.BRONZE]: [], [TECH_ERAS.IRON]: [] };
-  for (const [slotId, techDef] of techTree.entries()) {
+  const byEra = Object.fromEntries(ERA_ORDER.map(e => [e, []]));
+  for (const [, techDef] of techTree.entries()) {
     const era = techDef.era ?? TECH_ERAS.STONE;
     if (byEra[era]) byEra[era].push(techDef);
   }
@@ -101,41 +101,62 @@ function _renderTree(techTree, fs) {
     eraSection.className = 'rmod-era-col';
     eraSection.id = `rmod-col-${era}`;
 
-    const header = document.createElement('div');
-    header.className = 'rmod-era-header';
-    header.textContent = ERA_LABELS[era] ?? era;
-    eraSection.appendChild(header);
-
-    // CSS grid: rows × cols determined by max row/col in this era
-    const techs = byEra[era];
-    const maxCol = techs.reduce((m, t) => Math.max(m, t.col ?? 0), 0);
-    const maxRow = techs.reduce((m, t) => Math.max(m, t.row ?? 0), 0);
-
     const grid = document.createElement('div');
     grid.className = 'rmod-era-grid';
-    grid.style.gridTemplateColumns = `repeat(${maxCol + 1}, var(--rmod-card-w))`;
-    grid.style.gridTemplateRows    = `repeat(${maxRow + 1}, var(--rmod-row-h))`;
     eraSection.appendChild(grid);
 
-    for (const techDef of techs) {
-      const item = _makeTechItem(techDef, fs);
-      // Explicit grid placement from data — supports empty cells naturally
-      item.style.gridColumn = (techDef.col ?? 0) + 1;
-      item.style.gridRow    = (techDef.row ?? 0) + 1;
-      grid.appendChild(item);
+    for (const techDef of _depthSort(byEra[era])) {
+      grid.appendChild(_makeTechItem(techDef, fs, techTree));
     }
 
     treeGridEl.appendChild(eraSection);
   }
 }
 
-function _makeTechItem(techDef, fs) {
+/** Sort techs by intra-era dependency depth, then alphabetically. */
+function _depthSort(techDefs) {
+  const slotOf = t => t.replacesId ?? t.id;
+  const eraSlots = new Set(techDefs.map(slotOf));
+  const depth = new Map(techDefs.map(t => [t.id, 0]));
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const t of techDefs) {
+      const reqSlot = TECH_MAP[slotOf(t)]?.requires;
+      if (!reqSlot || !eraSlots.has(reqSlot)) continue;
+      const pred = techDefs.find(d => slotOf(d) === reqSlot);
+      if (!pred) continue;
+      const d = (depth.get(pred.id) ?? 0) + 1;
+      if (d > depth.get(t.id)) { depth.set(t.id, d); changed = true; }
+    }
+  }
+
+  return [...techDefs].sort((a, b) =>
+    depth.get(a.id) !== depth.get(b.id)
+      ? depth.get(a.id) - depth.get(b.id)
+      : a.id.localeCompare(b.id)
+  );
+}
+
+function _applyActiveEra() {
+  ERA_ORDER.forEach(era => {
+    const col = document.getElementById(`rmod-col-${era}`);
+    if (col) col.classList.toggle('active', era === _activeEra);
+  });
+  overlayEl.querySelectorAll('.rmod-era-tab').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.era === _activeEra)
+  );
+}
+
+function _makeTechItem(techDef, fs, techTree) {
   const wrapper = document.createElement('div');
   wrapper.className = 'rmod-tech-item';
   wrapper.dataset.techId = techDef.id;
 
   const unlocked  = fs.unlockedTechs.includes(techDef.id);
-  const prereqsMet = (techDef.requires ?? []).every(r => fs.unlockedTechs.includes(r));
+  const req = TECH_MAP[techDef.replacesId ?? techDef.id]?.requires;
+  const prereqsMet = !req || fs.unlockedTechs.includes(req);
   const cost      = getEffectiveTechCost(state.playerFactionId, techDef.baseCost);
   const affordable = canAfford(state.playerFactionId, { research: cost });
 
@@ -172,8 +193,8 @@ function _makeTechItem(techDef, fs) {
     btn.className = 'rmod-unlock-btn';
 
     if (!prereqsMet) {
-      const missingId = (techDef.requires ?? []).find(r => !fs.unlockedTechs.includes(r));
-      const missingDef = missingId ? TECH_MAP[missingId] : null;
+      const missingId = TECH_MAP[techDef.replacesId ?? techDef.id]?.requires;
+      const missingDef = missingId ? (techTree?.get(missingId) ?? TECH_MAP[missingId]) : null;
       btn.textContent = missingDef ? `Req: ${missingDef.name}` : 'Requires tech';
       btn.disabled = true;
     } else if (!affordable) {
@@ -194,105 +215,14 @@ function _makeTechItem(techDef, fs) {
   return wrapper;
 }
 
-// ── SVG connection lines ──────────────────────────────────
-
-const MAX_ROW_DIFF  = 5;    // clamp for Y-offset calculation
-const MAX_Y_RATIO   = 0.25; // max 25% of card height offset from center
-const ARROW_LEN     = 6;
-const ARROW_W       = 4;
-
-function _offsetFromContainer(el, container) {
-  let x = 0, y = 0;
-  let cur = el;
-  while (cur && cur !== container) {
-    x += cur.offsetLeft;
-    y += cur.offsetTop;
-    cur = cur.offsetParent;
-  }
-  return { x, y };
-}
-
-function _drawLines(techTree, fs) {
-  svgLines.innerHTML = '';
-  svgLines.setAttribute('width',  scrollEl.scrollWidth);
-  svgLines.setAttribute('height', scrollEl.scrollHeight);
-
-  function getItemEl(techId) {
-    return treeGridEl.querySelector(`.rmod-tech-item[data-tech-id="${techId}"]`);
-  }
-
-  for (const [slotId, techDef] of techTree.entries()) {
-    if (!techDef.requires || techDef.requires.length === 0) continue;
-
-    const targetEl = getItemEl(techDef.id);
-    if (!targetEl) continue;
-    const targetOff = _offsetFromContainer(targetEl, scrollEl);
-    const targetH   = targetEl.offsetHeight;
-    const targetCenterY = targetOff.y + targetH * 0.5;
-
-    for (const reqId of techDef.requires) {
-      const sourceEl = getItemEl(reqId);
-      if (!sourceEl) continue;
-      const sourceOff = _offsetFromContainer(sourceEl, scrollEl);
-      const sourceH   = sourceEl.offsetHeight;
-      const sourceCenterY = sourceOff.y + sourceH * 0.5;
-
-      // Row difference drives Y-offset (up to 25% of item height)
-      const sourceDef   = techTree.get(reqId);
-      const rowDiff     = (techDef.row ?? 0) - (sourceDef?.row ?? 0);
-      const clamped     = Math.max(-MAX_ROW_DIFF, Math.min(MAX_ROW_DIFF, rowDiff));
-      const maxOffset   = sourceH * MAX_Y_RATIO;
-      const yOffset     = (clamped / MAX_ROW_DIFF) * maxOffset;
-
-      const x1 = sourceOff.x + sourceEl.offsetWidth; // right edge of source
-      const y1 = sourceCenterY + yOffset;             // departure: shifted toward target
-      const x2 = targetOff.x;                         // left edge of target
-      const y2 = targetCenterY - yOffset;             // arrival: shifted toward source (opposite direction)
-      const midX = (x1 + x2) / 2;
-
-      // Polyline: horizontal → vertical step → horizontal (angular, like Civ 4)
-      const isStraight = Math.abs(y1 - y2) < 1.5;
-      const points = isStraight
-        ? `${x1},${y1} ${x2 - ARROW_LEN},${y2}`
-        : `${x1},${y1} ${midX},${y1} ${midX},${y2} ${x2 - ARROW_LEN},${y2}`;
-
-      // Unlock state → CSS class
-      const sourceUnlocked = fs.unlockedTechs.includes(reqId);
-      const targetUnlocked = fs.unlockedTechs.includes(techDef.id);
-      const stateCls = sourceUnlocked && targetUnlocked ? 'unlocked'
-                     : sourceUnlocked                   ? 'available'
-                     :                                    'locked';
-
-      const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-      poly.setAttribute('points', points);
-      poly.setAttribute('fill', 'none');
-      poly.setAttribute('stroke-width', '2');
-      poly.setAttribute('class', `rmod-line-${stateCls}`);
-      svgLines.appendChild(poly);
-
-      // Arrowhead at arrival (right-pointing triangle)
-      const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-      arrow.setAttribute('points',
-        `${x2 - ARROW_LEN},${y2 - ARROW_W} ${x2},${y2} ${x2 - ARROW_LEN},${y2 + ARROW_W}`
-      );
-      arrow.setAttribute('stroke', 'none');
-      arrow.setAttribute('class', `rmod-arrow-${stateCls}`);
-      svgLines.appendChild(arrow);
-    }
-  }
-}
-
-// ── Scroll listener: redraw lines on scroll ───────────────
-scrollEl?.addEventListener('scroll', () => {
-  if (!_isOpen) return;
-  const factionId = state.playerFactionId;
-  if (!factionId) return;
-  const fs = getFaction(factionId);
-  const techTree = buildFactionTechTree(factionId);
-  _drawLines(techTree, fs);
+// ── Event listeners ───────────────────────────────────────
+overlayEl?.addEventListener('click', e => {
+  const tab = e.target.closest('.rmod-era-tab');
+  if (!tab) return;
+  _activeEra = tab.dataset.era;
+  _applyActiveEra();
 });
 
-// ── Event listeners ───────────────────────────────────────
 closeBtn?.addEventListener('click', hideResearchModal);
 
 document.addEventListener('technology-researched', () => refreshResearchModal());

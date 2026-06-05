@@ -16,11 +16,11 @@
 #research-modal-overlay[hidden] { display: none; }
 
 #research-modal {
-  --rmod-card-w: 52px;
-  --rmod-card-h: 78px;
+  --rmod-card-w: 80px;
+  --rmod-card-h: 120px;
   --rmod-era-gap: 32px;
-  --rmod-card-gap: 10px;
-  --rmod-row-h: 122px;
+  --rmod-card-gap: 12px;
+  --rmod-row-h: 158px;
 
   background: var(--bg-panel);
   border: 2px solid var(--border);
@@ -84,6 +84,36 @@
   opacity: 0.7;
 }
 
+/* ── Era tabs ───────────────────────────────────── */
+#rmod-era-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 16px;
+  background: var(--bg-panel-alt);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.rmod-era-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 8px 14px 6px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.rmod-era-tab:hover {
+  color: var(--text);
+}
+.rmod-era-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
 /* ── Body / scrollable tree ─────────────────────── */
 #rmod-body {
   flex: 1;
@@ -99,61 +129,41 @@
   padding: 20px 24px 32px;
 }
 
-/* SVG overlay for connection lines — dimensions set dynamically in JS */
-#rmod-lines {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  overflow: visible;
-}
 
 /* ── Era grid ───────────────────────────────────── */
 #rmod-tree-grid {
-  display: flex;
-  gap: var(--rmod-era-gap);
-  align-items: flex-start;
-  min-width: max-content;
-  position: relative;
-  z-index: 1;
+  width: 100%;
 }
 
 .rmod-era-col {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 10px;
-  min-width: var(--rmod-card-w);
+  width: 100%;
+}
+.rmod-era-col.active {
+  display: flex;
 }
 
 .rmod-era-grid {
   display: grid;
+  grid-template-columns: repeat(auto-fill, var(--rmod-card-w));
   column-gap: 18px;
   row-gap: var(--rmod-card-gap);
-  align-items: center;
+  align-items: start;
 }
 
-.rmod-era-header {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 4px;
-  white-space: nowrap;
-}
 
 /* ── Tech items ─────────────────────────────────── */
 .rmod-tech-name {
-  font-size: 8px;
+  font-size: 10px;
   text-align: center;
   width: 100%;
   line-height: 1.2;
   color: var(--text);
   word-break: break-word;
   margin-bottom: 2px;
-  height: 22px;       /* fixed: fits 2 lines — keeps cards vertically aligned */
+  height: 26px;
   overflow: hidden;
   display: flex;
   align-items: flex-end;
@@ -170,8 +180,8 @@
 /* Unlock button — same width as card */
 .rmod-unlock-btn {
   width: 100%;
-  font-size: 7px;
-  padding: 2px 0;
+  font-size: 9px;
+  padding: 3px 0;
   border-radius: 0 0 3px 3px;
   text-align: center;
   white-space: nowrap;
@@ -193,7 +203,7 @@
 }
 
 .rmod-unlocked-label {
-  font-size: 8px;
+  font-size: 10px;
   padding: 3px 0;
   text-align: center;
   color: #4caf50;
@@ -226,13 +236,3 @@
   animation: tech-blink 1.2s ease-in-out 2;
 }
 
-/* SVG connection lines */
-/* Polyline strokes */
-.rmod-line-unlocked  { stroke: #4caf50; stroke-opacity: 0.8; }
-.rmod-line-available { stroke: var(--accent, #c8952a); stroke-opacity: 0.8; }
-.rmod-line-locked    { stroke: #555; stroke-opacity: 0.55; }
-
-/* Arrow polygon fills */
-.rmod-arrow-unlocked  { fill: #4caf50; fill-opacity: 0.8; }
-.rmod-arrow-available { fill: var(--accent, #c8952a); fill-opacity: 0.8; }
-.rmod-arrow-locked    { fill: #555; fill-opacity: 0.55; }

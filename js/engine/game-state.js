@@ -552,6 +552,11 @@ export function unlockTech(factionId, techId) {
 
   spendResources(factionId, { research: cost });
   fs.unlockedTechs.push(techId);
+  // If this is a replacement tech, also satisfy the base slot requirement so
+  // any tech whose `requires` references the original slot ID still unlocks correctly.
+  if (techDef.replacesId && !fs.unlockedTechs.includes(techDef.replacesId)) {
+    fs.unlockedTechs.push(techDef.replacesId);
+  }
 
   // Apply research multiplier — may be reduced by philosophical_school tech effect
   const baseGrowth = 1.03;

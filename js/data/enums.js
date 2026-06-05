@@ -66,4 +66,7 @@ export const TECH_ERAS = Object.freeze({
   STONE:  'stone',
   BRONZE: 'bronze',
   IRON:   'iron',
+  SILVER: 'silver',
+  GOLD:   'gold',
+  MITHRIL:'mithril',
 });
