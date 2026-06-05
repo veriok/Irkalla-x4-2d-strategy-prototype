@@ -578,6 +578,14 @@ export function unlockTech(factionId, techId) {
     fs.woundChanceBonus = (fs.woundChanceBonus ?? 0) + techDef.woundChanceBonus;
   }
 
+  // Apply faction-scope effects that update cached state immediately
+  for (const eff of (techDef.effects ?? [])) {
+    if (eff.scope !== 'faction') continue;
+    if (eff.type === 'army_support_limit') {
+      fs.armySupplyCap = (fs.armySupplyCap ?? 6) + (eff.amount ?? 1);
+    }
+  }
+
   document.dispatchEvent(new CustomEvent('technology-researched', {
     detail: { factionId, techId, techDef },
   }));

@@ -178,21 +178,51 @@ const GENERIC_CHAINS = [
     description: 'A grand cathedral of devotion. Major primary resource output and expands the sacred district.',
   },
 
-  // ── Barracks — enables tier-1 unit recruitment + +1 militia ──
+  // ── Training Building Chain ─────────────────────────────
   {
-    id: 'barracks', name: 'Barracks', emoji: '🛡️',
-    cardImg: 'assets/cards/buildings/barracks.png',
+    id: 'mustering_field', name: 'Mustering Field', emoji: '⛺',
+    cardImg: 'assets/cards/buildings/mustering_field.png',
     factionId: null,
     allowedLocTypes: ['village', 'fort', 'main_settlement'],
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.TRAINING,
-    techRequired: null,
+    techRequired: 'warbands',
     cost: { gold: 50 }, buildTurns: 2,
     bonuses: {},
     militiaBonus: 1,
     prerequisites: [],
+    unlocksBuildings: ['warrior_lodge'],
+    description: 'A basic mustering ground for clan warbands. Enables unit recruitment and bolsters local militia.',
+  },
+  {
+    id: 'warrior_lodge', name: 'Warrior Lodge', emoji: '🏕️',
+    cardImg: 'assets/cards/buildings/warrior_lodge.png',
+    factionId: null,
+    allowedLocTypes: ['fort', 'main_settlement'],
+    tier: 2, upgradeFromId: 'mustering_field',
+    category: BUILDING_CATEGORIES.TRAINING,
+    techRequired: 'clan_warfare',
+    cost: { gold: 100 }, buildTurns: 4,
+    bonuses: { recruitSpeed: 1 },
+    militiaBonus: 1,
+    prerequisites: [],
+    unlocksBuildings: ['barracks'],
+    description: 'A martial lodge where seasoned warriors train recruits. Reduces all unit recruit time by 1 turn.',
+  },
+  {
+    id: 'barracks', name: 'Barracks', emoji: '🛡️',
+    cardImg: 'assets/cards/buildings/barracks.png',
+    factionId: null,
+    allowedLocTypes: ['fort', 'main_settlement'],
+    tier: 3, upgradeFromId: 'warrior_lodge',
+    category: BUILDING_CATEGORIES.TRAINING,
+    techRequired: 'battle_formations',
+    cost: { gold: 180 }, buildTurns: 5,
+    bonuses: { recruitSpeed: 1 },
+    militiaBonus: 2,
+    prerequisites: [],
     unlocksBuildings: [],
-    description: 'A garrison barracks. Expands local militia and enables basic unit recruitment from this fort.',
+    description: 'A professional garrison barracks with organised drill. Further reduces recruit time and greatly expands local militia.',
   },
 
   // ── Market Chain (village / main_settlement) ────────────
@@ -920,12 +950,13 @@ const SUTEKH_RA_CHAINS = [
     allowedLocTypes: ['main_settlement', 'shrine'],
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.WORSHIPPING,
-    techRequired: null,
+    techRequired: 'dual_temples',
+    exclusiveWith: ['moon_temple_1', 'moon_temple_2', 'moon_temple_3'],
     cost: { gold: 50, faith: 5 }, buildTurns: 2,
     bonuses: { faith: 1, gold: 2 },
     prerequisites: [],
     unlocksBuildings: ['sun_temple_2'],
-    description: 'A modest shrine to the celestial twins. Generates Faith and blesses the community.',
+    description: 'A shrine of the Solar God. Generates Faith and blesses the community. Mutually exclusive with the Moon Temple.',
   },
   {
     id: 'sun_temple_2', name: 'Sun Temple', emoji: '🛕',
@@ -956,6 +987,55 @@ const SUTEKH_RA_CHAINS = [
     mainBuildingTier: 3,
     unlocksBuildings: [],
     description: 'An eternal pyramid monument. Inspires devotion and awe across the kingdom.',
+  },
+
+  // ── Moon Temple Chain (main_settlement / shrine) — mutually exclusive with sun_temple ──
+  {
+    id: 'moon_temple_1', name: 'Moon Shrine', emoji: '🌙',
+    cardImg: 'assets/cards/buildings/moon_temple_1.png',
+    factionId: FACTION_IDS.SUTEKH_RA,
+    allowedLocTypes: ['main_settlement', 'shrine'],
+    tier: 1, upgradeFromId: null,
+    category: BUILDING_CATEGORIES.WORSHIPPING,
+    techRequired: 'dual_temples',
+    exclusiveWith: ['sun_temple_1', 'sun_temple_2', 'sun_temple_3'],
+    cost: { gold: 50, ancient_lore: 5 }, buildTurns: 2,
+    bonuses: { faith: 1, ancient_lore: 1 },
+    prerequisites: [],
+    unlocksBuildings: ['moon_temple_2'],
+    description: 'A shrine of the Lunar God. Generates Faith and Ancient Lore. Mutually exclusive with the Sun Temple.',
+  },
+  {
+    id: 'moon_temple_2', name: 'Moon Temple', emoji: '🌕',
+    cardImg: 'assets/cards/buildings/moon_temple_2.png',
+    factionId: FACTION_IDS.SUTEKH_RA,
+    allowedLocTypes: ['main_settlement', 'shrine'],
+    tier: 2, upgradeFromId: 'moon_temple_1',
+    category: BUILDING_CATEGORIES.WORSHIPPING,
+    techRequired: null,
+    exclusiveWith: ['sun_temple_1', 'sun_temple_2', 'sun_temple_3'],
+    cost: { gold: 110, ancient_lore: 15, faith: 5 }, buildTurns: 4,
+    bonuses: { faith: 2, ancient_lore: 2, gold: 2 },
+    prerequisites: ['moon_temple_1'],
+    mainBuildingTier: 2,
+    unlocksBuildings: ['moon_temple_3'],
+    description: 'A great temple of the Moon God. Ancient Lore and Faith flow freely. Enables Moon Zealot recruitment.',
+  },
+  {
+    id: 'moon_temple_3', name: 'Grand Moon Temple', emoji: '🌑',
+    cardImg: 'assets/cards/buildings/moon_temple_3.png',
+    factionId: FACTION_IDS.SUTEKH_RA,
+    allowedLocTypes: ['main_settlement'],
+    tier: 3, upgradeFromId: 'moon_temple_2',
+    category: BUILDING_CATEGORIES.WORSHIPPING,
+    techRequired: null,
+    exclusiveWith: ['sun_temple_1', 'sun_temple_2', 'sun_temple_3'],
+    cost: { gold: 220, ancient_lore: 35, faith: 15 }, buildTurns: 7,
+    bonuses: { faith: 3, ancient_lore: 3, gold: 4, defense: 0.10 },
+    prerequisites: ['moon_temple_2'],
+    mainBuildingTier: 3,
+    unlocksBuildings: [],
+    description: 'The eternal monument to the Moon God. Death and rebirth are governed from this sacred place.',
   },
 
   // ── River Granary Chain (village / main_settlement) ──────
@@ -1110,6 +1190,16 @@ export function getBuildingsForFaction(factionId) {
 }
 
 /**
+ * Walk upgradeFromId links upward to find the chain-root building id (the tier-1 ancestor).
+ * Single-tier buildings (no upgradeFromId) are their own root.
+ */
+function _getChainRoot(buildingId) {
+  let cur = BUILDING_MAP[buildingId];
+  while (cur?.upgradeFromId) cur = BUILDING_MAP[cur.upgradeFromId];
+  return cur?.id ?? buildingId;
+}
+
+/**
  * Accumulate faction-scope build cost effects from faction effects + applied tech effects.
  * Returns { locationMultiplier, buildingMultiplier, timePenalty }
  * Used by province-modal and production queue when displaying/applying costs.
@@ -1150,8 +1240,14 @@ export function getBuildingsForLocation(factionId, locationType, existingBuildin
   );
   return available.filter(b => {
     if (existingBuildingIds.includes(b.id)) return false;
+    // Block a chain-root (tier-1) building if any tier of the same chain is already installed.
+    // This prevents rebuilding a lower tier after an upgrade has replaced it.
+    if (b.upgradeFromId === null) {
+      if (existingBuildingIds.some(eid => _getChainRoot(eid) === b.id)) return false;
+    }
     if (b.upgradeFromId && !existingBuildingIds.includes(b.upgradeFromId)) return false;
     if (!b.prerequisites.every(pId => existingBuildingIds.includes(pId))) return false;
+    if (b.exclusiveWith && b.exclusiveWith.some(id => existingBuildingIds.includes(id))) return false;
     if (b.mainBuildingTier != null) {
       const chain = LOCATION_MAIN_CHAIN[locationType];
       const reqId = chain?.[b.mainBuildingTier - 1];

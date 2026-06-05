@@ -59,6 +59,19 @@ import { renderArmyPanel } from './army-panel.js';
 import { showResearchModalAndHighlight } from './research-modal.js';
 import { showDenCombatReportModal } from './modal.js';
 
+// ─── Recruit speed helper ─────────────────────────────────
+/** Sum all recruitSpeed bonuses from buildings across the province. */
+function _getProvinceRecruitSpeed(prov) {
+  let speed = 0;
+  for (const loc of prov.locations) {
+    if (!loc.isControllable) continue;
+    for (const { buildingId } of (loc.buildings ?? [])) {
+      speed += BUILDING_MAP[buildingId]?.bonuses?.recruitSpeed ?? 0;
+    }
+  }
+  return speed;
+}
+
 // ─── Build cost modifier helper ───────────────────────────
 /** Apply faction build cost modifiers (e.g. Clans +50% buildings). Returns { cost, buildTurns } */
 function _effectiveBuildingCost(bDef) {
@@ -248,24 +261,15 @@ function _renderHeader(prov) {
     if (effectsEl) {
       effectsEl.innerHTML = '';
       const visibleEffects = prov.visibility === 'visible' ? (prov.statusEffects ?? []) : [];
-      if (visibleEffects.length === 0) {
-        const placeholder = document.createElement('span');
-        placeholder.className = 'pmod-effect-icon';
-        placeholder.title = 'No active effects';
-        placeholder.style.opacity = '0.3';
-        placeholder.textContent = '✨';
-        effectsEl.appendChild(placeholder);
-      } else {
-        for (const effect of visibleEffects) {
-          const def = PROVINCE_STATUS_MAP[effect.type];
-          if (!def) continue;
-          const chip = document.createElement('span');
-          chip.className = 'pmod-effect-chip';
-          chip.innerHTML = `<span class="pmod-effect-icon">${def.icon}</span>${(effect.stacks ?? 1) > 1 ? `<span class="pmod-effect-stacks">×${effect.stacks}</span>` : ''}<span class="pmod-effect-turns">${effect.turnsRemaining === -1 ? '∞' : effect.turnsRemaining + 't'}</span>`;
-          chip.addEventListener('mouseenter', () => showProvinceStatusTooltip(effect, chip));
-          chip.addEventListener('mouseleave', hideProvinceStatusTooltip);
-          effectsEl.appendChild(chip);
-        }
+      for (const effect of visibleEffects) {
+        const def = PROVINCE_STATUS_MAP[effect.type];
+        if (!def) continue;
+        const chip = document.createElement('span');
+        chip.className = 'pmod-effect-chip';
+        chip.innerHTML = `<span class="pmod-effect-icon">${def.icon}</span>${(effect.stacks ?? 1) > 1 ? `<span class="pmod-effect-stacks">×${effect.stacks}</span>` : ''}<span class="pmod-effect-turns">${effect.turnsRemaining === -1 ? '∞' : effect.turnsRemaining + 't'}</span>`;
+        chip.addEventListener('mouseenter', () => showProvinceStatusTooltip(effect, chip));
+        chip.addEventListener('mouseleave', hideProvinceStatusTooltip);
+        effectsEl.appendChild(chip);
       }
     }
 
@@ -1024,11 +1028,14 @@ function _renderRecruit(prov) {
   header.textContent = 'Recruit Units';
   sidebarActEl.appendChild(header);
 
+  const recruitSpeed = _getProvinceRecruitSpeed(prov);
+
   for (const { uDef, locationId } of units) {
     const affordable  = canAfford(state.playerFactionId, uDef.cost) && !queueFull;
     const stackSize   = uDef.stackSize ?? 1;
     const displayName = stackSize > 1 ? `${stackSize}× ${uDef.name}` : uDef.name;
     const costStr     = _costStr(uDef.cost, allRes);
+    const effectiveTurns = Math.max(1, uDef.buildTurns - recruitSpeed);
 
     const row = document.createElement('div');
     row.className = 'pmod-recruit-row';
@@ -1048,10 +1055,13 @@ function _renderRecruit(prov) {
 
     const info = document.createElement('div');
     info.className = 'pmod-recruit-info';
+    const turnsLabel = effectiveTurns < uDef.buildTurns
+      ? `${effectiveTurns}t <span style="color:var(--text-muted);text-decoration:line-through">${uDef.buildTurns}t</span>`
+      : `${effectiveTurns}t`;
     info.innerHTML = `
       <span class="pmod-recruit-name">${displayName}</span>
       <span class="pmod-recruit-stats">⚔${uDef.attack} 🛡${uDef.defense} ❤${uDef.maxHp ?? 10}</span>
-      <span style="font-size:10px;color:var(--text-muted)">${costStr} · ${uDef.buildTurns}t</span>
+      <span style="font-size:10px;color:var(--text-muted)">${costStr} · ${turnsLabel}</span>
     `;
     row.appendChild(info);
 
@@ -1062,7 +1072,7 @@ function _renderRecruit(prov) {
     btn.title       = !affordable ? (queueFull ? 'Queue full' : "Can't afford") : `Recruit ×${stackSize}`;
     btn.addEventListener('click', () => {
       if (!spendResources(state.playerFactionId, uDef.cost)) return;
-      enqueueProduction(prov, { type: 'unit', id: uDef.id, locationId, turnsRemaining: uDef.buildTurns });
+      enqueueProduction(prov, { type: 'unit', id: uDef.id, locationId, turnsRemaining: effectiveTurns });
       renderResourceBar();
       _render();
     });

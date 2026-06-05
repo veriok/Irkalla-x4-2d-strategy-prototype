@@ -16,6 +16,7 @@ import { state } from '../engine/game-state.js';
 import { TRAIT_MAP } from '../data/traits-data.js';
 import { createNativePreviewCard } from './card-renderer.js';
 import { TECH_MAP } from '../data/techs-data.js';
+import { FACTION_ACTIONS } from '../data/faction-actions-data.js';
 
 // Build a flat map of all resource definitions for emoji / name lookups
 const ALL_RES = {};
@@ -392,6 +393,17 @@ function _buildTechHtml(techDef) {
     effectParts.push(`🔓 Unlocks: ${names}`);
   }
 
+  for (const actionId of (techDef.unlockActions ?? [])) {
+    const a = FACTION_ACTIONS[actionId];
+    if (a) effectParts.push(`${a.icon} Unlocks action: ${a.label} — ${a.description}`);
+  }
+
+  for (const eff of (techDef.effects ?? [])) {
+    if (eff.scope === 'faction' && eff.type === 'army_support_limit') {
+      effectParts.push(`⚔ Army supply cap: +${eff.amount}`);
+    }
+  }
+
   // First unit unlocked by this tech for the player's faction (capped at 1 to avoid clutter)
   const unlockedUnits = UNITS.filter(u =>
     u.techRequired === techDef.id &&
@@ -493,6 +505,9 @@ function _buildHtml(bDef, opts = {}) {
   }
   if ((bDef.militiaBonus ?? 0) > 0) {
     bonusParts.push(`⚔ +${bDef.militiaBonus} Militia max`);
+  }
+  if ((bDef.bonuses?.recruitSpeed ?? 0) > 0) {
+    bonusParts.push(`⚡ -${bDef.bonuses.recruitSpeed} recruit turn${bDef.bonuses.recruitSpeed > 1 ? 's' : ''}`);
   }
 
   // Tech-applied bonuses for this specific building

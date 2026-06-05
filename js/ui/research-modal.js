@@ -196,7 +196,12 @@ function _makeTechItem(techDef, fs, techTree) {
       const missingId = TECH_MAP[techDef.replacesId ?? techDef.id]?.requires;
       const missingDef = missingId ? (techTree?.get(missingId) ?? TECH_MAP[missingId]) : null;
       btn.textContent = missingDef ? `Req: ${missingDef.name}` : 'Requires tech';
-      btn.disabled = true;
+      if (missingId) {
+        btn.classList.add('rmod-req-btn');
+        btn.addEventListener('click', () => showResearchModalAndHighlight(missingId));
+      } else {
+        btn.disabled = true;
+      }
     } else if (!affordable) {
       btn.textContent = `Need ${cost} 📚`;
       btn.disabled = true;

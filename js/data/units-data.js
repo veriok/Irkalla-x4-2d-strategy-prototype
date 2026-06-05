@@ -85,7 +85,7 @@ const UNIT_DEFS = [
     cost: { gold: 40, runes: 6 },
     buildTurns: 2,
     stackSize: 1,
-    requiredBuilding: 'barracks',
+    requiredBuilding: 'mustering_field',
     traitIds: ['leaderless_construct'],
   },
   {
@@ -207,7 +207,7 @@ const UNIT_DEFS = [
     cost: { gold: 35 },
     buildTurns: 2,
     stackSize: 1,
-    requiredBuilding: 'barracks',
+    requiredBuilding: 'mustering_field',
     techRequired: 'hunting',
   },
   {
@@ -225,6 +225,7 @@ const UNIT_DEFS = [
     cost: { gold: 50, runes: 6 },
     buildTurns: 3,
     stackSize: 1,
+    requiredBuilding: 'workshop_2',
   },
   {
     id: 'sky_raider',
@@ -259,6 +260,7 @@ const UNIT_DEFS = [
     buildTurns: 3,
     stackSize: 1,
     traitIds: ['siege_expert'],
+    requiredBuilding: 'workshop_3',
     techRequired: 'engineering_mastery',
   },
 
@@ -310,7 +312,7 @@ const UNIT_DEFS = [
     cost: { gold: 30, prestige: 2 },
     buildTurns: 1,
     stackSize: 2,
-    requiredBuilding: 'barracks',
+    requiredBuilding: 'mustering_field',
     techRequired: 'hunting',
   },
   {
@@ -397,7 +399,7 @@ const UNIT_DEFS = [
     cost: { gold: 30 },
     buildTurns: 1,
     stackSize: 2,
-    requiredBuilding: 'barracks',
+    requiredBuilding: 'mustering_field',
     techRequired: 'hunting',
   },
   {
@@ -415,6 +417,7 @@ const UNIT_DEFS = [
     cost: { gold: 45, contracts: 4 },
     buildTurns: 2,
     stackSize: 1,
+    requiredBuilding: 'warrior_lodge',
   },
   {
     id: 'golden_lancer',
@@ -448,6 +451,7 @@ const UNIT_DEFS = [
     cost: { gold: 60, prestige: 8 },
     buildTurns: 3,
     stackSize: 1,
+    requiredBuilding: 'barracks',
   },
   {
     id: 'mercenary_swords',
@@ -535,7 +539,7 @@ const UNIT_DEFS = [
     cost: { gold: 30, aether: 3 },
     buildTurns: 1,
     stackSize: 2,
-    requiredBuilding: 'barracks',
+    requiredBuilding: 'mustering_field',
     techRequired: 'hunting',
   },
   {
@@ -622,7 +626,7 @@ const UNIT_DEFS = [
     cost: { gold: 35, tribute: 3 },
     buildTurns: 1,
     stackSize: 1,
-    requiredBuilding: 'barracks',
+    requiredBuilding: 'mustering_field',
     traitIds: ['levy_boost_aura'],
   },
   {
@@ -640,7 +644,7 @@ const UNIT_DEFS = [
     cost: { gold: 45, tribute: 4 },
     buildTurns: 2,
     stackSize: 1,
-    requiredBuilding: 'barracks',
+    requiredBuilding: 'warrior_lodge',
     techRequired: 'iron_discipline',
   },
   {
@@ -676,19 +680,19 @@ const UNIT_DEFS = [
     cost: { gold: 60, tribute: 10 },
     buildTurns: 3,
     stackSize: 1,
+    requiredBuilding: 'discipline_hall_2',
     techRequired: 'eternal_phalanx',
   },
 
   // ═══════════════════════════════════════════════════════════
   // DUAL KINGDOM OF SUTEKH-RA  (lizard, river kingdom)
-  // Lizard units: +1 base def vs equivalent tiers — baked in.
   // ═══════════════════════════════════════════════════════════
 
   {
-    id: 'river_guard',
+    id: 'faithful_militia',
     factionId: FACTION_IDS.SUTEKH_RA,
     raceId: RACE_IDS.LIZARD,
-    name: 'River Guard',
+    name: 'Faithful Militia',
     emoji: '🦎',
     cardSpriteImg: null,
     description: 'Temple levy and patrol crews raised to defend local lands.',
@@ -696,6 +700,22 @@ const UNIT_DEFS = [
     tier: 1,
     unitType: UNIT_TYPES.INFANTRY,
     isMilitia: true,
+  },
+  {
+    id: 'river_guard',
+    factionId: FACTION_IDS.SUTEKH_RA,
+    raceId: RACE_IDS.LIZARD,
+    name: 'River Guard',
+    emoji: '🦎',
+    cardSpriteImg: null,
+    description: 'A willing rabble called forth by temple to enforce the divine will.',
+    attack: 4, defense: 4, maxHp: 7,
+    tier: 1,
+    movement: 1, upkeepGold: 1,
+    unitType: UNIT_TYPES.INFANTRY,
+    cost: { gold: 25 },
+    buildTurns: 1,
+    stackSize: 1,
   },
   {
     id: 'river_skirmisher',
@@ -729,6 +749,7 @@ const UNIT_DEFS = [
     cost: { gold: 40, faith: 5 },
     buildTurns: 2,
     stackSize: 1,
+    requiredBuilding: 'sun_temple_1',
   },
   {
     id: 'moon_zealot',
@@ -745,6 +766,7 @@ const UNIT_DEFS = [
     cost: { gold: 40, faith: 6, ancient_lore: 3 },
     buildTurns: 2,
     stackSize: 1,
+    requiredBuilding: 'moon_temple_2',
     techRequired: 'necromantic_arts',
   },
   {
@@ -781,7 +803,6 @@ const UNIT_DEFS = [
     cost: {},
     buildTurns: 0,
     stackSize: 1,
-    isMilitia: false,
   },
 
   // ═══════════════════════════════════════════════════════════
@@ -850,6 +871,7 @@ const UNIT_DEFS = [
     buildTurns: 2,
     stackSize: 1,
     traitIds: ['beast_bond_aura'],
+    requiredBuilding: 'beast_pen_1',
     techRequired: 'beast_taming',
   },
   {
@@ -868,6 +890,7 @@ const UNIT_DEFS = [
     buildTurns: 3,
     stackSize: 1,
     traitIds: ['beast_bond_aura'],
+    requiredBuilding: 'beast_pen_1',
     techRequired: 'beast_taming',
   },
   {
@@ -886,6 +909,7 @@ const UNIT_DEFS = [
     buildTurns: 4,
     stackSize: 1,
     traitIds: ['beast_bond_aura'],
+    requiredBuilding: 'beast_pen_2',
     techRequired: 'apex_predator',
   },
 
@@ -933,8 +957,8 @@ export function getRecruitableUnits(factionId, existingBuildingIds, locationType
     // Building requirement
     const req = u.requiredBuilding;
     if (req === null) {
-      // No building required: available from main_settlement or any location with barracks
-      return locationType === 'main_settlement' || existingBuildingIds.includes('barracks');
+      const TRAINING_BUILDINGS = ['mustering_field', 'warrior_lodge', 'barracks'];
+      return locationType === 'main_settlement' || TRAINING_BUILDINGS.some(id => existingBuildingIds.includes(id));
     }
 
     if (Array.isArray(req)) return req.some(id => existingBuildingIds.includes(id));

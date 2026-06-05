@@ -130,6 +130,14 @@ const STONE_AGE = [
     unlockBuildings: ['religious_2'],
   },
   {
+    id: 'warbands', name: 'Warbands', emoji: '🪓',
+    era: TECH_ERAS.STONE,
+    baseCost: 20, requires: null,
+    quote: '"A man alone is a man afraid. A warband is something else entirely."',
+    description: 'Organised raiding parties formalize into standing warbands. Unlocks the Mustering Field training building.',
+    unlockBuildings: ['mustering_field'],
+  },
+  {
     id: 'masonry', name: 'Masonry', emoji: '🪨',
     era: TECH_ERAS.STONE,
     baseCost: 30, requires: 'mining',
@@ -221,6 +229,15 @@ const BRONZE_AGE = [
     quote: '"Numbers do not lie. It is only those who wield them that are capable of deception."',
     description: 'Geometry, accounting, and engineering. +10% to all faction research income.',
     resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.RESEARCH, percent: 10 }],
+  },
+  {
+    id: 'clan_warfare', name: 'Clan Warfare', emoji: '⚔️',
+    era: TECH_ERAS.BRONZE,
+    baseCost: 45, requires: 'warbands',
+    quote: '"War is the crucible of nations. Only those who master it earn the right to call themselves one."',
+    description: 'Formalised battle doctrine and inter-clan rivalry sharpen warfare. Unlocks the Warrior Lodge. Armies can support +1 additional unit.',
+    unlockBuildings: ['warrior_lodge'],
+    effects: [{ scope: 'faction', type: 'army_support_limit', amount: 1 }],
   },
   {
     id: 'castle_construction', name: 'Castle Construction', emoji: '🏯',
@@ -318,6 +335,14 @@ const IRON_AGE = [
     description: 'Centralised rule. Unlocks the Imperial Palace (town hall tier 3). Grand Hall grants +3 gold/turn.',
     unlockBuildings: ['town_hall_3'],
     buildingBonuses: [{ buildingId: 'town_hall_2', bonusKey: RESOURCE_IDS.GOLD, amount: 3 }],
+  },
+  {
+    id: 'battle_formations', name: 'Battle Formations', emoji: '🏴',
+    era: TECH_ERAS.IRON,
+    baseCost: 80, requires: 'clan_warfare',
+    quote: '"A soldier fights for himself. A formation fights for everyone. That is why it wins."',
+    description: 'Coordinated tactical doctrine enables professional soldiery. Unlocks the Barracks (tier 3 training building, +2 militia, further reduces recruit time).',
+    unlockBuildings: ['barracks'],
   },
   {
     id: 'metallurgy', name: 'Metallurgy', emoji: '🔩',
@@ -664,6 +689,15 @@ const ARCHONATE_GREYHAVEN_TECHS = [
 ];
 
 const SUTEKH_RA_TECHS = [
+  {
+    id: 'dual_temples', name: 'Dual Temples', emoji: '⛩️',
+    era: TECH_ERAS.STONE,
+    factionId: FACTION_IDS.SUTEKH_RA, replacesId: 'worship',
+    baseCost: 30,
+    quote: '"The Sun rises to judge the living; the Moon descends to guide the dead. Both are holy."',
+    description: 'Sacred architecture of the twin gods. Unlocks the Sun Shrine and Moon Shrine — each province chooses one path, for they are mutually exclusive.',
+    unlockBuildings: ['sun_temple_1', 'moon_temple_1'],
+  },
   {
     id: 'sun_blessing', name: 'Sun Blessing', emoji: '☀️',
     era: TECH_ERAS.IRON,
