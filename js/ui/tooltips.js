@@ -15,6 +15,7 @@ import { LOCATION_TYPES } from '../models/location.js';
 import { state } from '../engine/game-state.js';
 import { TRAIT_MAP } from '../data/traits-data.js';
 import { createNativePreviewCard } from './card-renderer.js';
+import { TECH_MAP } from '../data/techs-data.js';
 
 // Build a flat map of all resource definitions for emoji / name lookups
 const ALL_RES = {};
@@ -652,3 +653,52 @@ export function showProvinceStatusTooltip(effect, anchorEl) {
 }
 
 export const hideProvinceStatusTooltip = hideBuildingTooltip;
+
+// ─── Faction action tooltip ────────────────────────────────────────────────
+
+/**
+ * Show a tooltip for a faction/army action button.
+ * @param {import('../data/faction-actions-data.js').FACTION_ACTIONS[string]} actionDef
+ * @param {{ type: 'faction'|'tech', id: string, name: string } | null} unlockSource
+ * @param {Element} anchorEl
+ */
+export function showActionTooltip(actionDef, unlockSource, anchorEl) {
+  if (!tooltipEl || !actionDef) return;
+  clearTimeout(_hideTimer);
+
+  let unlockSection;
+  if (unlockSource) {
+    const sourceLabel = unlockSource.type === 'tech' ? 'Tech' : 'Faction ability';
+    unlockSection = `<div class="btt-row btt-bonus">✓ ${sourceLabel}: ${unlockSource.name}</div>`;
+  } else if (actionDef.hintTechId) {
+    const hintTech = TECH_MAP[actionDef.hintTechId];
+    const techName = hintTech?.name ?? actionDef.hintTechId;
+    unlockSection = `<div class="btt-row btt-cost">🔒 Requires: ${techName}</div>`;
+  } else {
+    unlockSection = `<div class="btt-row btt-cost">🔒 Not available</div>`;
+  }
+
+  tooltipEl.innerHTML = `
+    <div class="btt-header">${actionDef.icon} ${actionDef.label}</div>
+    <div class="btt-desc">${actionDef.description ?? ''}</div>
+    <hr class="btt-hr">
+    <div class="btt-section">${unlockSection}</div>
+  `.trim();
+
+  tooltipEl.hidden = false;
+  requestAnimationFrame(() => {
+    const rect = anchorEl.getBoundingClientRect();
+    const tw   = 220;
+    const th   = tooltipEl.offsetHeight;
+    let left = rect.right + 8;
+    let top  = rect.top;
+    if (left + tw > window.innerWidth  - 8) left = rect.left - tw - 8;
+    if (top  + th > window.innerHeight - 8) top  = window.innerHeight - th - 8;
+    top = Math.max(8, top);
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top  = `${top}px`;
+    tooltipEl.classList.add('visible');
+  });
+}
+
+export const hideActionTooltip = hideBuildingTooltip;

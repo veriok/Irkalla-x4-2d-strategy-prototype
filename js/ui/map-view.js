@@ -10,6 +10,7 @@ import { state, getProvince, getArmy, selectProvince, selectArmy,
          startArmyMove, cancelArmyMove, moveArmy, computeMilitiaMax,
          getArmiesInProvince, mergeArmies } from '../engine/game-state.js';
 import { FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
+import { isFactionActionUnlocked } from '../engine/faction-actions.js';
 import { getBiome } from '../data/biomes-data.js';
 import { armySize } from '../models/army.js';
 import { updateFogOfWar } from '../engine/fog-of-war.js';
@@ -70,11 +71,14 @@ function handleProvinceClick(provinceId) {
     const army = getArmy(state.movingArmyId);
     const targetProv = getProvince(provinceId);
 
-    // Deep ocean is impassable — cancel the move order
-    if (targetProv?.isOcean && targetProv.oceanType === 'deep') {
-      cancelArmyMove();
-      clearReachableHighlights();
-      return;
+    // Ocean movement is gated by faction actions (boatbuilding → shallow, navigation → deep)
+    if (targetProv?.isOcean) {
+      const requiredAction = targetProv.oceanType === 'deep' ? 'embark_deep' : 'embark_shallow';
+      if (!army || !isFactionActionUnlocked(army.factionId, requiredAction)) {
+        cancelArmyMove();
+        clearReachableHighlights();
+        return;
+      }
     }
 
     if (army && targetProv && army.movesLeft > 0 &&
@@ -173,18 +177,22 @@ export function renderAllProvinces() {
 }
 
 function renderProvince(prov, path) {
-  // Ocean provinces: keep biome color, correct CSS class, reachable for shallow only
+  // Ocean provinces: keep biome color, correct CSS class; reachable only if faction has the action
   if (prov.isOcean) {
     const biome = getBiome(prov.biomeId);
     path.style.setProperty('--prov-color', biome.color);
     path.className.baseVal = prov.oceanType === 'shallow' ? 'ocean-shallow' : 'ocean-deep';
-    if (state.movingArmyId && prov.oceanType === 'shallow') {
+    if (state.movingArmyId) {
       const movingArmy = getArmy(state.movingArmyId);
       if (movingArmy) {
         const fromProv = getProvince(movingArmy.provinceId);
-        if (fromProv && fromProv.adjacentIds.includes(prov.id) &&
-            movingArmy.movesLeft > 0 && movingArmy.provinceId !== prov.id) {
-          path.classList.add('reachable');
+        const isAdjacent = fromProv?.adjacentIds.includes(prov.id);
+        const hasMovesLeft = movingArmy.movesLeft > 0 && movingArmy.provinceId !== prov.id;
+        if (isAdjacent && hasMovesLeft) {
+          const requiredAction = prov.oceanType === 'deep' ? 'embark_deep' : 'embark_shallow';
+          if (isFactionActionUnlocked(movingArmy.factionId, requiredAction)) {
+            path.classList.add('reachable');
+          }
         }
       }
     }

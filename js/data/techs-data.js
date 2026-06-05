@@ -110,7 +110,8 @@ const STONE_AGE = [
     era: TECH_ERAS.STONE,
     baseCost: 30, requires: 'fishing',
     quote: '"A plank, a rope, and a dream — all a man needs to cross any river."',
-    description: 'Construction of simple river craft. Enables deep-water sailing in the Bronze Age.',
+    description: 'Construction of simple river craft. Armies can embark and move through shallow coastal seas.',
+    unlockActions: ['embark_shallow'],
   },
   {
     id: 'writing', name: 'Writing', emoji: '✍️',
@@ -209,8 +210,9 @@ const BRONZE_AGE = [
     era: TECH_ERAS.BRONZE,
     baseCost: 60, requires: 'sailing',
     quote: '"Stars do not move — they merely wait for us to learn their language."',
-    description: 'Celestial wayfinding. +10% to all faction gold income.',
+    description: 'Celestial wayfinding. +10% to all faction gold income. Armies can venture into deep ocean provinces.',
     resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.GOLD, percent: 10 }],
+    unlockActions: ['embark_deep'],
   },
   {
     id: 'mathematics', name: 'Mathematics', emoji: '📐',
@@ -527,6 +529,7 @@ const IRON_FREEHOLDS_TECHS = [
     quote: '"The sky belongs to no king. We intend to keep it that way."',
     description: 'Unlocks the Sky Raider unit. Armies containing Sky Raiders gain +1 movement. Unlocks the Airship Teleport army action (spend Schematics to move up to 5 range).',
     unlockUnits: ['sky_raider'],
+    unlockActions: ['airship_teleport'],
   },
   {
     id: 'engineering_mastery', name: 'Engineering Mastery', emoji: '🔧',
@@ -554,6 +557,7 @@ const DRAIG_GOCH_TECHS = [
     factionId: FACTION_IDS.DRAIG_GOCH, replacesId: 'scholarship',
     quote: '"Honor is not given — it is earned at the edge of a blade."',
     description: 'Unlocks the "Code of Honor" army action: activate to grant +2 attack / -1 defense for one battle. Single use per battle.',
+    unlockActions: ['code_of_honor'],
   },
   {
     id: 'dragon_binding', name: 'Dragon Binding', emoji: '🐉',

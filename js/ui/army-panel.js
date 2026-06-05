@@ -7,16 +7,18 @@
 
 import { state, getProvince, getArmiesByFaction, getArmiesInProvince, selectArmy,
          startArmyMove, splitArmy, transferUnit,
-         getArmySupplyCap, getFaction } from '../engine/game-state.js';
+         getArmySupplyCap } from '../engine/game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
-import { FACTION_IDS } from '../data/enums.js';
+import { isArmyActionUnlocked } from '../engine/faction-actions.js';
 import { armySize, armyWoundedCount } from '../models/army.js';
 import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense } from '../engine/tech-effects.js';
 import { showReachableProvinces, renderArmyIcons, renderAllProvinces, cancelArmyMoveAndClear } from './map-view.js';
 import { showModal, hideModal } from './modal.js';
 import { createCard } from './card-renderer.js';
-import { showUnitTooltip, hideUnitTooltip } from './tooltips.js';
+import { showUnitTooltip, hideUnitTooltip, showActionTooltip, hideActionTooltip } from './tooltips.js';
+import { FACTION_ACTIONS } from '../data/faction-actions-data.js';
+import { getActionUnlockSource } from '../engine/faction-actions.js';
 
 const armyListEl = document.getElementById('army-list');
 
@@ -211,28 +213,25 @@ export function renderArmyPanel() {
 
 function _getArmyActions(army) {
   const actions = [];
-  const fs = getFaction(army.factionId);
 
-  if (army.factionId === FACTION_IDS.DRAIG_GOCH) {
-    const hasCodeOfHonor = fs?.unlockedTechs?.includes('code_of_honor');
-    if (hasCodeOfHonor) {
-      const isActive = (army.statusEffects ?? []).some(s => s.type === 'code_of_honor_stance');
-      actions.push({
-        emoji: '🐉',
-        label: 'Code of Honor',
-        description: isActive
-          ? 'Code of Honor is active — +2 ATK / -1 DEF next battle (consumed on combat)'
-          : 'Invoke the Dragon Code: +2 ATK / -1 DEF for next battle',
-        enabled: !isActive,
-        disabledReason: 'Already active',
-        isActive,
-        doAction: () => {
-          army.statusEffects = army.statusEffects ?? [];
-          army.statusEffects.push({ type: 'code_of_honor_stance' });
-          renderArmyPanel();
-        },
-      });
-    }
+  if (isArmyActionUnlocked(army, 'code_of_honor')) {
+    const isActive = (army.statusEffects ?? []).some(s => s.type === 'code_of_honor_stance');
+    actions.push({
+      actionId: 'code_of_honor',
+      emoji: '🐉',
+      label: 'Code of Honor',
+      description: isActive
+        ? 'Code of Honor is active — +2 ATK / -1 DEF next battle (consumed on combat)'
+        : 'Invoke the Dragon Code: +2 ATK / -1 DEF for next battle',
+      enabled: !isActive,
+      disabledReason: 'Already active',
+      isActive,
+      doAction: () => {
+        army.statusEffects = army.statusEffects ?? [];
+        army.statusEffects.push({ type: 'code_of_honor_stance' });
+        renderArmyPanel();
+      },
+    });
   }
 
   return actions;
@@ -265,6 +264,12 @@ function _renderArmyActionBar(army, containerEl) {
         e.stopPropagation();
         action.doAction();
       });
+    }
+    if (action.actionId && FACTION_ACTIONS[action.actionId]) {
+      const actionDef = FACTION_ACTIONS[action.actionId];
+      const unlockSrc = getActionUnlockSource(army.factionId, action.actionId);
+      btn.addEventListener('mouseenter', () => showActionTooltip(actionDef, unlockSrc, btn));
+      btn.addEventListener('mouseleave', hideActionTooltip);
     }
     bar.appendChild(btn);
   }

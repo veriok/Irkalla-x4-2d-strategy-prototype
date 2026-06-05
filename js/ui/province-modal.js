@@ -51,6 +51,7 @@ import {
 } from './tooltips.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { FACTION_IDS } from '../data/enums.js';
+import { isFactionActionUnlocked } from '../engine/faction-actions.js';
 import { ARMY_STATUS_MAP } from '../data/army-status-data.js';
 import { accumulateBuildCostModifiers, BUILDING_MAP as _BMAP } from '../data/buildings-data.js';
 import { TECH_MAP } from '../data/techs-data.js';
@@ -1181,7 +1182,7 @@ export function collectProvinceActions(prov, onRefresh) {
   const fs = getFaction(factionId);
   const actions = [];
 
-  if (factionId === FACTION_IDS.ARCHONATE_GREYHAVEN) {
+  if (isFactionActionUnlocked(factionId, 'conscript_levies')) {
     const hasEternalPhalanx = fs?.unlockedTechs?.includes('eternal_phalanx');
     const cost = hasEternalPhalanx ? 2 : 3;
     const leviesAdded = hasEternalPhalanx ? 3 : 2;
@@ -1218,7 +1219,7 @@ export function collectProvinceActions(prov, onRefresh) {
     });
   }
 
-  if (factionId === FACTION_IDS.IRON_FREEHOLDS) {
+  if (isFactionActionUnlocked(factionId, 'fortify_province')) {
     const hasEngineeringMastery = fs?.unlockedTechs?.includes('engineering_mastery');
     const cost = hasEngineeringMastery ? 5 : 10;
     const schematics = fs?.resources?.schematics ?? 0;

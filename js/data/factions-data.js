@@ -100,6 +100,7 @@ export const FACTIONS = [
     playstyle: 'Balanced. Economically flexible with strong siege capability and province fortification. Airship mobility counters slow dwarf movement.',
     biomePrefs: { primary: 'mountains', secondary: 'coastal' },
     startingUnits: [{ unitId: 'clan_fighter', count: 2 }, { unitId: 'clan_crossbowman', count: 1 }],
+    startingActions: ['fortify_province'],
   },
 
   // ═══════════════════════════════════════════════════════
@@ -239,6 +240,7 @@ export const FACTIONS = [
     playstyle: 'Tall defensive. Tribute from Tribute Halls enables instant conscription. Phalanx formations are nearly unbreakable when stacked.',
     biomePrefs: { primary: 'forest', secondary: 'coastal' },
     startingUnits: [{ unitId: 'archonate_levy', count: 2 }, { unitId: 'phalanx_soldier', count: 1 }],
+    startingActions: ['conscript_levies'],
   },
 
   // ═══════════════════════════════════════════════════════

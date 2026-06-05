@@ -1152,6 +1152,11 @@ export function getBuildingsForLocation(factionId, locationType, existingBuildin
     if (existingBuildingIds.includes(b.id)) return false;
     if (b.upgradeFromId && !existingBuildingIds.includes(b.upgradeFromId)) return false;
     if (!b.prerequisites.every(pId => existingBuildingIds.includes(pId))) return false;
+    if (b.mainBuildingTier != null) {
+      const chain = LOCATION_MAIN_CHAIN[locationType];
+      const reqId = chain?.[b.mainBuildingTier - 1];
+      if (reqId && !existingBuildingIds.includes(reqId)) return false;
+    }
     return true;
   });
 }
