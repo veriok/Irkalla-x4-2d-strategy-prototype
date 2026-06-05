@@ -514,7 +514,7 @@ const UNIT_DEFS = [
     raceId: RACE_IDS.ELF,
     name: 'Aethera Hoplite',
     emoji: '🛡️',
-    cardSpriteImg: 'assets/cards/units/aethera_hoplite.png',
+    cardSpriteImg: 'assets/cards/units/elf_hoplite.png',
     description: 'City-state spearmen. Disciplined and mobile.',
     attack: 4, defense: 6, maxHp: 10,
     tier: 1,
@@ -619,9 +619,9 @@ const UNIT_DEFS = [
     emoji: '📣',
     cardSpriteImg: 'assets/cards/units/drill_master.png',
     description: 'An officer who instils discipline into levy troops, raising their combat ability.',
-    attack: 4, defense: 4, maxHp: 10,
+    attack: 2, defense: 4, maxHp: 10,
     tier: 1,
-    movement: 1, upkeepGold: 1,
+    movement: 1, upkeepGold: 2,
     unitType: UNIT_TYPES.INFANTRY,
     cost: { gold: 35, tribute: 3 },
     buildTurns: 1,
@@ -976,7 +976,7 @@ const MILITIA_MAP = {
   [FACTION_IDS.ARCHONATE_GREYHAVEN]: 'greyhaven_militia',
   [FACTION_IDS.SUTEKH_RA]:           'river_guard',
   [FACTION_IDS.CLANS_FIRST_SCALE]:   'scale_clan_militia',
-  neutral:                            'militia_neutral',
+  neutral:                           'militia_neutral',
 };
 
 export function getMilitiaUnitIdForFaction(factionId) {
