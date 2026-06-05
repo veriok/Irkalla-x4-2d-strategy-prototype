@@ -168,7 +168,9 @@ function buildFactionPickerEl(onPick) {
       card.className = 'faction-card';
       card.style.setProperty('--fc', f.color);
       card.innerHTML = `
-        <span class="faction-card-emoji">${f.emoji}</span>
+        <div class="faction-card-flag-wrap">
+          <img class="faction-card-flag" src="${f.flagImg ?? ''}" alt="${f.name} flag" />
+        </div>
         <div class="faction-card-name">${f.name}</div>
         <div class="faction-card-full">${f.fullName}</div>
         <div class="faction-card-desc">${f.description}</div>

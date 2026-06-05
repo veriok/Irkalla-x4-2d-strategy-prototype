@@ -27,7 +27,7 @@ export const FACTIONS = [
       'Awakened from their tomb-cities after millennia of silence, their bronze-clad legions march ' +
       'alongside soul-bound constructs powered by the spirits of a civilization sacrificed for immortality.',
     emoji: '💀',
-    flagImg: 'assets/flags/kur_margal.png',
+    flagImg: 'assets/flags/kur_margal_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/kur_margal-unit-bg.png',
     backgroundImg: 'assets/backgrounds/kur_margal.jpg',
     color: '#8B6914',
@@ -81,7 +81,7 @@ export const FACTIONS = [
       'A confederation of fiercely independent dwarf clans who rejected eternal servitude and chose freedom over immortality. ' +
       'Inventors, traders, explorers, airship captains, and sea-raiders — they answer to no ruler beyond their own clan councils.',
     emoji: '⚙️',
-    flagImg: 'assets/flags/iron_freeholds.png',
+    flagImg: 'assets/flags/freeholds_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/iron_freeholds-unit-bg.png',
     backgroundImg: 'assets/backgrounds/iron_freeholds.jpg',
     color: '#4A5568',
@@ -115,7 +115,7 @@ export const FACTIONS = [
       'A rigid realm of dragon-worshipping warrior nobility where honor, lineage, and duty define every aspect of life. ' +
       'From the forests of the north, its disciplined warriors seek to embody the wisdom and might of the great dragons they revere.',
     emoji: '🐉',
-    flagImg: 'assets/flags/draig_goch.png',
+    flagImg: 'assets/flags/y_draig_goch_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/draig_goch-unit-bg.png',
     backgroundImg: 'assets/backgrounds/draig_goch.jpg',
     color: '#7A1010',
@@ -156,7 +156,7 @@ export const FACTIONS = [
       'A sprawling commercial empire where merchant dynasties wield influence behind the Imperial Throne. ' +
       'Masters of trade, diplomacy, and intrigue, they bind distant lands together through contracts, coin, and commerce, preferring wealth and negotiation to open war.',
     emoji: '💰',
-    flagImg: 'assets/flags/auric_empire.png',
+    flagImg: 'assets/flags/auric_empire_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/auric_empire-unit-bg.png',
     backgroundImg: 'assets/backgrounds/auric_empire.jpg',
     color: '#B7791F',
@@ -190,7 +190,7 @@ export const FACTIONS = [
       'A league of prosperous maritime city-states renowned for their philosophers, explorers, artists, and sailors. ' +
       'Admirers of beauty and knowledge, they cultivate an image of refinement while pursuing the interests of their cities with unwavering pragmatism.',
     emoji: '🌿',
-    flagImg: 'assets/flags/poleis_aethera.png',
+    flagImg: 'assets/flags/aethera_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/poleis_aethera-unit-bg.png',
     backgroundImg: 'assets/backgrounds/poleis_aethera.jpg',
     color: '#1E6B5B',
@@ -220,7 +220,7 @@ export const FACTIONS = [
       'A militaristic elven state where discipline outweighs freedom and every citizen is raised to serve the realm. ' +
       'Sustained by vast subject castes and governed by a warrior aristocracy, it believes that strength, sacrifice, and order are the foundations of civilization.',
     emoji: '🛡️',
-    flagImg: 'assets/flags/archonate_greyhaven.png',
+    flagImg: 'assets/flags/greyhaven_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/archonate_greyhaven-unit-bg.png',
     backgroundImg: 'assets/backgrounds/archonate_greyhaven.jpg',
     color: '#2C5282',
@@ -254,7 +254,7 @@ export const FACTIONS = [
       'An ancient river kingdom governed by rival priesthoods devoted to the celestial twins of day and night. ' +
       'While the Pharaoh serves as sacred intermediary between the gods and the world, the true struggle for power unfolds behind temple walls.',
     emoji: '☀️',
-    flagImg: 'assets/flags/sutekh_ra.png',
+    flagImg: 'assets/flags/dual_kingdom_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/sutekh_ra-unit-bg.png',
     backgroundImg: 'assets/backgrounds/sutekh_ra.jpg',
     color: '#C06020',
@@ -291,7 +291,7 @@ export const FACTIONS = [
       'A loose confederation of warrior clans who live by the law of strength and survival. ' +
       'Bound to the great beasts of their homelands, they raid, hunt, and wage war alongside monstrous creatures, believing that the strong have the right to claim what they can hold.',
     emoji: '🦎',
-    flagImg: 'assets/flags/clans_first_scale.png',
+    flagImg: 'assets/flags/clans_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/clans_first_scale-unit-bg.png',
     backgroundImg: 'assets/backgrounds/clans_first_scale.jpg',
     color: '#276749',

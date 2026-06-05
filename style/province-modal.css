@@ -64,11 +64,10 @@
   border-right: 1px solid var(--border);
 }
 #pmod-flag-img {
-  height: 68px;
-  width: auto;
-  max-width: 56px;
+  width: 96px;
+  height: 64px;
   border-radius: 2px;
-  object-fit: contain;
+  object-fit: cover;
 }
 #pmod-flag-emoji {
   font-size: 40px;

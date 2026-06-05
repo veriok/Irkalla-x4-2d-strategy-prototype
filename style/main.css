@@ -61,7 +61,7 @@ html, body {
   min-width: 180px;
 }
 #faction-flag {
-  width: 28px;
+  width: 30px;
   height: 20px;
   object-fit: cover;
   border-radius: 2px;
@@ -436,8 +436,15 @@ body {
   cursor: pointer;
 }
 .faction-card:hover { background: rgba(255,255,255,0.04); box-shadow: 0 0 0 1px var(--fc, var(--border)); }
-.faction-card-emoji  { font-size: 2rem; text-align: center; display: block; margin-bottom: 6px; }
-.faction-card-name   { font-weight: 700; font-size: 14px; color: var(--fc, var(--text)); margin-bottom: 2px; }
+.faction-card-flag-wrap { margin-bottom: 8px; }
+.faction-card-flag {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--fc, var(--border));
+  display: block;
+}.faction-card-name   { font-weight: 700; font-size: 14px; color: var(--fc, var(--text)); margin-bottom: 2px; }
 .faction-card-full   { font-size: 10px; color: var(--text-muted); font-style: italic; margin-bottom: 6px; }
 .faction-card-desc   { font-size: 11px; color: var(--text); margin-bottom: 6px; line-height: 1.4; }
 .faction-card-play   { font-size: 10px; color: var(--fc, var(--text-muted)); margin-bottom: 8px; line-height: 1.4; }
