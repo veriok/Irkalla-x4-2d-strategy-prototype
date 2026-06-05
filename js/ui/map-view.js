@@ -19,9 +19,11 @@ import { renderArmyPanel } from './army-panel.js';
 import { renderResourceBar } from './resource-bar.js';
 
 // ─── DOM references ───────────────────────────────────────
-const provincesG = document.getElementById('provinces');
-const unitLayerG  = document.getElementById('unit-layer');
-const SVG_NS      = 'http://www.w3.org/2000/svg';
+const provincesG   = document.getElementById('provinces');
+const unitLayerG   = document.getElementById('unit-layer');
+const bordersG     = document.getElementById('borders');
+const settlementG  = document.getElementById('settlement-layer');
+const SVG_NS       = 'http://www.w3.org/2000/svg';
 
 // ─── Events ───────────────────────────────────────────────
 let _onProvinceSelect = null;
@@ -173,6 +175,8 @@ export function renderAllProvinces() {
     if (!path) continue;
     renderProvince(prov, path);
   }
+  renderNationalBorders();
+  renderSettlementIcons();
   if (_minimapCallback) _minimapCallback();
 }
 
@@ -219,10 +223,11 @@ function renderProvince(prov, path) {
   path.className.baseVal = `owner-${prov.ownerId}` +
     (state.selectedProvinceId === prov.id ? ' selected' : '');
 
-  // Bold label for player's core provinces
+  // Bold label + crown for capitals (only when visible, not through fog)
   const labelEl = document.getElementById(`label_${prov.id}`);
   if (labelEl) {
     labelEl.style.fontWeight = prov.coreOf === state.playerFactionId ? 'bold' : '';
+    labelEl.textContent = (prov.isCapital && prov.visibility === 'visible' ? '♛ ' : '') + prov.name;
   }
 
   // Reachable highlight
@@ -390,6 +395,84 @@ export function renderArmyIcons() {
     });
   }
   if (_minimapCallback) _minimapCallback();
+}
+
+// ─── Color helpers ────────────────────────────────────────
+
+function _darkenHex(hex, factor) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const r = Math.round(((n >> 16) & 0xff) * factor);
+  const g = Math.round(((n >>  8) & 0xff) * factor);
+  const b = Math.round(( n        & 0xff) * factor);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+// ─── National borders (faction-colored inner stroke on outward edges) ────────
+// For each province, traces only the noisy edges that border a different owner,
+// offset slightly inward. Uses the pre-computed noisyPts / edgeNeighborIds from
+// mapNoisyEdgeData so the border exactly follows the organic rendered polygon.
+
+export function renderNationalBorders() {
+  if (!bordersG) return;
+  bordersG.innerHTML = '';
+  const noisyEdgeData = state.noisyEdgeData;
+  if (!noisyEdgeData) return;
+
+  const INSET = 4; // SVG units toward centroid
+
+  for (const prov of state.provinces.values()) {
+    if (prov.isOcean || prov.ownerId === 'neutral') continue;
+    if (prov.visibility !== 'visible') continue;
+    const faction = FACTION_MAP[prov.ownerId];
+    if (!faction) continue;
+
+    const edgeData = noisyEdgeData.get(prov.id);
+    if (!edgeData) continue;
+
+    const { noisyPts, noisyEdgeStarts, edgeNeighborIds } = edgeData;
+    const [cx, cy] = prov.centroid;
+    const n = edgeNeighborIds.length;
+
+    for (let k = 0; k < n; k++) {
+      const neighborId = edgeNeighborIds[k];
+      if (!neighborId) continue;
+      const neighbor = getProvince(neighborId);
+      if (!neighbor || neighbor.ownerId === prov.ownerId) continue;
+
+      // Extract all noisy vertices for this Voronoi edge (start → end inclusive)
+      const startIdx = noisyEdgeStarts[k];
+      const endIdx   = k < n - 1 ? noisyEdgeStarts[k + 1] : noisyPts.length - 1;
+      const edgePts  = noisyPts.slice(startIdx, endIdx + 1);
+
+      // Offset each vertex toward the province centroid (inner stroke effect)
+      const d_parts = ['M'];
+      for (let p = 0; p < edgePts.length; p++) {
+        const [x, y] = edgePts[p];
+        const dvx = cx - x, dvy = cy - y;
+        const dist = Math.sqrt(dvx * dvx + dvy * dvy) || 1;
+        const ix = (x + dvx / dist * INSET).toFixed(1);
+        const iy = (y + dvy / dist * INSET).toFixed(1);
+        d_parts.push(p === 0 ? `${ix},${iy}` : `L${ix},${iy}`);
+      }
+
+      const path = document.createElementNS(SVG_NS, 'path');
+      path.setAttribute('d', d_parts.join(''));
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', _darkenHex(faction.color, 0.72));
+      path.setAttribute('stroke-width', '3');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      path.setAttribute('pointer-events', 'none');
+      bordersG.appendChild(path);
+    }
+  }
+}
+
+// ─── Capital settlement icons ─────────────────────────────
+
+export function renderSettlementIcons() {
+  if (!settlementG) return;
+  // Crown is rendered as a label prefix (♛) in generateMap(); nothing to draw here.
 }
 
 /** Compute per-army [dx, dy] offsets so multiple armies in one province don't overlap. */

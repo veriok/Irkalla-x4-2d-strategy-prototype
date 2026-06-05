@@ -5,10 +5,16 @@
    states layer on top via filter/fill overrides.
 ═══════════════════════════════════════════════════ */
 
+/* ── Terrain biome base layer (static, beneath province overlay) ── */
+#terrain-layer path {
+  pointer-events: none;
+  stroke: none;
+}
+
 /* ── Base province style ── */
 #provinces path {
   fill: var(--prov-color, #4a5a3a);
-  stroke: #0a0907;
+  stroke: #1a120a;
   stroke-width: 1.5;
   stroke-linejoin: round;
   cursor: pointer;
@@ -49,11 +55,8 @@
 /* ── Biome base colors (fallback; map-generator sets --prov-color directly) ── */
 /* These are referenced in map-generator.js as the per-biome color values */
 
-/* ── Border layer ── */
-#borders path {
-  fill: none;
-  stroke: #0a0907;
-  stroke-width: 0.8;
+/* ── Border layer — national border lines ── */
+#borders line {
   pointer-events: none;
 }
 
@@ -113,6 +116,11 @@
   opacity: 0;
 }
 
+/* ── Settlement icons ── */
+.settlement-capital {
+  filter: drop-shadow(0 0 3px rgba(212, 168, 32, 0.55));
+}
+
 /* ── Ocean provinces ── */
 #provinces path.ocean-shallow,
 #provinces path.ocean-deep {
@@ -129,7 +137,7 @@
 #provinces path.ocean-deep.reachable {
   animation: none;
   filter: none;
-  stroke: #0a0907;
+  stroke: #1a120a;
   stroke-width: 1.5;
 }
 

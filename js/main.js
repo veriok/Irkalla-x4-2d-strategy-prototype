@@ -10,7 +10,7 @@
  *   6. Log turn 1
  */
 
-import { generateMap, MAP_SIZES, MAP_W, MAP_H } from './engine/map-generator.js';
+import { generateMap, mapSharedEdges, mapNoisyEdgeData, MAP_SIZES, MAP_W, MAP_H } from './engine/map-generator.js';
 import { initWorld, state } from './engine/game-state.js';
 import { updateFogOfWar } from './engine/fog-of-war.js';
 import { renderAllProvinces, renderArmyIcons, initMapEvents,
@@ -238,6 +238,8 @@ async function init() {
 
   // 5. Initialise game state
   initWorld(provinceData, playerFaction);
+  state.sharedEdges   = mapSharedEdges;
+  state.noisyEdgeData = mapNoisyEdgeData;
 
   // 6. Minimap init + wire callback
   initMinimap(MAP_W, MAP_H);

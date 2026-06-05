@@ -33,6 +33,14 @@ export const MAP_SIZES = {
 export let MAP_W = 1000;
 export let MAP_H = 600;
 
+// ─── Shared edges between adjacent provinces (set by generateMap) ──────────
+// Each entry: { provIdA, provIdB, pts: [[x1,y1],[x2,y2]] }
+export let mapSharedEdges = [];
+
+// ─── Per-province noisy edge data (set by generateMap) ──────────────────────
+// Maps provId → { noisyPts, noisyEdgeStarts, edgeNeighborIds }
+export let mapNoisyEdgeData = new Map();
+
 // ─── Seeded RNG (mulberry32) ─────────────────────────────
 function mulberry32(seed) {
   return function () {
@@ -224,6 +232,77 @@ function polygonToPath(polygon) {
     'Z';
 }
 
+// ─── Stable per-edge seed (identical for both provinces sharing an edge) ─
+function edgeSeed(x1, y1, x2, y2, globalSeed) {
+  if (x1 > x2 || (x1 === x2 && y1 > y2)) {
+    [x1, x2] = [x2, x1]; [y1, y2] = [y2, y1];
+  }
+  const rx1 = Math.round(x1 * 10), ry1 = Math.round(y1 * 10);
+  const rx2 = Math.round(x2 * 10), ry2 = Math.round(y2 * 10);
+  return ((rx1 * 73856093 ^ ry1 * 19349663 ^ rx2 * 83492791 ^ ry2 * 37392199)
+          + globalSeed * 1664525) >>> 0;
+}
+
+// ─── Noisy polygon builder ────────────────────────────────
+// Returns { svgPath, noisyPts, noisyEdgeStarts }.
+//   noisyPts          – flat [x,y][] of every rendered vertex in polygon order
+//   noisyEdgeStarts   – noisyEdgeStarts[k] = index in noisyPts of polygon[k]
+//
+// Canonical perpendicular + reversed midpoint insertion guarantees watertight
+// shared borders: one province bulges, neighbour has matching notch.
+function buildNoisyPolygon(polygon, globalSeed) {
+  if (!polygon || polygon.length === 0) return { svgPath: '', noisyPts: [], noisyEdgeStarts: [] };
+
+  const n             = polygon.length - 1;
+  const noisyPts      = [[polygon[0][0], polygon[0][1]]];
+  const noisyEdgeStarts = [];
+
+  for (let i = 0; i < n; i++) {
+    noisyEdgeStarts.push(noisyPts.length - 1); // polygon[i] lives at this index
+
+    const [ax, ay] = polygon[i];
+    const [bx, by] = polygon[(i + 1) % n];
+
+    const onBoundary = (ax === bx || ay === by) &&
+      (ax === 0 || ax === MAP_W || ay === 0 || ay === MAP_H);
+    if (onBoundary) { noisyPts.push([bx, by]); continue; }
+
+    const dx = bx - ax, dy = by - ay;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const numPts = len < 35 ? 0 : len < 65 ? 1 : len < 100 ? 2 : 3;
+    if (numPts === 0) { noisyPts.push([bx, by]); continue; }
+
+    const fwd = ax < bx || (ax === bx && ay < by);
+    const [cax, cay, cbx, cby] = fwd ? [ax, ay, bx, by] : [bx, by, ax, ay];
+    const cdx = cbx - cax, cdy = cby - cay;
+    const cpx = -cdy / len, cpy = cdx / len;
+
+    const rng = mulberry32(edgeSeed(ax, ay, bx, by, globalSeed));
+    const ts  = [];
+    for (let k = 0; k < numPts; k++) {
+      const base = (k + 1) / (numPts + 1);
+      ts.push(Math.max(0.12, Math.min(0.88, base + (rng() - 0.5) * 0.28)));
+    }
+    ts.sort((a, b) => a - b);
+
+    const maxOff = Math.min(len * 0.22, 14);
+    const mids   = ts.map(t => {
+      const mx = cax + cdx * t, my = cay + cdy * t;
+      const off = (rng() - 0.5) * 2 * maxOff;
+      return [mx + cpx * off, my + cpy * off];
+    });
+
+    noisyPts.push(...(fwd ? mids : [...mids].reverse()));
+    noisyPts.push([bx, by]);
+  }
+
+  const [first, ...rest] = noisyPts;
+  const svgPath = `M${first[0].toFixed(1)},${first[1].toFixed(1)}` +
+    rest.map(([x, y]) => `L${x.toFixed(1)},${y.toFixed(1)}`).join('') + 'Z';
+
+  return { svgPath, noisyPts, noisyEdgeStarts };
+}
+
 // ─── Centroid of a polygon ───────────────────────────────
 function centroid(polygon) {
   const n = polygon.length;
@@ -386,6 +465,7 @@ export function generateMap(seed, svgEl, mapType = 'pangea', worldSize = 'medium
 
   // ── Build initial province descriptors ──────────────────
   const provinceData = [];
+  mapNoisyEdgeData   = new Map();
 
   for (let i = 0; i < seeds.length; i++) {
     const polygon = voronoi.cellPolygon(i);
@@ -393,8 +473,27 @@ export function generateMap(seed, svgEl, mapType = 'pangea', worldSize = 'medium
 
     const s       = seeds[i];
     const isOcean = s.faction === 'ocean';
-    const pathStr = polygonToPath(polygon);
+    const { svgPath: pathStr, noisyPts, noisyEdgeStarts } = buildNoisyPolygon(polygon, seed);
     const center  = centroid(polygon);
+
+    // Per-edge neighbor IDs: edgeNeighborIds[k] = id of the province sharing polygon edge k
+    const pn      = polygon.length - 1;
+    const edgeNeighborIds = new Array(pn).fill(null);
+    for (const j of voronoi.neighbors(i)) {
+      if (j >= seeds.length) continue;
+      const polyJ = voronoi.cellPolygon(j);
+      if (!polyJ) continue;
+      const setJ = new Set(polyJ.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`));
+      for (let k = 0; k < pn; k++) {
+        const [ax2, ay2] = polygon[k];
+        const [bx2, by2] = polygon[(k + 1) % pn];
+        if (setJ.has(`${ax2.toFixed(1)},${ay2.toFixed(1)}`) &&
+            setJ.has(`${bx2.toFixed(1)},${by2.toFixed(1)}`)) {
+          edgeNeighborIds[k] = `prov_${j}`;
+        }
+      }
+    }
+    mapNoisyEdgeData.set(`prov_${i}`, { noisyPts, noisyEdgeStarts, edgeNeighborIds });
 
     const biomeId = isOcean
       ? 'shallow_ocean'                    // reclassified after adjacency pass
@@ -433,6 +532,23 @@ export function generateMap(seed, svgEl, mapType = 'pangea', worldSize = 'medium
       if (j < n) neighbors.push(provinceData[j].id);
     }
     provinceData[i].adjacentIds = neighbors;
+  }
+
+  // ── Precompute shared edges for national border rendering ────────────────
+  mapSharedEdges = [];
+  for (let i = 0; i < seeds.length; i++) {
+    const polyI = voronoi.cellPolygon(i);
+    if (!polyI) continue;
+    const setI = new Map(polyI.map(([x, y]) => [`${x.toFixed(1)},${y.toFixed(1)}`, [x, y]]));
+    for (const j of voronoi.neighbors(i)) {
+      if (j <= i || j >= seeds.length) continue;
+      const polyJ = voronoi.cellPolygon(j);
+      if (!polyJ) continue;
+      const shared = polyJ.filter(([x, y]) => setI.has(`${x.toFixed(1)},${y.toFixed(1)}`));
+      if (shared.length >= 2) {
+        mapSharedEdges.push({ provIdA: `prov_${i}`, provIdB: `prov_${j}`, pts: [shared[0], shared[1]] });
+      }
+    }
   }
 
   // ── Classify ocean as shallow / deep ────────────────────
@@ -500,11 +616,13 @@ export function generateMap(seed, svgEl, mapType = 'pangea', worldSize = 'medium
   }
 
   // ── Inject SVG elements ──────────────────────────────────
+  const terrainG   = svgEl.querySelector('#terrain-layer');
   const provincesG = svgEl.querySelector('#provinces');
   const oceanDecoG = svgEl.querySelector('#ocean-deco-layer');
   const fogG       = svgEl.querySelector('#fog-layer');
   const labelG     = svgEl.querySelector('#label-layer');
 
+  if (terrainG)   terrainG.innerHTML   = '';
   provincesG.innerHTML = '';
   if (oceanDecoG) oceanDecoG.innerHTML = '';
   fogG.innerHTML       = '';
@@ -528,21 +646,6 @@ export function generateMap(seed, svgEl, mapType = 'pangea', worldSize = 'medium
     }
     provincesG.appendChild(path);
 
-    // Ocean inner deco path (no data-province → no click/hover interception)
-    if (prov.isOcean && oceanDecoG) {
-      const polygon = voronoi.cellPolygon(prov.index);
-      if (polygon) {
-        const inset    = shrinkPolygon(polygon, prov.centroid, 4);
-        const decoPath = document.createElementNS(SVG_NS, 'path');
-        decoPath.setAttribute('d', polygonToPath(inset));
-        decoPath.setAttribute('fill', 'none');
-        decoPath.setAttribute('stroke', prov.oceanType === 'shallow' ? '#4a9fd0' : '#2a5f7a');
-        decoPath.setAttribute('stroke-width', '1.5');
-        decoPath.setAttribute('pointer-events', 'none');
-        decoPath.classList.add('ocean-inner-deco');
-        oceanDecoG.appendChild(decoPath);
-      }
-    }
 
     // Fog overlay path
     const fogPath = document.createElementNS(SVG_NS, 'path');

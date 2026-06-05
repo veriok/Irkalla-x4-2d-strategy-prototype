@@ -68,13 +68,19 @@
           </pattern>
         </defs>
 
-        <!-- Layer 1: Province fills (map-generator.js injects <path> elements here) -->
+        <!-- Layer 0: Biome terrain base (static, no interaction) -->
+        <g id="terrain-layer"></g>
+
+        <!-- Layer 1: Province ownership overlay (semi-transparent faction tint) -->
         <g id="provinces"></g>
 
         <!-- Layer 1b: Ocean inner-line decoration (pointer-events:none, no data-province) -->
         <g id="ocean-deco-layer"></g>
 
-        <!-- Layer 2: Province borders (map-generator.js injects <path> strokes here) -->
+        <!-- Layer 1c: Capital settlement icons -->
+        <g id="settlement-layer"></g>
+
+        <!-- Layer 2: National borders (faction-colored outward edges) -->
         <g id="borders"></g>
 
         <!-- Layer 3: Fog of war (duplicate paths, toggled by class) -->
