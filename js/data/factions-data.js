@@ -5,11 +5,12 @@
  * resources.advanced[0] = race-wide primary resource (faction_primary_adv)
  * resources.advanced[1] = faction-specific secondary resource (faction_secondary_adv)
  *
- * onProvinceCapture(battleResult, province, gameState) — optional reactive callback
- * onUnitDeath(unit, province, army, gameState)         — optional reactive callback
+ * onProvinceCapture: FACTION_REACTION_IDS[] — reactions fired on PROVINCE_CAPTURED
+ * onArmyCasualties:       FACTION_REACTION_IDS[] — reactions fired on ARMY_CASUALTIES
+ * Implementations live in js/engine/faction-reactions.js.
  */
 
-import { RACE_IDS, FACTION_IDS } from './enums.js';
+import { RACE_IDS, FACTION_IDS, FACTION_REACTION_IDS } from './enums.js';
 
 export const FACTIONS = [
 
@@ -44,30 +45,8 @@ export const FACTIONS = [
     playstyle: 'Defensive. Construct vanguard holds the line while undead elites ramp slowly. Soul resurrection makes dwarf units nearly unkillable when souls are plentiful.',
     biomePrefs: { primary: 'mountains', secondary: 'tundra' },
     startingUnits: [{ unitId: 'clay_golem', count: 2 }, { unitId: 'undead_levy', count: 1 }],
-
-    // Reactive events
-    onProvinceCapture(battleResult, province, gameState) {
-      const fs = gameState.factions.get(FACTION_IDS.KUR_MARGAL);
-      if (!fs) return;
-      const gained = battleResult?.defeatedUnitCount ?? 0;
-      if (gained > 0) {
-        fs.resources.souls = (fs.resources.souls ?? 0) + gained;
-      }
-    },
-
-    onUnitDeath(unit, province, army, gameState) {
-      if (unit.raceId !== RACE_IDS.DWARF) return;
-      if (unit.unitType === 'construct') return;
-      const fs = gameState.factions.get(FACTION_IDS.KUR_MARGAL);
-      if (!fs || (fs.resources.souls ?? 0) < 1) return;
-
-      const eternalBinding = fs.unlockedTechs.includes('eternal_binding');
-      if (eternalBinding && Math.random() < 0.5) return; // no soul consumed, no action either — resurrection still happens below
-
-      fs.resources.souls -= 1;
-      // Signal resurrection to combat resolver via a flag on the unit object
-      unit._resurrect = true;
-    },
+    onProvinceCapture: [FACTION_REACTION_IDS.KUR_MARGAL_SOUL_HARVEST],
+    onArmyCasualties:       [FACTION_REACTION_IDS.KUR_MARGAL_SOUL_RESURRECTION],
   },
 
   {
@@ -129,17 +108,7 @@ export const FACTIONS = [
     playstyle: 'Aggressive. Honor-driven combat unlocks elite dragon warriors. Code of Honor army ability provides burst combat power.',
     biomePrefs: { primary: 'tundra', secondary: 'forest' },
     startingUnits: [{ unitId: 'draig_warrior', count: 2 }, { unitId: 'draig_bowman', count: 1 }],
-
-    onProvinceCapture(battleResult, province, gameState) {
-      const fs = gameState.factions.get(FACTION_IDS.DRAIG_GOCH);
-      if (!fs) return;
-      // Base victory prestige
-      fs.resources.prestige = (fs.resources.prestige ?? 0) + 1;
-      // Oath of the Dragon tech bonus
-      if (fs.unlockedTechs.includes('oath_of_the_dragon')) {
-        fs.resources.dragon_essence = (fs.resources.dragon_essence ?? 0) + 2;
-      }
-    },
+    onProvinceCapture: [FACTION_REACTION_IDS.DRAIG_GOCH_PRESTIGE_ON_CAPTURE],
   },
 
   {
@@ -261,13 +230,7 @@ export const FACTIONS = [
     playstyle: 'Balanced. Sun Priest auras buff armies. Moon Zealots have a 25% chance to return as undead mummies when slain. Celestial Blessings provide combat burst power.',
     biomePrefs: { primary: 'desert', secondary: 'plains' },
     startingUnits: [{ unitId: 'river_skirmisher', count: 2 }, { unitId: 'sun_warrior', count: 1 }],
-
-    onUnitDeath(unit, province, army, gameState) {
-      if (unit.id !== 'moon_zealot') return;
-      if (Math.random() >= 0.25) return;
-      // Spawn undead_mummy at same province
-      unit._spawnOnDeath = 'undead_mummy';
-    },
+    onArmyCasualties: [FACTION_REACTION_IDS.SUTEKH_RA_MUMMY_SPAWN],
   },
 
   {
@@ -304,39 +267,7 @@ export const FACTIONS = [
       { scope: 'faction', type: 'build_time_bonus',   target: 'all',      amount: 1 },
     ],
 
-    onProvinceCapture(battleResult, province, gameState) {
-      if (province.coreOf === FACTION_IDS.CLANS_FIRST_SCALE) return;
-      const fs = gameState.factions.get(FACTION_IDS.CLANS_FIRST_SCALE);
-      if (!fs) return;
-
-      // Gold reward from buildings
-      let gold = 0;
-      for (const loc of (province.locations ?? [])) {
-        if (!loc.isControllable) continue;
-        for (const slot of (loc.buildings ?? [])) {
-          const bId = slot.buildingId;
-          // Assume tier is encoded in building id suffix (_1, _2, _3)
-          const tierMatch = bId?.match(/_(\d)$/);
-          const tier = tierMatch ? parseInt(tierMatch[1], 10) : 1;
-          gold += tier * 15;
-        }
-      }
-      fs.resources.gold = (fs.resources.gold ?? 0) + gold;
-
-      // Random building destruction
-      for (const loc of (province.locations ?? [])) {
-        if (!loc.isControllable || loc.locationType === 'main_settlement') continue;
-        if (Math.random() < 0.10) {
-          // 10%: destroy entire location (turn to ruins)
-          loc._raidDestroyed = true;
-        } else if (!loc._raidDestroyed) {
-          // 25%: downlevel one random building
-          if ((loc.buildings ?? []).length > 0 && Math.random() < 0.25) {
-            loc._raidDownlevel = true;
-          }
-        }
-      }
-    },
+    onProvinceCapture: [FACTION_REACTION_IDS.CLANS_RAID_ON_CAPTURE],
   },
 ];
 

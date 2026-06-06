@@ -34,6 +34,8 @@ import {
 import { getLocationDefenseBonus } from '../models/location.js';
 import { flashCombat, flashConquest } from '../ui/map-view.js';
 import { logCapture, logMessage } from '../ui/event-log.js';
+import { emit } from './game-events.js';
+import { GAME_EVENTS } from '../data/enums.js';
 import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense, getSiegeExpertReduction } from './tech-effects.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { playerCanSee } from './game-state.js';
@@ -42,18 +44,44 @@ import { MONSTER_UNITS, BIOME_DEN_ENCOUNTER } from '../data/monsters-data.js';
 const WOUND_CHANCE = 0.45;
 
 /**
- * Build a unit-death callback for a faction's onUnitDeath handler.
- * Returns a function (typeId, army) -> boolean (true = resurrect/wound instead of destroy).
+ * Emit ARMY_CASUALTIES after a combat phase, then apply any resurrections handlers grant.
+ * Pending casualties are typeIds of units that were truly destroyed (not naturally wounded).
+ * Handlers set entry.resurrect = true to wound the unit; entry.spawnUnitId to queue a spawn.
+ * Resurrections are only applied if the army has surviving units (armyWillSurvive).
  */
-function _makeDestroyCallback(factionData, province, gameState) {
-  if (!factionData?.onUnitDeath) return null;
-  return (typeId, army) => {
-    const unitDef = UNIT_MAP[typeId];
-    if (!unitDef) return false;
-    const fakeUnit = { ...unitDef };  // shallow copy so callback can set _resurrect
-    factionData.onUnitDeath(fakeUnit, province, army, gameState);
-    return fakeUnit._resurrect === true;
-  };
+function _emitArmyCasualties(army, pendingCasualties, province, role, outcome) {
+  if (!army || pendingCasualties.length === 0) return;
+
+  const entries = pendingCasualties
+    .map(typeId => ({ typeId, unit: { ...(UNIT_MAP[typeId] ?? {}) }, resurrect: false, spawnUnitId: null }))
+    .filter(e => e.unit.id);
+
+  if (entries.length === 0) return;
+
+  const armyWillSurvive = armySize(army) > 0;
+
+  emit(GAME_EVENTS.ARMY_CASUALTIES, {
+    factionId: army.factionId,
+    army,
+    province,
+    gameState: state,
+    outcome,
+    role,
+    armyWillSurvive,
+    casualties: entries,
+  });
+
+  if (!armyWillSurvive) return;
+
+  let anyResurrected = false;
+  for (const entry of entries) {
+    if (!entry.resurrect) continue;
+    const maxHp = Math.max(1, UNIT_MAP[entry.typeId]?.maxHp ?? 10);
+    army.hp.wounded[entry.typeId] = army.hp.wounded[entry.typeId] ?? [];
+    army.hp.wounded[entry.typeId].push(Math.max(1, Math.round(maxHp * 0.15)));
+    anyResurrected = true;
+  }
+  if (anyResurrected) recalcArmyMoves(army, UNIT_MAP);
 }
 
 function _d6() { return Math.floor(Math.random() * 6) + 1; }
@@ -245,18 +273,14 @@ function _pickTarget(attacker, enemies, bestChance, targetIsDefender, defenderFl
   return sorted[0] ?? enemies[Math.floor(Math.random() * enemies.length)];
 }
 
-/**
- * @param {Function|null} onDestroyUnit  (typeId, army) => boolean
- *   Called when a unit would be permanently destroyed (after normal wound chance fails).
- *   If it returns true the unit is wounded instead (soul resurrection, etc.).
- */
-function _applyBatchDamageToArmy(army, damageMap, woundChance = WOUND_CHANCE, onDestroyUnit = null) {
-  if (!army) return { destroyed: 0, wounded: 0, hpLost: 0 };
+function _applyBatchDamageToArmy(army, damageMap, woundChance = WOUND_CHANCE) {
+  if (!army) return { destroyed: 0, wounded: 0, hpLost: 0, pendingCasualties: [] };
   _ensureHpPools(army);
 
   let destroyed = 0;
   let wounded = 0;
   let hpLost = 0;
+  const pendingCasualties = []; // typeIds of units not naturally wounded — eligible for post-combat resurrection
 
   const grouped = new Map();
   for (const [key, damage] of damageMap.entries()) {
@@ -279,12 +303,12 @@ function _applyBatchDamageToArmy(army, damageMap, woundChance = WOUND_CHANCE, on
       if (after <= 0) {
         arr.splice(hit.idx, 1);
         destroyed++;
-        const naturallyWounded = Math.random() < woundChance;
-        const resurrected = !naturallyWounded && (onDestroyUnit?.(typeId, army) === true);
-        if (naturallyWounded || resurrected) {
+        if (Math.random() < woundChance) {
           army.hp.wounded[typeId] = army.hp.wounded[typeId] ?? [];
           army.hp.wounded[typeId].push(Math.max(1, Math.round(maxHp * 0.15)));
           wounded++;
+        } else {
+          pendingCasualties.push(typeId);
         }
       } else {
         arr[hit.idx] = after;
@@ -299,7 +323,7 @@ function _applyBatchDamageToArmy(army, damageMap, woundChance = WOUND_CHANCE, on
   }
 
   recalcArmyMoves(army, UNIT_MAP);
-  return { destroyed, wounded, hpLost };
+  return { destroyed, wounded, hpLost, pendingCasualties };
 }
 
 function _applyBatchDamageToMilitia(pool, damageMap) {
@@ -447,6 +471,8 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
 
   const rounds = [];
   let outcome = 'inconclusive';
+  const attPendingCasualties = [];
+  const defPendingCasualties = [];
 
   const totalRounds = 2 + ((attArmy.maxMoves ?? 1) === 2 ? 1 : 0);
 
@@ -496,10 +522,10 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
 
     const attWoundChance = Math.min(0.95, WOUND_CHANCE + (getFaction(attArmy.factionId)?.woundChanceBonus ?? 0));
     const defWoundChance = enemyDefArmy ? Math.min(0.95, WOUND_CHANCE + (getFaction(enemyDefArmy.factionId)?.woundChanceBonus ?? 0)) : WOUND_CHANCE;
-    const attDestroyCallback = _makeDestroyCallback(attFaction, targetP, state);
-    const defDestroyCallback = _makeDestroyCallback(defFaction, targetP, state);
-    const attApply = _applyBatchDamageToArmy(attArmy, damageToAtt, attWoundChance, attDestroyCallback);
-    const defArmyApply = _applyBatchDamageToArmy(enemyDefArmy, damageToDef, defWoundChance, defDestroyCallback);
+    const attApply = _applyBatchDamageToArmy(attArmy, damageToAtt, attWoundChance);
+    attPendingCasualties.push(...attApply.pendingCasualties);
+    const defArmyApply = _applyBatchDamageToArmy(enemyDefArmy, damageToDef, defWoundChance);
+    defPendingCasualties.push(...(defArmyApply.pendingCasualties ?? []));
     const defMilitiaApply = _applyBatchDamageToMilitia(militiaPool, damageToDef);
 
     const attDestroyed = attApply.destroyed;
@@ -539,6 +565,14 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     else if (ratio <= 0.9) outcome = 'defender';
   }
 
+  // Emit post-combat casualties and apply any faction resurrections.
+  // Attacker always gets the chance. Defender only if they're not about to be captured
+  // (if the province will be taken and their army is gone, resurrecting costs souls for nothing).
+  _emitArmyCasualties(attArmy, attPendingCasualties, targetP, 'attacker', outcome);
+  _emitArmyCasualties(enemyDefArmy, defPendingCasualties, targetP, 'defender', outcome);
+
+  // Return borrowed units after resurrections — resurrected borrowed units (now wounded)
+  // are correctly routed back to their donor armies by transferWoundedUnits.
   if (borrowedPlan.length > 0 && outcome !== 'attacker') {
     _returnBorrowedUnits(enemyDefArmy, borrowedPlan);
   }
@@ -702,6 +736,7 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
   let totalArmyCasualties  = 0;
   let totalArmyWounded     = 0;
   let totalEnemyCasualties = 0;
+  const armyPendingCasualties = [];
   const monsterUnitId  = loc.denEnemies.unitId;
   const startEnemyCount = loc.denEnemies.hp.length + loc.denEnemies.woundedHp.length;
 
@@ -755,10 +790,11 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
       armyDmgDealt += dmg;
     }
 
-    const result = _applyBatchDamageToArmy(army, armyDmgMap);
+    const result = _applyBatchDamageToArmy(army, armyDmgMap, WOUND_CHANCE);
     armyDestroyed = result.destroyed;
     totalArmyCasualties  += armyDestroyed;
     totalArmyWounded     += result.wounded;
+    armyPendingCasualties.push(...result.pendingCasualties);
     totalEnemyCasualties += denDestroyed;
 
     rounds.push(`Round ${r}: Your forces dealt ${denDmgDealt} damage (${denDestroyed} enemies slain). Monsters struck back for ${armyDmgDealt} damage (${armyDestroyed} of your units lost).`);
@@ -774,6 +810,8 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
     : armyRemaining === 0 ? 'defender'
     : loc.denEnemies.hp.length < Math.ceil(startCount / 2) ? 'attacker'
     : 'defender';
+
+  _emitArmyCasualties(army, armyPendingCasualties, prov, 'attacker', outcome);
 
   let treasure = null;
   if (outcome === 'attacker') {

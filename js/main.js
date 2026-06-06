@@ -25,6 +25,7 @@ import { initEndTurnButton }   from './ui/end-turn-btn.js';
 import { logTurn, logMessage } from './ui/event-log.js';
 import { FACTIONS, FACTION_MAP } from './data/factions-data.js';
 import { initMinimap, renderMinimap } from './ui/minimap.js';
+import { registerFactionReactions } from './engine/faction-reactions.js';
 
 // ─── World gen picker ─────────────────────────────────────
 
@@ -237,9 +238,11 @@ async function init() {
   const playerFaction = await showFactionPicker();
 
   // 5. Initialise game state
+  document.body.dataset.playerFactionId = playerFaction;
   initWorld(provinceData, playerFaction);
   state.sharedEdges   = mapSharedEdges;
   state.noisyEdgeData = mapNoisyEdgeData;
+  registerFactionReactions();
 
   // 6. Minimap init + wire callback
   initMinimap(MAP_W, MAP_H);

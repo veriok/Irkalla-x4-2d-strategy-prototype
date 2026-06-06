@@ -19,6 +19,8 @@
  */
 
 import { FACTIONS, FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
+import { GAME_EVENTS } from '../data/enums.js';
+import { emit } from './game-events.js';
 import { RACE_MAP } from '../data/races-data.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
@@ -374,9 +376,7 @@ export function captureProvince(provinceId, newOwnerId, battleResult = {}) {
     def?.onApply?.(province, state);
   }
 
-  // Faction reactive event — e.g. Kur-Margal gains souls, Clans raid buildings
-  const factionData = FACTION_MAP[newOwnerId];
-  factionData?.onProvinceCapture?.(battleResult, province, state);
+  emit(GAME_EVENTS.PROVINCE_CAPTURED, { factionId: newOwnerId, province, battleResult, gameState: state });
 
   // Apply raid destruction flags set by Clans onProvinceCapture
   _applyRaidDestruction(province);
@@ -598,9 +598,7 @@ export function unlockTech(factionId, techId) {
     }
   }
 
-  document.dispatchEvent(new CustomEvent('technology-researched', {
-    detail: { factionId, techId, techDef },
-  }));
+  emit(GAME_EVENTS.TECH_RESEARCHED, { factionId, techId, techDef });
   return true;
 }
 

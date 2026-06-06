@@ -70,3 +70,17 @@ export const TECH_ERAS = Object.freeze({
   GOLD:   'gold',
   MITHRIL:'mithril',
 });
+
+export const GAME_EVENTS = Object.freeze({
+  PROVINCE_CAPTURED: 'province_captured',
+  ARMY_CASUALTIES:   'army_casualties',
+  TECH_RESEARCHED:   'tech_researched',
+});
+
+export const FACTION_REACTION_IDS = Object.freeze({
+  KUR_MARGAL_SOUL_HARVEST:        'kur_margal_soul_harvest',
+  KUR_MARGAL_SOUL_RESURRECTION:   'kur_margal_soul_resurrection',
+  DRAIG_GOCH_PRESTIGE_ON_CAPTURE: 'draig_goch_prestige_on_capture',
+  CLANS_RAID_ON_CAPTURE:          'clans_raid_on_capture',
+  SUTEKH_RA_MUMMY_SPAWN:          'sutekh_ra_mummy_spawn',
+});
