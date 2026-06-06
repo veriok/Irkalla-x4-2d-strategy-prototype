@@ -79,10 +79,22 @@ GAME_EVENTS.TECH_RESEARCHED    // { factionId, techId, techDef }
 
 **DOM forwarding** is configured per-event in `game-events.js`. Events listed in `DOM_FORWARD` also dispatch a browser `CustomEvent` on `document`, letting UI scripts react without importing engine modules. Add a DOM forward entry only when a UI layer needs to react to a game event. `playerOnly: true` limits forwarding to events from the player's faction (faction ID is stored in `document.body.dataset.playerFactionId` at game start).
 
+**Two ways to register a faction reaction:**
+
+- **Static (available from game start)** — declare the ID in `onProvinceCapture` or `onArmyCasualties` on the faction definition in `factions-data.js`. Wired by `registerFactionReactions()` at startup.
+- **Tech-unlocked (wired when researched)** — add `unlockReactions` to the tech definition. When `TECH_RESEARCHED` fires, `registerFactionReactions`'s listener wires it for the researching faction. A registration guard prevents double-wiring.
+
+```js
+// techs-data.js
+unlockReactions: [
+  { reactionId: FACTION_REACTION_IDS.SOME_REACTION, event: GAME_EVENTS.PROVINCE_CAPTURED },
+]
+```
+
 **Adding a new game event:**
 1. Add the event name to `GAME_EVENTS` in `enums.js`.
 2. Call `emit(GAME_EVENTS.YOUR_EVENT, data)` from the engine at the right moment.
-3. If factions need to react, add a `FACTION_REACTION_IDS` entry, implement the handler in `faction-reactions.js`, and declare the ID on the relevant faction definitions.
+3. If factions need to react, add a `FACTION_REACTION_IDS` entry, implement the handler in `faction-reactions.js`, and declare the ID on the relevant faction definitions (static) or tech definitions (tech-unlocked).
 4. If UI needs to react without importing engine code, add an entry to `DOM_FORWARD` in `game-events.js`.
 
 ---

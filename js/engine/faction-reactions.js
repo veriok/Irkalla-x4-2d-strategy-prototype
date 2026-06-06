@@ -132,32 +132,50 @@ const REACTION_HANDLERS = {
   },
 };
 
-// Faction data declares reactions as arrays of IDs on two well-known keys.
-// This table maps those keys to their corresponding GAME_EVENTS value.
+// Maps faction data keys to their corresponding GAME_EVENTS value.
 const REACTION_KEY_TO_EVENT = {
   onProvinceCapture: GAME_EVENTS.PROVINCE_CAPTURED,
   onArmyCasualties:  GAME_EVENTS.ARMY_CASUALTIES,
 };
 
+// Tracks registered `${factionId}:${reactionId}` pairs to prevent double-registration.
+const _registered = new Set();
+
+function _registerReaction(factionId, reactionId, event) {
+  const key = `${factionId}:${reactionId}`;
+  if (_registered.has(key)) return;
+  const handler = REACTION_HANDLERS[reactionId];
+  if (!handler) {
+    console.warn(`faction-reactions: no handler for "${reactionId}" on "${factionId}"`);
+    return;
+  }
+  _registered.add(key);
+  on(event, (data) => {
+    if (data.factionId !== factionId) return;
+    handler(data);
+  });
+}
+
 /**
- * Wire all faction reaction IDs declared in factions-data.js to the EventBus.
- * Call once at game start, after the player faction is chosen.
+ * Wire faction reactions to the EventBus. Call once at game start.
+ *
+ * Two registration paths:
+ *   1. Static — reads onProvinceCapture / onArmyCasualties arrays from factions-data.js.
+ *   2. Tech-unlocked — listens to TECH_RESEARCHED and registers reactions declared in
+ *      techDef.unlockReactions: [{ reactionId, event }] when a tech is researched.
  */
 export function registerFactionReactions() {
   for (const faction of FACTIONS) {
     for (const [key, event] of Object.entries(REACTION_KEY_TO_EVENT)) {
       for (const reactionId of (faction[key] ?? [])) {
-        const handler = REACTION_HANDLERS[reactionId];
-        if (!handler) {
-          console.warn(`faction-reactions: no handler for reaction ID "${reactionId}" on faction "${faction.id}"`);
-          continue;
-        }
-        const factionId = faction.id;
-        on(event, (data) => {
-          if (data.factionId !== factionId) return;
-          handler(data);
-        });
+        _registerReaction(faction.id, reactionId, event);
       }
     }
   }
+
+  on(GAME_EVENTS.TECH_RESEARCHED, ({ factionId, techDef }) => {
+    for (const { reactionId, event } of (techDef.unlockReactions ?? [])) {
+      _registerReaction(factionId, reactionId, event);
+    }
+  });
 }

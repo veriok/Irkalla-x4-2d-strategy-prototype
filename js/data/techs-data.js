@@ -22,6 +22,9 @@
  *   obsoleteUnits            — unit ids that become unrecruitable (stay in armies)
  *   resourceYieldPercentBonuses — [{ resourceId, percent }]
  *   militiaBonus             — flat addition to faction globalMilitiaBonus
+ *   unlockReactions          — [{ reactionId: FACTION_REACTION_IDS.X, event: GAME_EVENTS.Y }]
+ *                              Registers a new EventBus reaction for the researching faction.
+ *                              Reaction handler must exist in faction-reactions.js.
  *
  * Optional display fields:
  *   img           — relative path to card image; defaults to assets/cards/techs/{id}.png
