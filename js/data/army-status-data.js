@@ -7,9 +7,10 @@
  * Each definition:
  *   id              — string key used in army.statusEffects[].type
  *   label           — display name
+ *   icon            — emoji shown on the army card status chip
  *   description     — tooltip text
  *   effects         — structured effect objects (scope:'army')
- *   consumedOnCombat — true = status is removed after the next combat
+ *   movementBonus   — flat bonus added to army maxMoves each turn (applied in recalcArmyMoves)
  *   onApply         — (army, gameState) => void | null
  *   onRemove        — (army, gameState) => void | null
  */
@@ -18,21 +19,32 @@ const ARMY_STATUSES = [
   {
     id: 'code_of_honor_stance',
     label: 'Code of Honor',
-    description: 'The warriors have invoked the Dragon Code. +2 attack, -1 defense for this battle.',
+    icon: '⚔️',
+    description: 'The warriors have invoked the Dragon Code. +3 attack, -2 defense until next turn.',
     effects: [
-      { scope: 'army', type: 'stat_modifier', attack: 2, defense: -1 },
+      { scope: 'army', type: 'stat_modifier', attack: 3, defense: -2 },
     ],
-    consumedOnCombat: true,   // removed after the next combat (win or lose)
+    turnsRemaining: 1,
     onApply: null,
     onRemove: null,
   },
   {
     id: 'airship_transit',
     label: 'Airship Transit',
+    icon: '🚀',
     description: 'This army arrived by airship and cannot attack this turn.',
     effects: [],
-    consumedOnCombat: false,
-    turnsRemaining: 1,        // removed at end of turn
+    turnsRemaining: 1,
+    onApply: null,
+    onRemove: null,
+  },
+  {
+    id: 'roads_movement',
+    label: 'Road Network',
+    icon: '🛣️',
+    description: '+1 movement this turn from the provincial road network.',
+    effects: [],
+    movementBonus: 1,
     onApply: null,
     onRemove: null,
   },

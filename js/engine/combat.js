@@ -35,7 +35,7 @@ import { getLocationDefenseBonus } from '../models/location.js';
 import { flashCombat, flashConquest } from '../ui/map-view.js';
 import { logCapture, logMessage } from '../ui/event-log.js';
 import { emit } from './game-events.js';
-import { GAME_EVENTS } from '../data/enums.js';
+import { GAME_EVENTS, UNIT_TYPES } from '../data/enums.js';
 import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense, getSiegeExpertReduction } from './tech-effects.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { playerCanSee } from './game-state.js';
@@ -222,6 +222,8 @@ function _collectArmyUnits(army, factionId = null) {
         maxHp: Math.max(1, def.maxHp ?? 10),
         attack,
         defense,
+        unitType: def.unitType ?? null,
+        traitIds: def.traitIds ?? [],
       });
     }
   }
@@ -242,6 +244,8 @@ function _collectMilitiaUnits(pool) {
       maxHp: Math.max(1, pool.unitDef.maxHp ?? 5),
       attack: pool.unitDef.attack ?? 0,
       defense: pool.unitDef.defense ?? 0,
+      unitType: pool.unitDef.unitType ?? null,
+      traitIds: [],
     });
   }
   return out;
@@ -255,7 +259,10 @@ function _effectiveAttack(unit, includeRoll = true) {
 }
 
 function _damageAgainst(attacker, target, targetIsDefender, defenderFlatBonus, includeRandom) {
-  const atk = _effectiveAttack(attacker, includeRandom);
+  let atk = _effectiveAttack(attacker, includeRandom);
+  if ((attacker.traitIds ?? []).includes('anti_cavalry') && target.unitType === UNIT_TYPES.CAVALRY) {
+    atk += 3;
+  }
   const targetDef = (target.defense ?? 0) + (targetIsDefender ? defenderFlatBonus : 0);
   return Math.max(1, Math.round(atk - targetDef));
 }

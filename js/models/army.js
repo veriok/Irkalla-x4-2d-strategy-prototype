@@ -61,7 +61,10 @@ export function recalcArmyMoves(army, unitMap = UNIT_MAP) {
     return Math.min(min, unitMove);
   }, Number.POSITIVE_INFINITY);
 
-  const nextMax = Number.isFinite(minMove) ? minMove : 1;
+  let movementBonus = 0;
+  for (const s of (army.statusEffects ?? [])) movementBonus += s.movementBonus ?? 0;
+
+  const nextMax = Number.isFinite(minMove) ? minMove + movementBonus : 1;
   if (!Number.isFinite(army.maxMoves)) army.maxMoves = nextMax;
   if (army.maxMoves !== nextMax) {
     const wasFull = army.movesLeft >= army.maxMoves;

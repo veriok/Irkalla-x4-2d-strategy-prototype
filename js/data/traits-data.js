@@ -57,6 +57,12 @@ export const TRAITS = [
     description: 'This mercenary unit does not recover from wounds — when wounded, it is destroyed instead.',
     effect: { scope: 'army', type: 'no_heal' },
   },
+  {
+    id: 'anti_cavalry',
+    name: 'Anti-Cavalry',
+    description: 'Trained to counter mounted units. Gains +3 attack when fighting cavalry in combat.',
+    effect: { scope: 'army', type: 'anti_cavalry_bonus', attackBonus: 3 },
+  },
 ];
 
 export const TRAIT_MAP = Object.fromEntries(TRAITS.map(t => [t.id, t]));

@@ -74,6 +74,7 @@ export const BUILDING_CATEGORIES = Object.freeze({
   WORSHIPPING:    'worshipping',
   SCIENTIFIC:     'scientific',
   INDUSTRIAL:     'industrial',
+  INFRASTRUCTURE: 'infrastructure',
 });
 
 export const TECH_ERAS = Object.freeze({

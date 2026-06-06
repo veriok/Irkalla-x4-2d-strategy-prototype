@@ -446,6 +446,23 @@ const GENERIC_CHAINS = [
     demolishable: true,
     description: 'Monks preserve ancient texts, slowly generating research each turn.',
   },
+
+  // ── Infrastructure ──────────────────────────────────────
+  {
+    id: 'roads', name: 'Road Network', emoji: '🛣️',
+    cardImg: 'assets/cards/buildings/roads.png',
+    factionId: null,
+    allowedLocTypes: ['main_settlement', 'village', 'fort', 'shrine'],
+    tier: 1, upgradeFromId: null,
+    category: BUILDING_CATEGORIES.INFRASTRUCTURE,
+    techRequired: 'road_building',
+    cost: { gold: 80 }, buildTurns: 3,
+    bonuses: {},
+    maxPerProvince: 1,
+    prerequisites: [],
+    unlocksBuildings: [],
+    description: 'Paved roads connecting the province. Armies that start their turn here gain +1 movement for that turn.',
+  },
 ];
 
 // ─────────────────────────────────────────────────────────
@@ -1232,14 +1249,26 @@ export function accumulateBuildCostModifiers(factionEffects = [], appliedTechEff
   return { locationMultiplier: locationMult, buildingMultiplier: buildingMult, timePenalty };
 }
 
-/** Get all buildings that can be built at a given location type for a faction */
-export function getBuildingsForLocation(factionId, locationType, existingBuildingIds = [], isCoastal = false) {
+/**
+ * Get all buildings that can be built at a given location type for a faction.
+ * @param {string}   factionId
+ * @param {string}   locationType
+ * @param {string[]} existingBuildingIds    — buildings already installed at THIS location
+ * @param {boolean}  isCoastal
+ * @param {string[]} provinceInstalledIds   — all buildings installed anywhere in the province (for maxPerProvince checks)
+ */
+export function getBuildingsForLocation(factionId, locationType, existingBuildingIds = [], isCoastal = false, provinceInstalledIds = []) {
   const available = getBuildingsForFaction(factionId).filter(b =>
     b.allowedLocTypes.includes(locationType) &&
     (!b.requiresCoastalProvince || isCoastal)
   );
   return available.filter(b => {
     if (existingBuildingIds.includes(b.id)) return false;
+    // Province-level cap (e.g. roads: max 1 per province)
+    if (b.maxPerProvince != null) {
+      const count = provinceInstalledIds.filter(id => id === b.id).length;
+      if (count >= b.maxPerProvince) return false;
+    }
     // Block a chain-root (tier-1) building if any tier of the same chain is already installed.
     // This prevents rebuilding a lower tier after an upgrade has replaced it.
     if (b.upgradeFromId === null) {

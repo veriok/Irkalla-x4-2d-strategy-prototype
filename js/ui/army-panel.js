@@ -19,6 +19,7 @@ import { createCard } from './card-renderer.js';
 import { showUnitTooltip, hideUnitTooltip, showActionTooltip, hideActionTooltip } from './tooltips.js';
 import { FACTION_ACTIONS } from '../data/faction-actions-data.js';
 import { getActionUnlockSource } from '../engine/faction-actions.js';
+import { ARMY_STATUS_MAP } from '../data/army-status-data.js';
 
 const armyListEl = document.getElementById('army-list');
 
@@ -39,7 +40,13 @@ export function renderArmyPanel() {
   armyListEl.innerHTML = '';
 
   const playerFactionId = state.playerFactionId;
-  const armies          = getArmiesByFaction(playerFactionId);
+  const armies          = getArmiesByFaction(playerFactionId)
+    .slice()
+    .sort((a, b) => {
+      const nameA = getProvince(a.provinceId)?.name ?? '';
+      const nameB = getProvince(b.provinceId)?.name ?? '';
+      return nameA.localeCompare(nameB);
+    });
 
   if (armies.length === 0) {
     armyListEl.innerHTML = '<p style="color:var(--text-muted);font-size:12px;font-style:italic">No armies.</p>';
@@ -77,7 +84,7 @@ export function renderArmyPanel() {
       const uDef = UNIT_MAP[typeId];
       const hpArr = (army.hp?.active?.[typeId] ?? []).slice();
       while (hpArr.length < count) hpArr.push(uDef?.maxHp ?? 10);
-      const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(typeId, army.factionId, UNIT_MAP);
+      const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(typeId, army.factionId, UNIT_MAP, army);
       for (let i = 0; i < count; i++) {
         const currentHp = hpArr[i] ?? (uDef?.maxHp ?? 10);
         const unitCard = _makeUnitCard(uDef, false, faction, currentHp, effAtk, effDef);
@@ -102,13 +109,31 @@ export function renderArmyPanel() {
       const uDef = UNIT_MAP[typeId];
       const hpArr = (army.hp?.wounded?.[typeId] ?? []).slice();
       while (hpArr.length < count) hpArr.push(Math.max(1, Math.floor((uDef?.maxHp ?? 10) * 0.2)));
-      const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(typeId, army.factionId, UNIT_MAP);
+      const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(typeId, army.factionId, UNIT_MAP, army);
       for (let i = 0; i < count; i++) {
         const currentHp = hpArr[i] ?? Math.max(1, Math.floor((uDef?.maxHp ?? 10) * 0.2));
         unitsEl.appendChild(_makeUnitCard(uDef, true, faction, currentHp, effAtk, effDef));
       }
     }
     card.appendChild(unitsEl);
+
+    // ── Army status chips ────────────────────────────────────
+    const activeStatuses = (army.statusEffects ?? [])
+      .filter(s => ARMY_STATUS_MAP[s.type]);
+    if (activeStatuses.length > 0) {
+      const chipRow = document.createElement('div');
+      chipRow.className = 'army-status-chips';
+      for (const s of activeStatuses) {
+        const def = ARMY_STATUS_MAP[s.type];
+        const chip = document.createElement('span');
+        chip.className = 'army-status-chip';
+        const turns = s.turnsRemaining != null ? `${s.turnsRemaining}t` : '∞';
+        chip.innerHTML = `<span>${def.icon ?? '●'}</span><span class="army-status-chip__turns">${turns}</span>`;
+        chip.title = `${def.label}: ${def.description}`;
+        chipRow.appendChild(chip);
+      }
+      card.appendChild(chipRow);
+    }
 
     // Drop zone: accept dragged units from sibling armies in same province
     card.addEventListener('dragover', e => {
@@ -215,20 +240,29 @@ function _getArmyActions(army) {
   const actions = [];
 
   if (isArmyActionUnlocked(army, 'code_of_honor')) {
-    const isActive = (army.statusEffects ?? []).some(s => s.type === 'code_of_honor_stance');
+    const isActive   = (army.statusEffects ?? []).some(s => s.type === 'code_of_honor_stance');
+    const unitCount  = armySize(army);
+    const cost       = 3 * unitCount;
+    const fs         = state.factions.get(army.factionId);
+    const essence    = fs?.resources?.dragon_essence ?? 0;
+    const canAfford  = essence >= cost;
+    const enabled    = !isActive && canAfford;
+    const disabledReason = isActive ? 'Already active this turn'
+                         : `Not enough Dragon Essence (need ${cost}, have ${essence})`;
     actions.push({
       actionId: 'code_of_honor',
       emoji: '🐉',
-      label: 'Code of Honor',
+      label: `Code of Honor (🔥${cost})`,
       description: isActive
-        ? 'Code of Honor is active — +2 ATK / -1 DEF next battle (consumed on combat)'
-        : 'Invoke the Dragon Code: +2 ATK / -1 DEF for next battle',
-      enabled: !isActive,
-      disabledReason: 'Already active',
+        ? `Code of Honor is active — +3 ATK / -2 DEF until next turn`
+        : `Invoke the Dragon Code: +3 ATK / -2 DEF for one turn. Costs ${cost} Dragon Essence.`,
+      enabled,
+      disabledReason,
       isActive,
       doAction: () => {
+        fs.resources.dragon_essence = Math.max(0, essence - cost);
         army.statusEffects = army.statusEffects ?? [];
-        army.statusEffects.push({ type: 'code_of_honor_stance' });
+        army.statusEffects.push({ type: 'code_of_honor_stance', turnsRemaining: 1 });
         renderArmyPanel();
       },
     });

@@ -516,8 +516,9 @@ function _renderLocationRows(prov) {
             fallbackSub: '',
           });
           if (isPlayerProvince && bDef) {
-            const unlockedTechs = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
-            const avail = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal)
+            const unlockedTechs    = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
+            const provInstalledIds = prov.locations.flatMap(l => getInstalledBuildingIds(l));
+            const avail = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal, provInstalledIds)
               .filter(b => !b.techRequired || unlockedTechs.includes(b.techRequired));
             if (avail.some(b => b.upgradeFromId === buildingId)) {
               const badge = document.createElement('span');
@@ -640,9 +641,10 @@ function _renderSlotActions(prov, loc, buildingId) {
   const bDef       = BUILDING_MAP[buildingId];
   if (!bDef) { _renderRecruit(prov); return; }
 
-  const installedIds = getInstalledBuildingIds(loc);
-  const unlockedTechs = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
-  const allAvail   = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal)
+  const installedIds      = getInstalledBuildingIds(loc);
+  const provInstalledIds  = prov.locations.flatMap(l => getInstalledBuildingIds(l));
+  const unlockedTechs     = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
+  const allAvail   = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal, provInstalledIds)
     .filter(b => !b.techRequired || unlockedTechs.includes(b.techRequired));
   const upgradeDef = allAvail.find(b => b.upgradeFromId === buildingId) ?? null;
 
@@ -758,9 +760,10 @@ function _renderSlotActions(prov, loc, buildingId) {
 
 // ── Sidebar: empty slot (build menu) ─────────────────────
 function _renderEmptySlotBuildMenu(prov, loc) {
-  const installedIds  = getInstalledBuildingIds(loc);
-  const unlockedTechs = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
-  const available     = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal)
+  const installedIds      = getInstalledBuildingIds(loc);
+  const provInstalledIds  = prov.locations.flatMap(l => getInstalledBuildingIds(l));
+  const unlockedTechs     = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
+  const available     = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal, provInstalledIds)
     .filter(b => b.upgradeFromId === null && (!b.techRequired || unlockedTechs.includes(b.techRequired)));
   const availableIds = new Set(available.map(b => b.id));
 

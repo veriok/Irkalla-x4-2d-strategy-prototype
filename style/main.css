@@ -328,6 +328,18 @@ body {
 .army-units { margin-top: 5px; }
 /* Shrink cards just enough so 6 fit inside the army-card's 220px content width (6×34+5×3=219px) */
 .army-units.card-grid--6 { --card-w: 34px; --card-h: 51px; }
+.army-status-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.army-status-chip {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 1px 5px;
+  font-size: 10px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  cursor: default;
+}
+.army-status-chip__turns { font-size: 9px; color: var(--accent); }
 .unit-chip {
   font-size: 11px;
   background: var(--bg-dark);
@@ -714,7 +726,7 @@ body {
 .card-grid { display: flex; flex-wrap: wrap; gap: 3px; }
 .card-grid--6 {
   display: grid;
-  grid-template-columns: repeat(6, var(--card-w));
+  grid-template-columns: repeat(auto-fill, var(--card-w));
   gap: 3px;
 }
 .card-grid--5 {

@@ -262,6 +262,13 @@ const BRONZE_AGE = [
       { unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
     ],
   },
+  {
+    id: 'road_building', name: 'Road Building', emoji: '🛣️',
+    era: TECH_ERAS.BRONZE,
+    baseCost: 50, requires: 'masonry',
+    quote: '"A road is a promise made to the future — that we intend to return."',
+    description: 'Allows construction of Road Networks. Armies starting a turn in a province with roads gain +1 movement that turn.',
+  },
 ];
 
 // ─────────────────────────────────────────────────────────
@@ -426,16 +433,6 @@ const HUMAN_RACE_TECHS = [
     unitStatBonuses: [
       { unitType: UNIT_TYPES.INFANTRY, stat: 'attack', amount: 1 },
       { unitType: UNIT_TYPES.CAVALRY,  stat: 'attack', amount: 1 },
-    ],
-  },
-  {
-    id: 'imperial_roads', name: 'Imperial Roads', emoji: '🛣️',
-    era: TECH_ERAS.BRONZE,
-    raceId: RACE_IDS.HUMAN, replacesId: 'steel',
-    quote: '"Roads are the sinews of empire — cut them and the body falls."',
-    description: 'Paved road networks grant all human armies +1 movement.',
-    unitStatBonuses: [
-      { unitType: UNIT_TYPES.ALL, stat: 'movement', amount: 1 },
     ],
   },
 ];

@@ -13,12 +13,12 @@
 
 import { state, addResources, getProvincesByFaction, getArmiesByFaction,
          checkElimination, getFaction, computeMilitiaMax,
-         getArmiesInProvince } from './game-state.js';
+         getArmiesInProvince, getProvince } from './game-state.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
-import { getLocationResourceBonuses, LOCATION_BASE_SLOTS, LOCATION_STARTING_BUILDING } from '../models/location.js';
+import { getLocationResourceBonuses, LOCATION_BASE_SLOTS, LOCATION_STARTING_BUILDING, getInstalledBuildingIds } from '../models/location.js';
 import { getBiome } from '../data/biomes-data.js';
 import { BIOME_DEN_ENCOUNTER, MONSTER_UNITS } from '../data/monsters-data.js';
 import {
@@ -419,6 +419,11 @@ function tickProvinceStatuses() {
 
 function resetArmyMoves(factionId) {
   for (const army of getArmiesByFaction(factionId)) {
+    // Refresh roads_movement status: remove stale, re-apply if province has roads
+    army.statusEffects = (army.statusEffects ?? []).filter(s => s.type !== 'roads_movement');
+    const prov = getProvince(army.provinceId);
+    const hasRoads = prov?.locations.some(loc => getInstalledBuildingIds(loc).includes('roads'));
+    if (hasRoads) army.statusEffects.push({ type: 'roads_movement', movementBonus: 1 });
     resetMoves(army);
   }
 }
