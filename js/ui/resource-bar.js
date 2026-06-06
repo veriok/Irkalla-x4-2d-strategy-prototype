@@ -64,25 +64,18 @@ export function renderResourceBar() {
   // Income breakdown
   const breakdown = computeIncomeBreakdown(playerFactionId);
 
-  const RESEARCH_DEF = {
-    id: 'research',
-    name: 'Research',
-    emoji: '📚',
-    description: 'Accumulated knowledge. Spend to unlock technologies.',
-  };
-
   // Resource chips
   const allResources = [
-    faction.resources.basic,
+    faction.resources.gold,
     ...faction.resources.advanced,
-    RESEARCH_DEF,
+    faction.resources.research,
   ];
 
   resourceBarEl.innerHTML = allResources.map(res => {
-    const amount = fs.resources[res.id] ?? 0;
+    const amount = Math.floor(fs.resources[res.id] ?? 0);
     const info   = breakdown[res.id] ?? { total: 0, sources: [] };
     const delta  = info.total;
-    const deltaDisplay = parseFloat(delta.toFixed(1));
+    const deltaDisplay = Math.round(delta);
     const deltaClass = delta > 0 ? 'positive' : delta < 0 ? 'negative' : '';
     const deltaStr   = deltaDisplay !== 0 ? `${deltaDisplay > 0 ? '+' : ''}${deltaDisplay}/turn` : '—';
     const tipLines   = info.sources.length > 0

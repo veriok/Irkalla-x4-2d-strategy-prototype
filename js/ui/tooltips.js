@@ -7,6 +7,7 @@
  */
 
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
+import { RESEARCH_RESOURCE } from '../data/enums.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { MONSTER_UNITS } from '../data/monsters-data.js';
 import { BUILDING_MAP, LOCATION_MAIN_CHAIN } from '../data/buildings-data.js';
@@ -21,10 +22,10 @@ import { FACTION_ACTIONS } from '../data/faction-actions-data.js';
 // Build a flat map of all resource definitions for emoji / name lookups
 const ALL_RES = {};
 for (const f of FACTIONS) {
-  ALL_RES[f.resources.basic.id] = f.resources.basic;
+  ALL_RES[f.resources.gold.id] = f.resources.gold;
   for (const r of f.resources.advanced) ALL_RES[r.id] = r;
+  ALL_RES[f.resources.research.id] = f.resources.research;
 }
-ALL_RES['research'] = { id: 'research', name: 'Research', emoji: '📚' };
 
 const tooltipEl = document.getElementById('building-tooltip');
 const unitTooltipEl = document.getElementById('unit-tooltip');

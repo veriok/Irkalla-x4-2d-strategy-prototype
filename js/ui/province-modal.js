@@ -106,6 +106,8 @@ function _effectiveLocationCost(baseCost, baseTurns) {
 
 // ─── DOM refs ─────────────────────────────────────────────
 const overlayEl      = document.getElementById('province-modal-overlay');
+const navPrevEl      = document.getElementById('pmod-nav-prev');
+const navNextEl      = document.getElementById('pmod-nav-next');
 const nameEl         = document.getElementById('pmod-province-name');
 const subEl          = document.getElementById('pmod-province-sub');
 const incomeChipsEl  = document.getElementById('pmod-income-chips');
@@ -167,6 +169,28 @@ export function refreshProvinceModal() {
 // ─── Close button ─────────────────────────────────────────
 closeBtn.addEventListener('click', hideProvinceModal);
 
+// ─── Province cycling ─────────────────────────────────────
+function _playerProvinceIds() {
+  return [...state.provinces.values()]
+    .filter(p => p.ownerId === state.playerFactionId)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(p => p.id);
+}
+
+navPrevEl.addEventListener('click', () => {
+  const ids = _playerProvinceIds();
+  const idx = ids.indexOf(_provinceId);
+  if (idx === -1) return;
+  showProvinceModal(ids[(idx - 1 + ids.length) % ids.length]);
+});
+
+navNextEl.addEventListener('click', () => {
+  const ids = _playerProvinceIds();
+  const idx = ids.indexOf(_provinceId);
+  if (idx === -1) return;
+  showProvinceModal(ids[(idx + 1) % ids.length]);
+});
+
 // ─── Main render ──────────────────────────────────────────
 function _render() {
   const prov = getProvince(_provinceId);
@@ -182,6 +206,11 @@ function _render() {
 function _renderHeader(prov) {
   const biome   = getBiome(prov.biomeId);
   const faction = FACTION_MAP[prov.ownerId] ?? NEUTRAL;
+
+  // Cycling arrows — only visible for player-owned provinces
+  const isPlayerOwned = prov.ownerId === state.playerFactionId;
+  navPrevEl.hidden = !isPlayerOwned;
+  navNextEl.hidden = !isPlayerOwned;
 
   // Province name
   nameEl.textContent = prov.name;
@@ -223,8 +252,8 @@ function _renderHeader(prov) {
   const playerFaction = FACTION_MAP[state.playerFactionId];
   if (playerFaction && prov.ownerId === state.playerFactionId) {
     const allResById = {
-      research: { id: 'research', name: 'Research', emoji: '📚' },
-      [playerFaction.resources.basic.id]: playerFaction.resources.basic,
+      [playerFaction.resources.gold.id]:     playerFaction.resources.gold,
+      [playerFaction.resources.research.id]: playerFaction.resources.research,
     };
     for (const r of playerFaction.resources.advanced) allResById[r.id] = r;
 
@@ -318,8 +347,8 @@ function _computeProvinceBreakdown(prov, playerFaction) {
   const advResId0 = playerFaction.resources.advanced?.[0]?.id;
   const advResId1 = playerFaction.resources.advanced?.[1]?.id;
   const factionResIds = new Set([
-    'research',
-    playerFaction.resources.basic.id,
+    playerFaction.resources.research.id,
+    playerFaction.resources.gold.id,
     ...(advResId0 ? [advResId0] : []),
     ...(advResId1 ? [advResId1] : []),
   ]);
@@ -631,7 +660,7 @@ function _renderSlotActions(prov, loc, buildingId) {
 
   const queueFull  = (prov.productionQueue?.length ?? 0) >= 5;
   const faction    = FACTION_MAP[state.playerFactionId];
-  const allRes     = faction ? [faction.resources.basic, ...faction.resources.advanced] : [];
+  const allRes     = faction ? [faction.resources.gold, ...faction.resources.advanced] : [];
 
   const header = document.createElement('div');
   header.className = 'pmod-section-header';
@@ -682,7 +711,7 @@ function _renderSlotActions(prov, loc, buildingId) {
         fallbackSub: '',
       },
       name: `↑ ${upgradeDefBlocked.name}`,
-      costLabel: `${_costStr(upgradeDefBlocked.cost, faction ? [faction.resources.basic, ...faction.resources.advanced] : [])} · ${upgradeDefBlocked.buildTurns}t`,
+      costLabel: `${_costStr(upgradeDefBlocked.cost, faction ? [faction.resources.gold, ...faction.resources.advanced] : [])} · ${upgradeDefBlocked.buildTurns}t`,
       hint: `Needs ${upgradeBlockedBy.name}`,
       disabled: true,
       affordable: false,
@@ -747,7 +776,7 @@ function _renderEmptySlotBuildMenu(prov, loc) {
 
   const queueFull    = (prov.productionQueue?.length ?? 0) >= 5;
   const faction      = FACTION_MAP[state.playerFactionId];
-  const allRes       = faction ? [faction.resources.basic, ...faction.resources.advanced] : [];
+  const allRes       = faction ? [faction.resources.gold, ...faction.resources.advanced] : [];
 
   const header = document.createElement('div');
   header.className = 'pmod-section-header';
@@ -1012,7 +1041,7 @@ function _renderRecruit(prov) {
 
   const queueFull = (prov.productionQueue?.length ?? 0) >= 5;
   const faction   = FACTION_MAP[state.playerFactionId];
-  const allRes    = faction ? [faction.resources.basic, ...faction.resources.advanced] : [];
+  const allRes    = faction ? [faction.resources.gold, ...faction.resources.advanced] : [];
 
   const fs = getFaction(state.playerFactionId);
   const unlockedTechs = fs?.unlockedTechs ?? [];

@@ -204,8 +204,8 @@ function renderResourceSummary(prov) {
   if (!playerFaction) { resourceSummaryEl.hidden = true; return; }
 
   const allResById = {
-    research: { id: 'research', name: 'Research', emoji: '📚' },
-    [playerFaction.resources.basic.id]: playerFaction.resources.basic,
+    [playerFaction.resources.gold.id]:     playerFaction.resources.gold,
+    [playerFaction.resources.research.id]: playerFaction.resources.research,
   };
   for (const r of playerFaction.resources.advanced) allResById[r.id] = r;
 

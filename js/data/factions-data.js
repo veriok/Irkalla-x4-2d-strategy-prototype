@@ -10,7 +10,7 @@
  * Implementations live in js/engine/faction-reactions.js.
  */
 
-import { RACE_IDS, FACTION_IDS, FACTION_REACTION_IDS } from './enums.js';
+import { RACE_IDS, FACTION_IDS, FACTION_REACTION_IDS, GOLD_RESOURCE, RESEARCH_RESOURCE } from './enums.js';
 
 export const FACTIONS = [
 
@@ -34,11 +34,12 @@ export const FACTIONS = [
     borderColor: '#b08020',
     textColor: '#d4a030',
     resources: {
-      basic: { id: 'gold', name: 'Gold', emoji: '🪙', description: 'Universal currency.' },
+      gold: GOLD_RESOURCE,
       advanced: [
         { id: 'runes',  name: 'Runes',  emoji: '🔮', description: 'Ancient inscriptions empowering constructs and weapons. Sourced from forges and ancient ruins.' },
         { id: 'souls',  name: 'Souls',  emoji: '👻', description: 'Harvested from the slain. Needed to raise undead dwarves and sustain the kingdom\'s dark buildings.' },
       ],
+      research: RESEARCH_RESOURCE,
     },
     startingResources: { gold: 50, research: 0, runes: 20, souls: 20 },
     unitEmoji: '💀',
@@ -64,11 +65,12 @@ export const FACTIONS = [
     borderColor: '#2D3748',
     textColor: '#A0AEC0',
     resources: {
-      basic: { id: 'gold', name: 'Gold', emoji: '🪙', description: 'Universal currency.' },
+      gold: GOLD_RESOURCE,
       advanced: [
         { id: 'runes',      name: 'Runes',      emoji: '🔮', description: 'Ancient dwarven inscriptions. Enhances weapons and armour.' },
         { id: 'schematics', name: 'Schematics', emoji: '📐', description: 'Engineering blueprints. Used to fortify provinces and develop advanced technology.' },
       ],
+      research: RESEARCH_RESOURCE,
     },
     startingResources: { gold: 50, research: 0, runes: 20, schematics: 20 },
     unitEmoji: '⚙️',
@@ -97,11 +99,12 @@ export const FACTIONS = [
     borderColor: '#601010',
     textColor: '#e04020',
     resources: {
-      basic: { id: 'gold', name: 'Gold', emoji: '🪙', description: 'Universal currency.' },
+      gold: GOLD_RESOURCE,
       advanced: [
         { id: 'prestige',       name: 'Prestige',       emoji: '👑', description: 'Noble reputation earned through great deeds. Enables elite units and high-tier buildings.' },
         { id: 'dragon_essence', name: 'Dragon Essence', emoji: '🔥', description: 'Sacred dragon fire. Powers draconic blessings and the mightiest warriors.' },
       ],
+      research: RESEARCH_RESOURCE,
     },
     startingResources: { gold: 50, research: 0, prestige: 20, dragon_essence: 20 },
     unitEmoji: '🐉',
@@ -126,11 +129,12 @@ export const FACTIONS = [
     borderColor: '#975A16',
     textColor: '#F6E05E',
     resources: {
-      basic: { id: 'gold', name: 'Gold', emoji: '🪙', description: 'Universal currency.' },
+      gold: GOLD_RESOURCE,
       advanced: [
         { id: 'prestige',  name: 'Prestige',  emoji: '👑', description: 'Noble reputation. Enables elite access and high-tier construction.' },
         { id: 'contracts', name: 'Contracts', emoji: '📜', description: 'Trade agreements. Can rush production or hire mercenaries instantly.' },
       ],
+      research: RESEARCH_RESOURCE,
     },
     startingResources: { gold: 50, research: 0, prestige: 20, contracts: 20 },
     unitEmoji: '💰',
@@ -158,11 +162,12 @@ export const FACTIONS = [
     borderColor: '#204860',
     textColor: '#40c890',
     resources: {
-      basic: { id: 'gold', name: 'Gold', emoji: '🪙', description: 'Universal currency.' },
+      gold: GOLD_RESOURCE,
       advanced: [
         { id: 'aether',     name: 'Aether',     emoji: '✨', description: 'Arcane sea-mist harvested from coastal towers. Powers elven magic and advanced units.' },
         { id: 'philosophy', name: 'Philosophy', emoji: '📜', description: 'Accumulated knowledge from great academies. Reduces research costs and unlocks powerful bonuses.' },
       ],
+      research: RESEARCH_RESOURCE,
     },
     startingResources: { gold: 50, research: 0, aether: 20, philosophy: 20 },
     unitEmoji: '🌿',
@@ -186,11 +191,12 @@ export const FACTIONS = [
     borderColor: '#1A365D',
     textColor: '#63B3ED',
     resources: {
-      basic: { id: 'gold', name: 'Gold', emoji: '🪙', description: 'Universal currency.' },
+      gold: GOLD_RESOURCE,
       advanced: [
         { id: 'aether',  name: 'Aether',  emoji: '✨', description: 'Arcane sea-mist. Powers elven constructions and advanced units.' },
         { id: 'tribute', name: 'Tribute', emoji: '⚖️', description: 'Taxation from subject provinces. Funds instant conscription and elite buildings.' },
       ],
+      research: RESEARCH_RESOURCE,
     },
     startingResources: { gold: 50, research: 0, aether: 20, tribute: 20 },
     unitEmoji: '🛡️',
@@ -219,11 +225,12 @@ export const FACTIONS = [
     borderColor: '#A04810',
     textColor: '#E08840',
     resources: {
-      basic: { id: 'gold', name: 'Gold', emoji: '🪙', description: 'Universal currency.' },
+      gold: GOLD_RESOURCE,
       advanced: [
         { id: 'ancient_lore', name: 'Ancient Lore', emoji: '📿', description: 'Ancestral knowledge from ancient ruins and temples. Enables powerful rituals and ancient units.' },
         { id: 'faith',        name: 'Faith',        emoji: '🌙', description: 'Devotion to the celestial twins. Powers blessings and moon priest resurrection.' },
       ],
+      research: RESEARCH_RESOURCE,
     },
     startingResources: { gold: 50, research: 0, ancient_lore: 20, faith: 20 },
     unitEmoji: '☀️',
@@ -248,11 +255,12 @@ export const FACTIONS = [
     borderColor: '#22543D',
     textColor: '#68D391',
     resources: {
-      basic: { id: 'gold', name: 'Gold', emoji: '🪙', description: 'Universal currency.' },
+      gold: GOLD_RESOURCE,
       advanced: [
         { id: 'ancient_lore', name: 'Ancient Lore', emoji: '📿', description: 'Ancestral knowledge from ruins and beasts. Enables ancient rituals and creature bonds.' },
         { id: 'beasts',       name: 'Beasts',       emoji: '🦕', description: 'Bound war-creatures. Needed to recruit and sustain monster units in your armies.' },
       ],
+      research: RESEARCH_RESOURCE,
     },
     startingResources: { gold: 50, research: 0, ancient_lore: 20, beasts: 20 },
     unitEmoji: '🦎',

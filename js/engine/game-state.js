@@ -323,8 +323,8 @@ export function rollTreasure(factionId, provinceId) {
   const gain = { gold };
   if (Math.random() < 0.5) {
     const fDef = FACTION_MAP[factionId];
-    if (fDef?.resources?.basic?.id) {
-      gain[fDef.resources.basic.id] = 5 + Math.floor(Math.random() * 11);
+    if (fDef?.resources?.gold?.id) {
+      gain[fDef.resources.gold.id] = 5 + Math.floor(Math.random() * 11);
     }
   }
   if (Math.random() < 0.25) {

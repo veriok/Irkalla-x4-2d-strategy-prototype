@@ -51,6 +51,20 @@ export const RESOURCE_IDS = Object.freeze({
   BEASTS:         'beasts',
 });
 
+export const GOLD_RESOURCE = Object.freeze({
+  id:          RESOURCE_IDS.GOLD,
+  name:        'Gold',
+  emoji:       '🪙',
+  description: 'Universal currency.',
+});
+
+export const RESEARCH_RESOURCE = Object.freeze({
+  id:          RESOURCE_IDS.RESEARCH,
+  name:        'Research',
+  emoji:       '📚',
+  description: 'Accumulated knowledge. Spend to unlock technologies.',
+});
+
 export const BUILDING_CATEGORIES = Object.freeze({
   TRADE:          'trade',
   ADMINISTRATION: 'administration',

@@ -71,9 +71,9 @@ export function computeProvinceIncomeBreakdown(province, factionId) {
   const biome = getBiome(province.biomeId);
 
   const factionResIds = new Set([
-    faction.resources.basic.id,
+    faction.resources.gold.id,
     ...faction.resources.advanced.map(r => r.id),
-    'research',
+    faction.resources.research.id,
   ]);
 
   // ── Flat income (province base + buildings, no modifiers) ──

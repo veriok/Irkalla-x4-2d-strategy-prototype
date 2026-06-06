@@ -422,6 +422,7 @@ body {
   padding-bottom: 4px;
   border-bottom: 1px solid var(--border);
   align-self: end;
+  text-align: center;
 }
 /* faction-picker and faction-race-group no longer used */
 .faction-picker { display: contents; }
@@ -429,7 +430,7 @@ body {
   border: 2px solid var(--fc, var(--border));
   border-radius: 8px;
   padding: 12px;
-  text-align: left;
+  text-align: center;
   display: flex;
   flex-direction: column;
   min-width: 0;          /* prevent grid blowout */

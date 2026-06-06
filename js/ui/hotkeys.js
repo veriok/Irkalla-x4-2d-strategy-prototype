@@ -9,7 +9,7 @@
 
 import { state, startArmyMove } from '../engine/game-state.js';
 import { renderAllProvinces, showReachableProvinces, cancelArmyMoveAndClear } from './map-view.js';
-import { isModalOpen, hideProvinceModal } from './province-modal.js';
+import { isModalOpen, hideProvinceModal, showProvinceModal } from './province-modal.js';
 import { handleEndTurn } from './end-turn-btn.js';
 
 export function initHotkeys() {
@@ -34,6 +34,16 @@ export function initHotkeys() {
           if (army && army.factionId === state.playerFactionId) {
             startArmyMove(state.selectedArmyId);
             showReachableProvinces(state.selectedArmyId);
+          }
+        }
+        break;
+
+      case 'b':
+      case 'B':
+        if (!isModalOpen() && state.selectedProvinceId) {
+          const prov = state.provinces.get(state.selectedProvinceId);
+          if (prov && prov.ownerId === state.playerFactionId) {
+            showProvinceModal(state.selectedProvinceId);
           }
         }
         break;

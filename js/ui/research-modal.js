@@ -65,7 +65,7 @@ function _render() {
   const income    = computeIncome(factionId);
 
   // Header pool display
-  const balance      = fs.resources.research ?? 0;
+  const balance      = Math.floor(fs.resources.research ?? 0);
   const incomePerTurn = Math.round(income.research ?? 0);
   const multiplier   = fs.researchCostMultiplier ?? 1.0;
   const pctIncrease  = Math.round((multiplier - 1) * 100);

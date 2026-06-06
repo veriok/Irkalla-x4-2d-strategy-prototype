@@ -337,14 +337,16 @@ function generateLocations(provinceId, biomeId, isStartingProvince, isCapital, r
   // Median province on a medium map ≈ 36 000 u². Use that as the baseline (2–3 locs).
   // Clamp to 1–5 for non-starting, 3–5 for starting.
   let locCount;
-  if (isStartingProvince) {
+  if (isCapital) {
+    locCount = 4;
+  } else if (isStartingProvince) {
     const base = Math.round(2 + (area / 36000) * 1.5);
     locCount = Math.min(5, Math.max(3, base)) + (rng() < 0.5 ? 0 : 1);
   } else {
     const base = Math.round(1 + (area / 36000) * 2);
-    locCount = Math.min(5, Math.max(1, base));
-    // small jitter
-    if (rng() < 0.35 && locCount < 5) locCount++;
+    locCount = Math.min(5, Math.max(2, base));
+    if (rng() < 0.12 && locCount >= 5) locCount = 6;
+    else if (rng() < 0.35 && locCount < 5) locCount++;
   }
 
   const locations = [];
