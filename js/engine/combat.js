@@ -99,6 +99,37 @@ function _getHeroTacticsBonus(army) {
 }
 function _clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
+function _snapshotCounts(hpMap) {
+  const out = {};
+  for (const [id, arr] of Object.entries(hpMap ?? {}))
+    if (arr?.length > 0) out[id] = arr.length;
+  return out;
+}
+
+function _buildUnitCardList(snapActive, snapWounded, postActive, postWounded) {
+  const cards = [];
+  for (const typeId of new Set([...Object.keys(snapActive), ...Object.keys(snapWounded)])) {
+    const priorActive  = snapActive[typeId]  ?? 0;
+    const priorWounded = snapWounded[typeId] ?? 0;
+    const postActiveCount  = postActive[typeId]?.length  ?? 0;
+    const postWoundedCount = postWounded[typeId]?.length ?? 0;
+
+    // Pre-existing wounded: those still in wounded pool stay 'wounded', rest were killed
+    const priorWoundedSurviving = Math.min(priorWounded, postWoundedCount);
+    for (let i = 0; i < priorWoundedSurviving;                    i++) cards.push({ typeId, status: 'wounded' });
+    for (let i = 0; i < priorWounded - priorWoundedSurviving;     i++) cards.push({ typeId, status: 'killed'  });
+
+    // Previously-active units: some newly wounded, rest alive or killed
+    const newlyWounded = Math.max(0, postWoundedCount - priorWoundedSurviving);
+    const stillActive  = Math.min(priorActive, postActiveCount);
+    const activeKilled = Math.max(0, priorActive - stillActive - newlyWounded);
+    for (let i = 0; i < stillActive;  i++) cards.push({ typeId, status: 'alive'   });
+    for (let i = 0; i < newlyWounded; i++) cards.push({ typeId, status: 'wounded' });
+    for (let i = 0; i < activeKilled; i++) cards.push({ typeId, status: 'killed'  });
+  }
+  return cards;
+}
+
 function _pickBestDefenderArmy(defArmies) {
   if (!defArmies || defArmies.length === 0) return null;
   return [...defArmies].sort((a, b) => {
@@ -539,6 +570,9 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     );
     _applyBorrowedUnits(enemyDefArmy, borrowedPlan);
   }
+  // Snapshot AFTER borrow merge so borrowed units appear in the report as participants
+  const defSnapActive  = enemyDefArmy ? _snapshotCounts(enemyDefArmy.hp.active)       : {};
+  const defSnapWounded = enemyDefArmy ? _snapshotCounts(enemyDefArmy.hp.wounded ?? {}) : {};
 
   const militiaPool = _militiaPoolForProvince(targetP);
   const hasMilitia = _militiaCount(militiaPool) > 0;
@@ -597,6 +631,11 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
 
   const attSizeBefore = armySize(attArmy);
   const defSizeBefore = (enemyDefArmy ? armySize(enemyDefArmy) : 0) + _militiaCount(militiaPool);
+
+  const attSnapActive   = _snapshotCounts(attArmy.hp.active);
+  const attSnapWounded  = _snapshotCounts(attArmy.hp.wounded ?? {});
+  const militiaSnapCount = _militiaCount(militiaPool);
+  const militiaUnitId   = militiaPool?.unitId ?? null;
 
   const rounds = [];
   let outcome = 'inconclusive';
@@ -707,6 +746,22 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   _emitArmyCasualties(attArmy, attPendingCasualties, targetP, 'attacker', outcome);
   _emitArmyCasualties(enemyDefArmy, defPendingCasualties, targetP, 'defender', outcome);
 
+  // Build unit card lists BEFORE returning borrowed units so all participants are captured.
+  // Resurrections from _emitArmyCasualties have already been applied (wounded pool is final).
+  const attUnitCards = _buildUnitCardList(
+    attSnapActive, attSnapWounded, attArmy.hp.active, attArmy.hp.wounded ?? {}
+  );
+  const defUnitCards = enemyDefArmy
+    ? _buildUnitCardList(defSnapActive, defSnapWounded, enemyDefArmy.hp.active, enemyDefArmy.hp.wounded ?? {})
+    : [];
+  const militiaCards = [];
+  if (militiaUnitId && militiaSnapCount > 0) {
+    const survivingMilitia = _militiaCount(militiaPool);
+    const killedMilitia    = Math.max(0, militiaSnapCount - survivingMilitia);
+    for (let i = 0; i < survivingMilitia; i++) militiaCards.push({ typeId: militiaUnitId, status: 'alive'  });
+    for (let i = 0; i < killedMilitia;    i++) militiaCards.push({ typeId: militiaUnitId, status: 'killed' });
+  }
+
   // Return borrowed units after resurrections — resurrected borrowed units (now wounded)
   // are correctly routed back to their donor armies by transferWoundedUnits.
   if (borrowedPlan.length > 0 && outcome !== 'attacker') {
@@ -744,11 +799,14 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     summary,
     attackerStrength: Math.max(0, attackerStrengthPre),
     defenderStrength: Math.max(0, defenderStrengthPre),
-    terrainBonus: Math.round((biome?.terrainDefBonus ?? 0) * 100),
+    defenseBonus: Math.round((biome?.terrainDefBonus ?? 0) * 100 * siegeReduction),
     fortBonus,
     seaAttack: isSeaAttack,
     attLostTotal,
     defLostTotal,
+    attUnitCards,
+    defUnitCards,
+    militiaCards,
     rounds: _buildCombatNarrative(_ensureMinNarrative(rounds, outcome, targetP.name)),
     turn: state.turn,
   };

@@ -7,6 +7,8 @@
 import { state } from '../engine/game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { MONSTER_UNITS } from '../data/monsters-data.js';
+import { createCard } from './card-renderer.js';
+import { UNIT_MAP } from '../data/units-data.js';
 
 const overlayEl  = document.getElementById('modal-overlay');
 const titleEl    = document.getElementById('modal-title');
@@ -125,6 +127,62 @@ export function showDenCombatReportModal(result) {
   ]);
 }
 
+function _buildCasualtiesSide(label, unitCards, factionId) {
+  const side = document.createElement('div');
+  side.className = 'cr-casualties-side';
+
+  const lbl = document.createElement('div');
+  lbl.className = 'cr-casualties-label';
+  lbl.textContent = label;
+  side.appendChild(lbl);
+
+  if (!unitCards || unitCards.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'cr-casualties-empty';
+    empty.textContent = '—';
+    side.appendChild(empty);
+    return side;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'cr-casualties-grid';
+
+  const factionDef = FACTION_MAP[factionId];
+  const bgSrc = factionDef?.unitCardBgImg ?? null;
+
+  for (const { typeId, status } of unitCards) {
+    const unitDef = UNIT_MAP[typeId];
+    const card = createCard({
+      variant: 'unit',
+      wounded: status === 'wounded',
+      backgroundSrc: bgSrc,
+      foregroundSrc: unitDef?.cardSpriteImg ?? null,
+      fallbackIcon: unitDef?.emoji ?? '⚔',
+      fallbackName: unitDef?.name ?? typeId,
+    });
+
+    const statusLabel = status === 'wounded' ? ' · Wounded' : status === 'killed' ? ' · Killed' : '';
+    if (unitDef?.name) card.title = unitDef.name + statusLabel;
+
+    if (status === 'killed') {
+      card.classList.add('game-card--killed');
+      const overlay = document.createElement('div');
+      overlay.className = 'cr-card-overlay cr-card-overlay--killed';
+      overlay.textContent = '❌';
+      card.appendChild(overlay);
+    } else if (status === 'wounded') {
+      const overlay = document.createElement('div');
+      overlay.className = 'cr-card-overlay cr-card-overlay--wounded';
+      overlay.textContent = '🩸';
+      card.appendChild(overlay);
+    }
+    grid.appendChild(card);
+  }
+
+  side.appendChild(grid);
+  return side;
+}
+
 /**
  * Show a combat report modal for a given reportId.
  * @param {string} reportId
@@ -165,24 +223,44 @@ export function showCombatReportModal(reportId) {
       <span>⚔ ${attName}: <strong>${report.attackerStrength}</strong></span>
       <span>🛡 ${defName}: <strong>${report.defenderStrength}</strong></span>
     </div>
-    ${report.terrainBonus > 0 ? `<div class="cr-terrain">🏔 Terrain defense bonus: +${report.terrainBonus}%</div>` : ''}
+    ${report.defenseBonus > 0 ? `<div class="cr-terrain">🛡 Defender defense bonus: +${report.defenseBonus}%</div>` : ''}
     <hr class="cr-divider">
     <div class="cr-rounds-title">Battle Narrative</div>
     <ol class="cr-rounds">
       ${(report.rounds ?? []).map(r => `<li>${r.text}</li>`).join('')}
     </ol>
     <hr class="cr-divider">
-    <div class="cr-losses">
+  `;
+
+  if (report.attUnitCards || report.defUnitCards) {
+    const casualties = document.createElement('div');
+    casualties.className = 'cr-casualties';
+    const defCards = [...(report.defUnitCards ?? []), ...(report.militiaCards ?? [])];
+    casualties.appendChild(_buildCasualtiesSide(attName, report.attUnitCards ?? [], report.attackerFactionId));
+    casualties.appendChild(_buildCasualtiesSide(defName, defCards, report.defenderFactionId));
+    body.appendChild(casualties);
+  } else {
+    const fallback = document.createElement('div');
+    fallback.className = 'cr-losses';
+    fallback.innerHTML = `
       <span>📉 ${attName} losses: <strong>${report.attLostTotal ?? '?'}</strong></span>
       <span>📉 ${defName} losses: <strong>${report.defLostTotal ?? '?'}</strong></span>
-    </div>
-    ${(report.attHeroXp || report.defHeroXp) ? `
-    <hr class="cr-divider">
-    <div class="cr-hero-xp">
+    `;
+    body.appendChild(fallback);
+  }
+
+  if (report.attHeroXp || report.defHeroXp) {
+    const hr = document.createElement('hr');
+    hr.className = 'cr-divider';
+    body.appendChild(hr);
+    const heroXp = document.createElement('div');
+    heroXp.className = 'cr-hero-xp';
+    heroXp.innerHTML = `
       ${report.attHeroXp ? `<span>🦸 ${report.attHeroName}: <strong>+${report.attHeroXp} XP</strong></span>` : ''}
-      ${report.defHeroXp ? `<span>🦸 ${report.defHeroName}: <strong>+${report.defHeroXp} XP</strong></span>` : ''}
-    </div>` : ''}
-  `;
+      ${report.defHeroXp ? `<span class="cr-hero-xp__def">🦸 ${report.defHeroName}: <strong>+${report.defHeroXp} XP</strong></span>` : ''}
+    `;
+    body.appendChild(heroXp);
+  }
 
   showModal(`⚔ Battle Report — ${report.provinceName}`, body, [
     { label: 'Close' },

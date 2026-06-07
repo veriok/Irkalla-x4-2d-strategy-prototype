@@ -672,6 +672,20 @@ body {
 .cr-divider  { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
 .cr-hero-xp  { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); }
 .cr-hero-xp strong { color: #80c080; }
+.cr-hero-xp__def { margin-left: auto; }
+.cr-casualties { display: flex; gap: 10px; margin-top: 2px; }
+.cr-casualties-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.cr-casualties-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.cr-casualties-side:last-child .cr-casualties-label { text-align: right; }
+.cr-casualties-empty { font-size: 11px; color: var(--text-muted); }
+.cr-casualties-grid { --card-w: 34px; display: grid; grid-template-columns: repeat(4, var(--card-w)); gap: 3px; }
+.cr-card-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; pointer-events: none; z-index: 2;
+}
+.cr-card-overlay--killed  { background: rgba(0,0,0,0.50); }
+.cr-card-overlay--wounded { background: rgba(80,0,0,0.20); }
 .cr-rounds-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 6px; }
 .cr-rounds {
   list-style: decimal;
@@ -778,9 +792,10 @@ body {
   border-color: var(--accent);
 }
 .game-card--wounded {
-  filter: grayscale(1);
   border-color: var(--danger) !important;
 }
+.game-card--wounded .game-card__media,
+.game-card--killed  .game-card__media { filter: grayscale(1); }
 .game-card--empty {
   border-style: dashed;
   opacity: 0.4;
