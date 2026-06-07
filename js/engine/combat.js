@@ -36,6 +36,9 @@ import { flashCombat, flashConquest } from '../ui/map-view.js';
 import { logCapture, logMessage } from '../ui/event-log.js';
 import { emit } from './game-events.js';
 import { GAME_EVENTS, UNIT_TYPES } from '../data/enums.js';
+import { isHeroActive, addHeroExperience, woundHero } from './hero-engine.js';
+import { ARTIFACT_MAP, rollRandomArtifact } from '../data/artifacts-data.js';
+import { SPELL_MAP } from '../data/hero-spells-data.js';
 import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense, getSiegeExpertReduction } from './tech-effects.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { playerCanSee } from './game-state.js';
@@ -214,14 +217,18 @@ function _collectArmyUnits(army, factionId = null) {
     const { attack, defense } = getEffectiveUnitStats(typeId, factionId, UNIT_MAP, army);
     for (let i = 0; i < arr.length; i++) {
       if (arr[i] <= 0) continue;
+      // combatEffects: applied by spell resolution, stripped after battle
+      const effects = (army.combatEffects ?? []).filter(e => e.unitKey === `a:${typeId}:${i}`);
+      const effAtkBonus  = effects.reduce((s, e) => e.stat === 'attack'  ? s + e.amount : s, 0);
+      const effDefBonus  = effects.reduce((s, e) => e.stat === 'defense' ? s + e.amount : s, 0);
       out.push({
         key: `a:${typeId}:${i}`,
         pool: 'army',
         typeId,
         hp: arr[i],
         maxHp: Math.max(1, def.maxHp ?? 10),
-        attack,
-        defense,
+        attack:  attack  + effAtkBonus,
+        defense: defense + effDefBonus,
         unitType: def.unitType ?? null,
         traitIds: def.traitIds ?? [],
       });
@@ -395,6 +402,99 @@ function _buildCombatNarrative(rounds) {
   return rounds.map((text, idx) => ({ round: idx + 1, text }));
 }
 
+function _resolveHeroSpells(attackers, defenders, attArmy, defArmy, roundNum) {
+  // Attacker hero spells
+  _castHeroCombatSpells(attArmy, attackers, defenders, roundNum);
+  // Defender hero spells
+  _castHeroCombatSpells(defArmy, defenders, attackers, roundNum);
+}
+
+function _castHeroCombatSpells(army, ownUnits, enemyUnits, roundNum) {
+  if (!army?.heroId) return;
+  const fs = getFaction(army.factionId);
+  const hero = fs?.heroes?.find(h => h.id === army.heroId);
+  if (!hero || !isHeroActive(hero)) return;
+  if (!hero.combatSpellQueue || hero.combatSpellQueue.length === 0) return;
+
+  // Check condition: if_not_weaker compares total power
+  const ownPower  = ownUnits.reduce((s, u)  => s + u.attack + u.defense, 0);
+  const enemyPower = enemyUnits.reduce((s, u) => s + u.attack + u.defense, 0);
+  const isWeaker = ownPower < enemyPower * 0.5;
+
+  for (const entry of hero.combatSpellQueue) {
+    if (entry.condition === 'if_not_weaker' && isWeaker) continue;
+    const spell = SPELL_MAP[entry.spellId];
+    if (!spell || spell.type !== 'combat') continue;
+    if (hero.mana < spell.manaCost) continue;
+
+    hero.mana = Math.max(0, hero.mana - spell.manaCost);
+    const spellpower = hero.stats.spellpower ?? 0;
+    const baseDmg = (spell.baseDamage ?? 0) + spellpower;
+
+    if (spell.effectType === 'damage_all' || spell.damageType === 'damage_all') {
+      const targets = spell.targetType?.includes('ally') ? ownUnits : enemyUnits;
+      for (const target of targets) {
+        target.hp = Math.max(0, target.hp - Math.max(1, baseDmg));
+      }
+    } else if (spell.effectType === 'damage_random' || spell.damageType === 'damage_random') {
+      const targets = spell.targetType?.includes('ally') ? ownUnits : enemyUnits;
+      if (targets.length > 0) {
+        const target = targets[Math.floor(Math.random() * targets.length)];
+        target.hp = Math.max(0, target.hp - Math.max(1, Math.round(baseDmg * 1.5)));
+      }
+    } else if (spell.effectType === 'buff' && spell.buffEffect) {
+      const targets = spell.targetType?.includes('enemy') ? enemyUnits : ownUnits;
+      for (const target of targets) {
+        target[spell.buffEffect.stat === 'attack' ? 'attack' : 'defense'] +=
+          spell.buffEffect.amount ?? 0;
+      }
+    }
+  }
+}
+
+function _heroXpForCombat(winnerHero, loserHero, enemyArmy, ownArmy) {
+  // Approximate enemy power: (atk + def) × count per unit type
+  const power = (enemyArmy?.units ?? []).reduce((sum, { typeId, count }) => {
+    const u = UNIT_MAP[typeId];
+    return sum + ((u?.attack ?? 0) + (u?.defense ?? 0)) * count;
+  }, 0);
+  if (winnerHero && isHeroActive(winnerHero)) {
+    addHeroExperience(winnerHero, 20 + Math.floor(power / 10));
+  }
+  if (loserHero && isHeroActive(loserHero)) {
+    addHeroExperience(loserHero, 5);
+  }
+}
+
+function _woundHeroOnArmyDestroyed(army, factionId) {
+  if (!army?.heroId) return;
+  const turnsWounded = 2 + Math.floor(Math.random() * 3);
+  woundHero(army.heroId, factionId, turnsWounded);
+  emit(GAME_EVENTS.HERO_WOUNDED, { factionId, heroId: army.heroId });
+}
+
+function _lootEnemyHeroArtifacts(enemyArmy, winnerFactionId) {
+  if (!enemyArmy?.heroId) return;
+  const enemyFactionId = enemyArmy.factionId;
+  const enemyFs = getFaction(enemyFactionId);
+  if (!enemyFs) return;
+  const hero = enemyFs.heroes?.find(h => h.id === enemyArmy.heroId);
+  if (!hero) return;
+
+  const winnerFs = getFaction(winnerFactionId);
+  if (!winnerFs) return;
+
+  for (const [slot, instanceId] of Object.entries(hero.artifacts)) {
+    if (!instanceId) continue;
+    if (Math.random() < 0.2) {
+      hero.artifacts[slot] = null;
+      winnerFs.artifacts = winnerFs.artifacts ?? [];
+      winnerFs.artifacts.push({ instanceId, artifactId: instanceId });
+      emit(GAME_EVENTS.ARTIFACT_ACQUIRED, { factionId: winnerFactionId, instanceId });
+    }
+  }
+}
+
 export function resolveCombat(attackerArmyId, targetProvinceId) {
   const attArmy = getArmy(attackerArmyId);
   const targetP = getProvince(targetProvinceId);
@@ -467,6 +567,10 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   const defenderMilitiaDefensePre = _militiaDefense(militiaPool);
   const defenderStrengthPre = Math.round((defenderArmyDefensePre + defenderMilitiaDefensePre) * terrainMod + fortBonus * 10);
 
+  // Init combat effect buffers
+  attArmy.combatEffects = [];
+  if (enemyDefArmy) enemyDefArmy.combatEffects = [];
+
   markArmyAttacked(attArmy);
   if (enemyDefArmy) markArmyAttacked(enemyDefArmy);
 
@@ -489,6 +593,9 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
       ..._collectArmyUnits(enemyDefArmy, enemyDefArmy?.factionId ?? null),
       ..._collectMilitiaUnits(militiaPool),
     ];
+
+    // Hero spell resolution (before unit attacks, modifies unit objects in-place)
+    _resolveHeroSpells(attackers, defenders, attArmy, enemyDefArmy, roundNum);
 
     if (attackers.length === 0) {
       outcome = 'defender';
@@ -572,6 +679,10 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     else if (ratio <= 0.9) outcome = 'defender';
   }
 
+  // Strip combat effects from armies
+  attArmy.combatEffects = [];
+  if (enemyDefArmy) enemyDefArmy.combatEffects = [];
+
   // Emit post-combat casualties and apply any faction resurrections.
   // Attacker always gets the chance. Defender only if they're not about to be captured
   // (if the province will be taken and their army is gone, resurrecting costs souls for nothing).
@@ -623,6 +734,54 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     rounds: _buildCombatNarrative(_ensureMinNarrative(rounds, outcome, targetP.name)),
     turn: state.turn,
   };
+
+  // ── Hero post-combat: XP + wounds + artifact loot ────────
+  {
+    const attFs = getFaction(attArmy.factionId);
+    const defFs = enemyDefArmy ? getFaction(enemyDefArmy.factionId) : null;
+    const attHero = attFs?.heroes?.find(h => h.id === attArmy.heroId) ?? null;
+    const defHero = defFs?.heroes?.find(h => h.id === enemyDefArmy?.heroId) ?? null;
+
+    // Compute XP amounts before applying so we can record them in the report
+    const _power = (army) => (army?.units ?? []).reduce((s, { typeId, count }) => {
+      const u = UNIT_MAP[typeId];
+      return s + ((u?.attack ?? 0) + (u?.defense ?? 0)) * count;
+    }, 0);
+
+    let attHeroXp = 0, defHeroXp = 0;
+    if (outcome === 'attacker') {
+      const pow = _power(enemyDefArmy);
+      attHeroXp = attHero && isHeroActive(attHero) ? 20 + Math.floor(pow / 10) : 0;
+      defHeroXp = defHero && isHeroActive(defHero) ? 5 : 0;
+    } else if (outcome === 'defender') {
+      const pow = _power(attArmy);
+      defHeroXp = defHero && isHeroActive(defHero) ? 20 + Math.floor(pow / 10) : 0;
+      attHeroXp = attHero && isHeroActive(attHero) ? 5 : 0;
+    } else {
+      attHeroXp = attHero && isHeroActive(attHero) ? 5 : 0;
+      defHeroXp = defHero && isHeroActive(defHero) ? 5 : 0;
+    }
+
+    // Stamp XP onto result so the battle report can display it
+    if (attHero && attHeroXp > 0) { result.attHeroName = attHero.name; result.attHeroXp = attHeroXp; }
+    if (defHero && defHeroXp > 0) { result.defHeroName = defHero.name; result.defHeroXp = defHeroXp; }
+
+    // Apply XP
+    if (attHeroXp > 0) addHeroExperience(attHero, attHeroXp);
+    if (defHeroXp > 0) addHeroExperience(defHero, defHeroXp);
+
+    // Wounds and loot
+    if (outcome === 'attacker') {
+      if (enemyDefArmy && armySize(enemyDefArmy) <= 0) {
+        _woundHeroOnArmyDestroyed(enemyDefArmy, enemyDefArmy.factionId);
+        _lootEnemyHeroArtifacts(enemyDefArmy, attArmy.factionId);
+      }
+    } else if (outcome === 'defender') {
+      if (armySize(attArmy) <= 0) {
+        _woundHeroOnArmyDestroyed(attArmy, attArmy.factionId);
+      }
+    }
+  }
 
   const reportId = addCombatReport(result);
   result.reportId = reportId;
@@ -820,6 +979,19 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
 
   _emitArmyCasualties(army, armyPendingCasualties, prov, 'attacker', outcome);
 
+  // Hero XP for den combat
+  {
+    const fs = getFaction(army.factionId);
+    const hero = fs?.heroes?.find(h => h.id === army.heroId) ?? null;
+    if (hero && isHeroActive(hero)) {
+      const xp = outcome === 'attacker' ? 15 : 5;
+      addHeroExperience(hero, xp);
+    }
+    if (outcome === 'defender' && armySize(army) <= 0) {
+      _woundHeroOnArmyDestroyed(army, army.factionId);
+    }
+  }
+
   let treasure = null;
   if (outcome === 'attacker') {
     loc.type = 'empty';
@@ -829,11 +1001,25 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
     if (Math.random() < 0.65) {
       treasure = rollTreasure(army.factionId, provinceId);
     }
+
+    // Artifact drop from den (always roll, uses weighted rarity)
+    const artDrop = rollRandomArtifact();
+    if (artDrop) {
+      const fs = getFaction(army.factionId);
+      if (fs) {
+        const instanceId = `art_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        fs.artifacts = fs.artifacts ?? [];
+        fs.artifacts.push({ instanceId, artifactId: artDrop.id });
+        emit(GAME_EVENTS.ARTIFACT_ACQUIRED, { factionId: army.factionId, instanceId, artifactName: artDrop.name });
+      }
+    }
+
     const factionDef = FACTION_MAP[army.factionId];
     const treasureStr = treasure
       ? ` Found treasure: ${Object.entries(treasure).map(([r, a]) => `+${a} ${r}`).join(', ')}.`
       : '';
-    logMessage(`⚔ ${factionDef?.name ?? army.factionId} cleared the monster den in ${prov.name}!${treasureStr}`);
+    const artStr = artDrop ? ` Found artifact: ${artDrop.name}!` : '';
+    logMessage(`⚔ ${factionDef?.name ?? army.factionId} cleared the monster den in ${prov.name}!${treasureStr}${artStr}`);
   } else {
     const factionDef = FACTION_MAP[army.factionId];
     logMessage(`⚔ ${factionDef?.name ?? army.factionId} failed to clear the monster den in ${prov.name}.`);

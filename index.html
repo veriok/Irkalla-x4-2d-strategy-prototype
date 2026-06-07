@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="style/animations.css" />
   <link rel="stylesheet" href="style/province-modal.css" />
   <link rel="stylesheet" href="style/research-modal.css" />
+  <link rel="stylesheet" href="style/hero-panel.css" />
 
   <!-- ES module import map: d3-delaunay from CDN -->
   <script type="importmap">
@@ -34,6 +35,7 @@
     <div id="turn-display">
       Turn <span id="turn-number">1</span>
     </div>
+    <div id="heroes-top-area"></div>
     <button id="minimap-btn" class="btn-secondary">🗺 Map</button>
     <button id="research-btn" class="btn-secondary">📚 Research</button>
     <button id="end-turn-btn" class="btn-primary">End Turn ⏭</button>
@@ -104,12 +106,15 @@
       </div>
       <div id="province-panel-content" hidden>
         <div id="province-header">
-          <span id="province-biome-icon"></span>
-          <h2 id="province-name"></h2>
+          <div id="province-name-row">
+            <span id="province-biome-icon"></span>
+            <h2 id="province-name"></h2>
+          </div>
           <span id="province-owner-badge"></span>
           <div id="province-core-info"></div>
         </div>
         <p id="province-biome-label"></p>
+        <div id="province-governor-area" hidden></div>
 
         <div id="province-resource-summary" hidden></div>
         <div id="province-core-row" hidden></div>
@@ -193,11 +198,13 @@
         <button class="rmod-era-tab" data-era="silver">⚪ Silver Age</button>
         <button class="rmod-era-tab" data-era="gold">🟡 Gold Age</button>
         <button class="rmod-era-tab" data-era="mithril">💠 Mithril Age</button>
+        <button class="rmod-era-tab rmod-magic-tab" data-era="magic">✨ Magic</button>
       </div>
       <div id="rmod-body">
         <div id="rmod-tree-scroll">
           <div id="rmod-tree-grid"><!-- era columns injected by JS --></div>
         </div>
+        <div id="rmod-magic-panel" hidden><!-- filled by research-modal.js when magic tab is active --></div>
       </div>
     </div>
   </div>
@@ -210,6 +217,7 @@
           <img id="pmod-flag-img" alt="" hidden />
           <span id="pmod-flag-emoji"></span>
         </div>
+        <div id="pmod-governor-area"></div>
         <div id="pmod-title-area">
           <div id="pmod-nav-row">
             <span id="pmod-nav-prev" class="pmod-nav-arrow">‹</span>
@@ -240,6 +248,56 @@
         <div class="pmod-queue-slots" id="pmod-queue-slots"><!-- 6 queue slots --></div>
       </div>
     </div>
+  </div>
+
+  <!-- Spellbook Modal -->
+  <div id="spellbook-modal-overlay" hidden>
+    <div id="spellbook-modal">
+      <div id="sb-header">
+        <span id="sb-hero-name">📖 Spellbook</span>
+        <span id="sb-mana"></span>
+        <button id="sb-close" class="btn-secondary">✕ Close</button>
+      </div>
+      <div id="sb-book">
+        <!-- Left page: combat spells -->
+        <div class="sb-page sb-page--left" id="sb-left-page"></div>
+        <!-- Spine -->
+        <div class="sb-spine"></div>
+        <!-- Right page: province spells -->
+        <div class="sb-page sb-page--right" id="sb-right-page"></div>
+      </div>
+      <div id="sb-footer">
+        <div id="sb-prev-edge" class="sb-page-edge sb-edge--empty"></div>
+        <button id="sb-prev" class="btn-secondary" hidden>◄ Prev tier</button>
+        <span id="sb-page-indicator">Tier 1</span>
+        <button id="sb-next" class="btn-secondary" hidden>Next tier ►</button>
+        <div id="sb-next-edge" class="sb-page-edge sb-edge--empty"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero Panel Overlay -->
+  <div id="hero-panel-overlay" hidden>
+    <div id="hero-panel">
+      <div id="hpanel-header">
+        <h2 id="hpanel-title">🦸 Heroes</h2>
+        <button id="hpanel-close" class="btn-secondary">✕ Close</button>
+      </div>
+      <div id="hpanel-body">
+        <!-- Left sidebar: hero list + recruit -->
+        <div id="hpanel-sidebar">
+          <div id="hpanel-hero-list"><!-- filled by hero-panel.js --></div>
+          <div id="hpanel-recruit-section"><!-- filled by hero-panel.js --></div>
+        </div>
+        <!-- Main area: hero detail -->
+        <div id="hpanel-detail"><!-- filled by hero-panel.js --></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero Assignment Modal (small overlay, shared by army panel + province modal) -->
+  <div id="hero-assign-modal-overlay" hidden>
+    <div id="ham-box"><!-- filled by hero-assign-modal.js --></div>
   </div>
 
   <!-- Entry point -->

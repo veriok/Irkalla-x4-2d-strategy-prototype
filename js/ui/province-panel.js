@@ -12,6 +12,7 @@
 import {
   state,
   getProvince,
+  getFaction,
   addResources,
   computeMilitiaMax,
 } from '../engine/game-state.js';
@@ -30,7 +31,10 @@ import {
   showUnitTooltip, hideUnitTooltip,
   showLocationTooltip, hideLocationTooltip,
   showProvinceStatusTooltip, hideProvinceStatusTooltip,
+  showHeroTooltip, hideHeroTooltip,
 } from './tooltips.js';
+import { HERO_CLASS_MAP } from '../data/hero-classes-data.js';
+import { heroGenderEmoji } from '../models/hero.js';
 import { createCard } from './card-renderer.js';
 import { showProvinceModal, renderProvinceActionBar } from './province-modal.js';
 
@@ -40,6 +44,7 @@ const nameEl          = document.getElementById('province-name');
 const biomeIconEl     = document.getElementById('province-biome-icon');
 const biomeLabelEl    = document.getElementById('province-biome-label');
 const ownerBadgeEl    = document.getElementById('province-owner-badge');
+const governorAreaEl  = document.getElementById('province-governor-area');
 const locationListEl  = document.getElementById('location-list');
 const resourceSummaryEl = document.getElementById('province-resource-summary');
 const recruitSectionEl  = document.getElementById('recruit-section');
@@ -72,6 +77,9 @@ export function showProvincePanel(provinceId) {
 
   // Clear legacy core info in header (no longer used)
   if (coreInfoEl) coreInfoEl.innerHTML = '';
+
+  // Governor card
+  _renderGovernorCard(prov);
 
   // Ocean provinces: hide all gameplay sections
   if (prov.isOcean) {
@@ -363,6 +371,53 @@ function renderProductionQueue(prov) {
   }
 }
 
+// ─── Governor card ────────────────────────────────────────
+function _renderGovernorCard(prov) {
+  if (!governorAreaEl) return;
+  governorAreaEl.innerHTML = '';
+
+  if (!prov.governorId || prov.visibility !== 'visible') {
+    governorAreaEl.hidden = true;
+    return;
+  }
+
+  const fs = getFaction(prov.ownerId);
+  const governor = fs?.heroes?.find(h => h.id === prov.governorId) ?? null;
+  if (!governor) { governorAreaEl.hidden = true; return; }
+
+  const classDef = HERO_CLASS_MAP[governor.classId];
+  const factionDef = FACTION_MAP[prov.ownerId] ?? NEUTRAL;
+
+  const card = createCard({
+    variant: 'unit',
+    extraClass: 'hero-card-slot',
+    backgroundSrc: factionDef?.unitCardBgImg ?? null,
+    foregroundSrc: null,
+    fallbackIcon: classDef?.isSpellcaster ? '🧙' : '⚔',
+    fallbackName: governor.name,
+    fallbackSub: `Lv.${governor.level}`,
+  });
+
+  const infoEl = document.createElement('div');
+  infoEl.className = 'province-governor-info';
+  infoEl.innerHTML = `
+    <div class="province-governor-name">${governor.name} ${heroGenderEmoji(governor)}</div>
+    <div class="province-governor-class">${classDef?.name ?? governor.classId} · Lv.${governor.level}</div>
+    <div class="province-governor-label">Governor</div>
+  `;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'province-governor-card';
+  wrap.appendChild(card);
+  wrap.appendChild(infoEl);
+
+  wrap.addEventListener('mouseenter', () => showHeroTooltip(governor, factionDef, wrap));
+  wrap.addEventListener('mouseleave', hideHeroTooltip);
+
+  governorAreaEl.appendChild(wrap);
+  governorAreaEl.hidden = false;
+}
+
 // ─── Manage Province button ────────────────────────────────
 let _manageBtnEl = null;
 
@@ -370,7 +425,7 @@ function _ensureManageBtn(provinceId) {
   if (!_manageBtnEl) {
     _manageBtnEl = document.createElement('button');
     _manageBtnEl.className = 'btn-primary';
-    _manageBtnEl.style.cssText = 'width:100%;margin-bottom:8px;';
+    _manageBtnEl.style.cssText = 'width:100%;margin-top:10px;margin-bottom:8px;';
     _manageBtnEl.textContent   = '🏛 Manage Province';
   }
   // Re-wire click so it uses the current province ID

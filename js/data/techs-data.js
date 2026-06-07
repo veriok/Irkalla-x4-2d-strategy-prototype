@@ -269,6 +269,14 @@ const BRONZE_AGE = [
     quote: '"A road is a promise made to the future — that we intend to return."',
     description: 'Allows construction of Road Networks. Armies starting a turn in a province with roads gain +1 movement that turn.',
   },
+  {
+    id: 'call_to_glory', name: 'Call to Glory', emoji: '🦸',
+    era: TECH_ERAS.BRONZE,
+    baseCost: 60, requires: 'worship',
+    quote: '"Come forward, champion. The realm has need of you."',
+    description: 'Legends spread of great champions willing to serve for coin and glory. Allows recruitment of 1 additional hero.',
+    effects: [{ scope: 'faction', type: 'hero_count_bonus', amount: 1 }],
+  },
 ];
 
 // ─────────────────────────────────────────────────────────
@@ -590,6 +598,15 @@ const DRAIG_GOCH_TECHS = [
     factionId: FACTION_IDS.DRAIG_GOCH, replacesId: 'guilds',
     quote: '"The dragon does not serve. It chooses. And it has chosen us."',
     description: 'The Dragon Knight unit is unlocked. A warrior so bound to the Dragon that they can no longer truly die.',
+  },
+  {
+    id: 'draconic_pact', name: 'Draconic Pact', emoji: '🐲',
+    era: TECH_ERAS.IRON,
+    factionId: FACTION_IDS.DRAIG_GOCH, replacesId: 'battle_formations',
+    baseCost: 80,
+    quote: '"The dragon and the man made a pact older than kingdoms: strength for loyalty, fury for faith."',
+    description: 'Ancient blood-oaths with dragon-kin draw legendary champions to Draig Goch\'s banner. +1 hero capacity.',
+    effects: [{ scope: 'faction', type: 'hero_count_bonus', amount: 1 }],
   },
 ];
 

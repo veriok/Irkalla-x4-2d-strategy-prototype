@@ -4,7 +4,7 @@
  * Renders the player's resources in the top bar.
  */
 
-import { state, getFaction } from '../engine/game-state.js';
+import { state, getFaction, computeHeroCount } from '../engine/game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { computeIncomeBreakdown } from '../engine/turn-engine.js';
 
@@ -102,6 +102,29 @@ export function renderResourceBar() {
     researchChip.addEventListener('click', () => {
       document.dispatchEvent(new CustomEvent('open-research-modal'));
     });
+  }
+
+  // Hero count chip — rendered in dedicated top-bar slot next to minimap button
+  const heroesAreaEl = document.getElementById('heroes-top-area');
+  if (heroesAreaEl) {
+    const heroCount = fs.heroes?.length ?? 0;
+    const heroMax   = computeHeroCount(playerFactionId);
+    const pendingLevelUps = (fs.heroes ?? []).filter(h => h.pendingLevelUp).length;
+    const alertBadge = pendingLevelUps > 0 ? `<span class="heroes-levelup-badge">⬆${pendingLevelUps}</span>` : '';
+    heroesAreaEl.innerHTML = `<div class="resource-chip resource-chip--heroes" id="heroes-resource-chip" title="Heroes — click to manage" style="cursor:pointer">
+      <div class="r-row-top">
+        <span class="r-icon">🦸</span>
+        <span class="r-name">Heroes</span>
+        <span class="r-value">${heroCount}/${heroMax}</span>
+        ${alertBadge}
+      </div>
+    </div>`;
+    const heroChip = document.getElementById('heroes-resource-chip');
+    if (heroChip) {
+      heroChip.addEventListener('click', () => {
+        document.dispatchEvent(new CustomEvent('open-hero-panel'));
+      });
+    }
   }
 }
 

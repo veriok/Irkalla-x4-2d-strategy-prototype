@@ -232,11 +232,15 @@ body {
 
 #province-header {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#province-name-row {
+  display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
 }
-#province-biome-icon { font-size: 22px; }
+#province-biome-icon { font-size: 22px; flex-shrink: 0; }
 #province-name {
   font-family: var(--font-title);
   font-size: 16px;
@@ -248,8 +252,33 @@ body {
   padding: 2px 7px;
   border-radius: 10px;
   border: 1px solid currentColor;
+  align-self: center;
+  text-align: center;
 }
 #province-biome-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* Governor card in province sidebar */
+#province-governor-area { margin: 6px 0 2px; }
+.province-governor-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: default;
+}
+.province-governor-card:hover { border-color: var(--accent); }
+.province-governor-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.province-governor-name { font-size: 12px; font-weight: 600; color: var(--text-bright); }
+.province-governor-class { font-size: 11px; color: var(--text-muted); }
+.province-governor-label {
+  font-size: 10px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 
 /* Location cards */
 .location-card {
@@ -390,7 +419,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 220;
 }
 .modal-overlay[hidden] { display: none; }
 
@@ -585,7 +614,9 @@ body {
 .cr-strengths strong, .cr-losses strong { color: var(--text-bright); }
 .cr-terrain  { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
 .cr-treasure { font-size: 12px; color: var(--accent, #c8952a); margin-top: 6px; }
-.cr-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+.cr-divider  { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+.cr-hero-xp  { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); }
+.cr-hero-xp strong { color: #80c080; }
 .cr-rounds-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 6px; }
 .cr-rounds {
   list-style: decimal;

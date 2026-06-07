@@ -49,7 +49,8 @@ const GENERIC_CHAINS = [
     unlocksBuildings: ['town_hall_2'],
     demolishable: false,
     militiaBonus: 3,
-    description: 'A rudimentary seat of local governance. Enables further development.',
+    heroCountBonus: 1,
+    description: 'A rudimentary seat of local governance. Enables further development. Allows recruitment of 1 hero.',
   },
   {
     id: 'town_hall_2', name: 'Grand Hall', emoji: '🏰',
@@ -65,7 +66,8 @@ const GENERIC_CHAINS = [
     unlocksBuildings: ['town_hall_3'],
     demolishable: false,
     militiaBonus: 4,
-    description: 'An imposing hall that marks this settlement as a regional center.',
+    heroCountBonus: 1,
+    description: 'An imposing hall that marks this settlement as a regional center. Allows recruitment of 1 hero.',
   },
   {
     id: 'town_hall_3', name: 'Imperial Palace', emoji: '👑',
@@ -81,7 +83,8 @@ const GENERIC_CHAINS = [
     unlocksBuildings: [],
     demolishable: false,
     militiaBonus: 6,
-    description: 'The seat of power. A symbol of dominance that inspires loyalty.',
+    heroCountBonus: 1,
+    description: 'The seat of power. A symbol of dominance that inspires loyalty. Allows recruitment of 1 hero.',
   },
 
   // ── Mercantile Base Chain (village only, pre-placed) ────

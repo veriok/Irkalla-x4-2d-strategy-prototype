@@ -58,6 +58,20 @@ import { resolveMonsterDenCombat } from '../engine/combat.js';
 import { renderArmyPanel } from './army-panel.js';
 import { showResearchModalAndHighlight } from './research-modal.js';
 import { showDenCombatReportModal } from './modal.js';
+import { isHeroActive, getHeroProvinceBonuses } from '../engine/hero-engine.js';
+import { HERO_CLASS_MAP } from '../data/hero-classes-data.js';
+import { heroGenderEmoji } from '../models/hero.js';
+import { openHeroAssignModal } from './hero-assign-modal.js';
+
+// ─── Build speed helper (governor Builder skill) ──────────
+/** Returns the governor's build-time reduction in turns (0 if no active governor). */
+function _getGovernorBuildSpeedBonus(prov) {
+  if (!prov.governorId) return 0;
+  const fs = getFaction(state.playerFactionId);
+  const governor = fs?.heroes?.find(h => h.id === prov.governorId) ?? null;
+  if (!governor || !isHeroActive(governor)) return 0;
+  return getHeroProvinceBonuses(governor).buildSpeedBonus ?? 0;
+}
 
 // ─── Recruit speed helper ─────────────────────────────────
 /** Sum all recruitSpeed bonuses from buildings across the province. */
@@ -339,7 +353,58 @@ function _renderHeader(prov) {
       milChip.title = replenishing ? 'Replenishing +1/turn' : cur >= max ? 'At full strength' : '';
       statsRowEl.appendChild(milChip);
     }
+    // Governor slot is rendered in pmod-governor-area (between flag and title)
+    _renderGovernorArea(prov, isPlayerOwned);
   }
+}
+
+function _renderGovernorArea(prov, isPlayerOwned) {
+  const areaEl = document.getElementById('pmod-governor-area');
+  if (!areaEl) return;
+  areaEl.innerHTML = '';
+  if (!isPlayerOwned) return;
+
+  const factionId = state.playerFactionId;
+  const fs = getFaction(factionId);
+  const governor = prov.governorId
+    ? (fs?.heroes?.find(h => h.id === prov.governorId) ?? null)
+    : null;
+
+  // Governor card — same visual as army hero slot, no mana bar
+  const slot = document.createElement('div');
+  slot.className = `hero-card-slot${governor ? '' : ' hero-card-slot--empty'}`;
+
+  if (governor) {
+    const classDef = HERO_CLASS_MAP[governor.classId];
+    const active   = isHeroActive(governor);
+    const isWounded = governor.woundedFor > 0;
+    if (!active) slot.classList.add('hero-card-slot--inactive');
+    if (isWounded) slot.classList.add('hero-card-slot--wounded');
+
+    let statusLine = '';
+    if (isWounded) statusLine = `<span class="hero-slot-status hero-slot-status--wounded">⚔ ${governor.woundedFor}t</span>`;
+
+    slot.innerHTML = `
+      <div class="hero-slot-icon">${classDef?.isSpellcaster ? '🧙' : '⚔'}</div>
+      <div class="hero-slot-name">${governor.name}</div>
+      <div class="hero-slot-level">${governor.level}</div>
+      ${statusLine}
+    `;
+    slot.title = `Governor: ${governor.name} ${heroGenderEmoji(governor)} (${classDef?.name ?? ''}) — click to reassign`;
+  } else {
+    slot.innerHTML = `<span class="hero-slot-plus">+</span><span class="hero-slot-label">Hero</span>`;
+    slot.title = 'No governor — click to assign';
+  }
+
+  slot.addEventListener('click', () => {
+    openHeroAssignModal({
+      targetType: 'province',
+      targetId: prov.id,
+      onAssigned: () => refreshProvinceModal(),
+    });
+  });
+
+  areaEl.appendChild(slot);
 }
 
 function _computeProvinceBreakdown(prov, playerFaction) {
@@ -694,7 +759,7 @@ function _renderSlotActions(prov, loc, buildingId) {
       onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(upgradeDef, el, { locationType: loc.type })); el.addEventListener('mouseleave', hideBuildingTooltip); },
       onClick: () => {
         if (!spendResources(state.playerFactionId, effCost)) return;
-        enqueueProduction(prov, { type: 'building', id: upgradeDef.id, locationId: loc.id, turnsRemaining: effTurns });
+        enqueueProduction(prov, { type: 'building', id: upgradeDef.id, locationId: loc.id, turnsRemaining: Math.max(1, effTurns - _getGovernorBuildSpeedBonus(prov)) });
         renderResourceBar();
         _render();
       },
@@ -813,7 +878,7 @@ function _renderEmptySlotBuildMenu(prov, loc) {
       onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(bDef, el, { locationType: loc.type })); el.addEventListener('mouseleave', hideBuildingTooltip); },
       onClick: !isBlocked ? () => {
         if (!spendResources(state.playerFactionId, bDef.cost)) return;
-        enqueueProduction(prov, { type: 'building', id: bDef.id, locationId: loc.id, turnsRemaining: bDef.buildTurns });
+        enqueueProduction(prov, { type: 'building', id: bDef.id, locationId: loc.id, turnsRemaining: Math.max(1, bDef.buildTurns - _getGovernorBuildSpeedBonus(prov)) });
         renderResourceBar();
         _selectedSlotKey = null;
         _render();

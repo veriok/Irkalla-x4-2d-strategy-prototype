@@ -9,9 +9,10 @@
  *   4. Trait effects (auras, conditions)
  */
 
-import { getFaction } from './game-state.js';
+import { getFaction, getProvince } from './game-state.js';
 import { UNIT_TYPES } from '../data/enums.js';
 import { TRAIT_MAP } from '../data/traits-data.js';
+import { isHeroActive, getHeroArmyBonuses } from './hero-engine.js';
 
 /**
  * Returns effective attack and defense for a unit type, with all bonuses applied.
@@ -59,7 +60,38 @@ export function getEffectiveUnitStats(typeId, factionId, unitMap, army = null) {
     defense += eff.defense ?? 0;
   }
 
-  // 4. Army status effects targeting this specific unit type
+  // 4. Hero bonuses from army leader (or province governor if army has no hero)
+  {
+    const fs = getFaction(factionId);
+    let leader = null;
+    if (army?.heroId && factionId) {
+      leader = fs?.heroes?.find(h => h.id === army.heroId) ?? null;
+    } else if (!army?.heroId && army?.provinceId && factionId) {
+      // Fall back to province governor for armies defending a governed province
+      const prov = getProvince(army.provinceId);
+      if (prov?.governorId) {
+        leader = fs?.heroes?.find(h => h.id === prov.governorId) ?? null;
+      }
+    }
+    if (leader && isHeroActive(leader)) {
+      const bonuses = getHeroArmyBonuses(leader);
+      attack  += Math.round(attack  * bonuses.statAtk  * 0.02);
+      defense += Math.round(defense * bonuses.statDef   * 0.02);
+      const uDef = unitMap[typeId];
+      for (const b of bonuses.unitTypeBonuses) {
+        if (b.unitType === uDef?.unitType || b.unitType === UNIT_TYPES.ALL) {
+          if (b.stat === 'attack')  attack  += Math.round(attack  * b.percent / 100);
+          if (b.stat === 'defense') defense += Math.round(defense * b.percent / 100);
+        }
+      }
+      for (const b of bonuses.allUnitsBonuses) {
+        if (b.stat === 'attack')  attack  += Math.round(attack  * b.percent / 100);
+        if (b.stat === 'defense') defense += Math.round(defense * b.percent / 100);
+      }
+    }
+  }
+
+  // 5. Army status effects targeting this specific unit type
   if (army) {
     for (const status of (army.statusEffects ?? [])) {
       if (status.type === 'unit_type_stat_bonus' && status.unitTypeId === typeId) {
@@ -81,7 +113,7 @@ export function getEffectiveUnitStats(typeId, factionId, unitMap, army = null) {
 /** Evaluate a named condition against the current army state */
 function _conditionMet(condition, army) {
   if (!condition) return true;  // no condition = always active
-  if (condition === 'army_no_hero') return !(army?.hasHero);
+  if (condition === 'army_no_hero') return !army?.heroId;
   return true;  // unknown conditions default to active
 }
 

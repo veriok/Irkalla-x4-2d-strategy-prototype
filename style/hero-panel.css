@@ -1,0 +1,1211 @@
+/* ═══════════════════════════════════════════════════
+   HERO PANEL — full-viewport overlay
+═══════════════════════════════════════════════════ */
+
+#hero-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#hero-panel-overlay[hidden] { display: none; }
+
+#hero-panel {
+  background: var(--bg-panel);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 12px 64px rgba(0, 0, 0, 0.9);
+  width: 88vw;
+  max-width: 1000px;
+  height: 86vh;
+  max-height: 760px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────── */
+#hpanel-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-panel-alt);
+  flex-shrink: 0;
+}
+
+#hpanel-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0;
+  flex: 1;
+}
+
+/* ── Body: sidebar + detail ────────────────────── */
+#hpanel-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Left sidebar ───────────────────────────────── */
+#hpanel-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+#hpanel-hero-list {
+  flex: 1;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.hpanel-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 12px;
+  padding: 8px;
+}
+
+.hpanel-hero-item {
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel-alt);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.hpanel-hero-item:hover { border-color: var(--accent); }
+.hpanel-hero-item--selected { border-color: var(--accent); background: #2a2620; }
+.hpanel-hero-item--wounded { opacity: 0.65; }
+
+.hpanel-list-hero-card {
+  flex-shrink: 0;
+  width: var(--card-w);
+  height: var(--card-h);
+}
+
+.hpanel-hero-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.hpanel-hero-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+}
+.hpanel-hero-item-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hpanel-hero-item-level {
+  font-size: 11px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.hpanel-hero-item-class {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+
+.hpanel-hero-status { font-size: 11px; }
+.hpanel-status--wounded { color: #c05040; }
+.hpanel-status--transit { color: #7080c0; }
+.hpanel-status--active  { color: var(--success); }
+.hpanel-status--idle    { color: var(--text-muted); }
+
+.hpanel-levelup-badge {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #f0c030;
+  background: rgba(240, 192, 48, 0.12);
+  border: 1px solid rgba(240, 192, 48, 0.4);
+  border-radius: 3px;
+  padding: 1px 5px;
+  display: inline-block;
+}
+
+/* ── Recruit section ──────────────────────────── */
+#hpanel-recruit-section {
+  padding: 10px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-dark);
+  flex-shrink: 0;
+}
+
+.hpanel-hero-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.hpanel-recruit-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.hpanel-recruit-card {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  background: var(--bg-panel-alt);
+}
+
+.hpanel-recruit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.hpanel-recruit-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+.hpanel-recruit-class {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.hpanel-recruit-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.hpanel-recruit-cost { font-size: 12px; color: var(--success); }
+.hpanel-recruit-cost--poor { color: var(--danger); }
+.hpanel-recruit-timer { font-size: 11px; color: var(--text-muted); }
+
+.hpanel-recruit-btn { width: 100%; font-size: 12px; padding: 4px 8px; }
+.btn-disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Detail area ────────────────────────────────── */
+#hpanel-detail {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hpanel-no-selection {
+  color: var(--text-muted);
+  font-style: italic;
+  margin: auto;
+  text-align: center;
+}
+
+/* ── Hero header ────────────────────────────────── */
+.hpanel-detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.hpanel-sprite {
+  width: 56px;
+  height: 56px;
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  background: var(--bg-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.hpanel-name-block { display: flex; flex-direction: column; gap: 3px; }
+.hpanel-name { font-size: 1.2rem; font-weight: 700; color: var(--text-bright); }
+.hpanel-gender { font-size: 1rem; }
+.hpanel-class-line { font-size: 13px; color: var(--text-muted); }
+
+.hpanel-levelup-btn {
+  margin-top: 4px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(240, 192, 48, 0.15);
+  border: 1px solid rgba(240, 192, 48, 0.5);
+  border-radius: 4px;
+  color: #f0c030;
+  cursor: pointer;
+  display: inline-block;
+}
+.hpanel-levelup-btn:hover { background: rgba(240, 192, 48, 0.25); }
+
+/* ── XP bar ─────────────────────────────────────── */
+.hpanel-xp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.hpanel-level-label { color: var(--accent); font-weight: 600; white-space: nowrap; }
+.hpanel-xp-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.hpanel-xp-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s;
+}
+.hpanel-xp-label { color: var(--text-muted); white-space: nowrap; font-size: 11px; }
+
+/* ── Detail top: two-column layout ──────────────── */
+.hpanel-detail-top {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.hpanel-detail-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hpanel-detail-right {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Artifact grid (2×2) ────────────────────────── */
+.hpanel-artifact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+/* ── Artifact slot — hard-edge frame style ──────── */
+.hpanel-artifact-slot {
+  border: 2px solid #2a2620;
+  border-radius: 2px;
+  background: #0e0c08;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px;
+  position: relative;
+  text-align: center;
+  box-sizing: border-box;
+  transition: filter 0.12s;
+}
+
+/* Inner frame inset */
+.hpanel-artifact-slot::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(255,255,255,0.06);
+  pointer-events: none;
+}
+
+.hpanel-artifact-slot[style*="cursor: pointer"]:hover { filter: brightness(1.2); }
+.hpanel-artifact-slot--empty { border-style: dashed; border-color: #2a2620; }
+.hpanel-artifact-slot--empty:hover { border-color: var(--accent); }
+
+/* Rarity border colors */
+.hpanel-artifact-slot--common    { border-style: solid; border-color: #666; }
+.hpanel-artifact-slot--uncommon  { border-style: solid; border-color: #3366bb; box-shadow: 0 0 6px rgba(51,102,187,0.25); }
+.hpanel-artifact-slot--rare      { border-style: solid; border-color: #b07820; box-shadow: 0 0 7px rgba(176,120,32,0.3); }
+.hpanel-artifact-slot--legendary { border-style: solid; border-color: #bb2222; box-shadow: 0 0 8px rgba(187,34,34,0.4); }
+
+.hpanel-artifact-icon { font-size: 26px; line-height: 1; }
+.hpanel-artifact-icon--empty { opacity: 0.2; }
+.hpanel-artifact-name {
+  font-size: 9px;
+  color: var(--text-muted);
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Rarity color classes (used on text spans too) */
+.hpanel-rarity--common    { color: #888; }
+.hpanel-rarity--uncommon  { color: #4488cc; }
+.hpanel-rarity--rare      { color: #c8a030; }
+.hpanel-rarity--legendary { color: #cc3030; }
+
+/* ── Vault section ───────────────────────────────── */
+.hpanel-vault {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hpanel-vault-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+/* ── Lore ───────────────────────────────────────── */
+.hpanel-lore {
+  font-style: italic;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  border-left: 2px solid var(--border);
+  padding-left: 10px;
+}
+
+/* ── Stats ──────────────────────────────────────── */
+.hpanel-stats {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.hpanel-stat-cell {
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 4px;
+  text-align: center;
+}
+.hpanel-stat-val {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+.hpanel-stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Mana ───────────────────────────────────────── */
+.hpanel-mana-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.hpanel-mana-label { color: #60a0d0; font-weight: 600; white-space: nowrap; }
+.hpanel-mana-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.hpanel-mana-bar-fill {
+  height: 100%;
+  background: #3070c0;
+  transition: width 0.3s;
+}
+.hpanel-mana-val { color: #80c0e8; white-space: nowrap; }
+.hpanel-mana-regen { color: var(--text-muted); font-size: 11px; }
+
+/* ── Skills ─────────────────────────────────────── */
+.hpanel-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.hpanel-skill-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hpanel-skill-slot {
+  flex: 1;
+  min-width: 110px;
+  max-width: 160px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  background: var(--bg-dark);
+  min-height: 64px;
+}
+.hpanel-skill-slot--filled { background: var(--bg-panel-alt); border-color: #4a4640; }
+.hpanel-skill-slot--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.35;
+}
+
+.hpanel-skill-name { font-size: 12px; font-weight: 600; color: var(--text-bright); margin-bottom: 3px; }
+.hpanel-skill-tier {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-bottom: 4px;
+  text-transform: capitalize;
+}
+.hpanel-tier--novice  { background: rgba(100,140,80,0.25); color: #80c060; border: 1px solid rgba(100,140,80,0.4); }
+.hpanel-tier--expert  { background: rgba(80,120,180,0.25); color: #80b0e8; border: 1px solid rgba(80,120,180,0.4); }
+.hpanel-tier--master  { background: rgba(160,100,200,0.25); color: #c080e8; border: 1px solid rgba(160,100,200,0.4); }
+.hpanel-skill-desc { font-size: 11px; color: var(--text-muted); line-height: 1.3; }
+.hpanel-skill-empty-label { font-size: 11px; color: var(--text-muted); }
+
+/* ── Assignment ─────────────────────────────────── */
+.hpanel-assignment {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hpanel-assign-text { font-size: 13px; color: var(--text); }
+
+.hpanel-btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hpanel-kick-btn { color: var(--danger); border-color: var(--danger); }
+.hpanel-kick-btn:hover { background: rgba(160, 48, 32, 0.15); }
+
+/* ── Level-up dialog ────────────────────────────── */
+.hpanel-levelup-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hpanel-levelup-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f0c030;
+  margin: 0;
+}
+.hpanel-levelup-info { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+.hpanel-skill-choices {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hpanel-skill-choice-card {
+  flex: 1;
+  min-width: 180px;
+  max-width: 260px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  background: var(--bg-dark);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.hpanel-skill-choice-card:hover {
+  border-color: var(--accent);
+  background: #1e1c17;
+}
+
+.hpanel-choice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.hpanel-choice-name { font-size: 14px; font-weight: 700; color: var(--text-bright); }
+
+.hpanel-choice-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.hpanel-badge--new     { background: rgba(100,200,100,0.15); color: #80e080; border: 1px solid rgba(100,200,100,0.3); }
+.hpanel-badge--upgrade { background: rgba(80,140,220,0.15); color: #80c0f0; border: 1px solid rgba(80,140,220,0.3); }
+
+.hpanel-choice-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+/* ── Level-up result ────────────────────────────── */
+.hpanel-levelup-result { display: flex; flex-direction: column; gap: 8px; }
+.hpanel-levelup-result p { margin: 0; }
+
+/* ── Artifact picker ────────────────────────────── */
+.hpanel-artifact-picker { display: flex; flex-direction: column; gap: 8px; }
+.hpanel-artifact-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-dark);
+  cursor: pointer;
+}
+.hpanel-artifact-pick-row:hover { border-color: var(--accent); }
+.hpanel-pick-name { font-weight: 600; font-size: 13px; color: var(--text-bright); flex: 1; }
+
+/* ═══════════════════════════════════════════════════
+   SPELLBOOK MODAL — open book layout
+═══════════════════════════════════════════════════ */
+
+#spellbook-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#spellbook-modal-overlay[hidden] { display: none; }
+
+#spellbook-modal {
+  background: #1e1a10;
+  border: 3px solid #6a5020;
+  border-radius: 4px;
+  box-shadow: 0 0 60px rgba(0,0,0,0.95), inset 0 0 40px rgba(0,0,0,0.3);
+  width: 820px;
+  max-width: 96vw;
+  height: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#sb-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 2px solid #6a5020;
+  background: #241e0e;
+  flex-shrink: 0;
+}
+
+#sb-hero-name {
+  flex: 1;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #d4a840;
+}
+
+#sb-mana { font-size: 12px; color: #6090c0; }
+
+#sb-book {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.sb-page {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #f5f0e0;
+  color: #2a1e08;
+}
+
+.sb-page--left { border-right: 1px solid #c0a860; }
+
+.sb-spine {
+  width: 8px;
+  background: linear-gradient(to right, #5a3a10, #8a5a20, #5a3a10);
+  flex-shrink: 0;
+}
+
+.sb-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6a4010;
+  border-bottom: 1px solid #c0a860;
+  padding-bottom: 4px;
+}
+
+.sb-empty {
+  font-style: italic;
+  font-size: 12px;
+  color: #8a7050;
+}
+
+/* Queue */
+.sb-queue-section { display: flex; flex-direction: column; gap: 6px; }
+
+.sb-queue-slots {
+  display: flex;
+  gap: 4px;
+}
+
+.sb-queue-slot {
+  flex: 1;
+  height: 32px;
+  border: 1px dashed #b09060;
+  border-radius: 3px;
+  background: #ede5cc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #8a7050;
+  cursor: pointer;
+  text-align: center;
+  overflow: hidden;
+  padding: 2px;
+}
+.sb-queue-slot--filled {
+  background: #d4b870;
+  border-color: #8a6020;
+  border-style: solid;
+  color: #2a1e08;
+  font-size: 9px;
+  font-weight: 600;
+}
+.sb-queue-slot--filled:hover { background: #c0a040; }
+
+.sb-condition-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.sb-cond-label { color: #6a4010; }
+.sb-cond-btn {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-color: #b09060;
+  color: #4a2e08;
+  background: #ede5cc;
+}
+.sb-cond-btn:hover { background: #d4c8a0; }
+
+/* Spell list (both pages) */
+.sb-spell-list { display: flex; flex-direction: column; gap: 6px; }
+
+.sb-spell-row, .sb-province-spell-row {
+  padding: 8px;
+  border: 1px solid #c0a860;
+  border-radius: 3px;
+  background: #ede5cc;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: background 0.12s;
+}
+.sb-spell-row:hover, .sb-province-spell-row:hover { background: #e0d5a8; }
+.sb-spell-row--queued { background: #d4c880; border-color: #8a6020; }
+.sb-spell-row--queued:hover { background: #c8bc60; }
+
+.sb-spell-name { font-size: 13px; font-weight: 700; color: #2a1e08; }
+.sb-spell-meta { display: flex; gap: 8px; align-items: center; }
+.sb-mana-cost { font-size: 11px; color: #3060a0; }
+.sb-extra-cost { font-size: 11px; color: #6040a0; }
+.sb-cost--poor { color: #a03020; text-decoration: line-through; }
+.sb-spell-dmg { font-size: 11px; color: #a04020; }
+.sb-target { font-size: 10px; color: #6a5030; margin-left: auto; }
+.sb-spell-desc { font-size: 11px; color: #5a4020; line-height: 1.3; }
+
+.sb-cast-btn {
+  align-self: flex-end;
+  font-size: 11px;
+  padding: 3px 10px;
+  margin-top: 2px;
+}
+
+/* Footer / page turn */
+#sb-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  border-top: 2px solid #6a5020;
+  background: #241e0e;
+  flex-shrink: 0;
+}
+
+#sb-page-indicator {
+  font-size: 12px;
+  color: #c0a040;
+  font-family: var(--font-title);
+}
+
+.sb-page-edge {
+  width: 40px;
+  height: 20px;
+  border-radius: 2px;
+}
+.sb-edge--filled {
+  background: repeating-linear-gradient(
+    -5deg,
+    #b09060 0px, #b09060 2px, #ede5cc 2px, #ede5cc 4px
+  );
+  opacity: 0.8;
+}
+.sb-edge--empty { opacity: 0.2; background: #6a5020; }
+
+/* ═══════════════════════════════════════════════════
+   RESEARCH MODAL — magic tab additions
+═══════════════════════════════════════════════════ */
+
+.rmod-magic-tab { border-left: 1px solid var(--border); margin-left: 8px; }
+
+#rmod-magic-panel {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+.rmod-magic-empty { color: var(--text-muted); font-style: italic; }
+
+.rmod-spell-school {
+  flex: 1;
+  min-width: 280px;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rmod-spell-school-header {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+
+.rmod-spell-tier-group { display: flex; flex-direction: column; gap: 6px; }
+
+.rmod-spell-tier-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 0;
+}
+.rmod-spell-tier--novice { color: #80c060; }
+.rmod-spell-tier--expert { color: #80b0e8; }
+.rmod-spell-tier--master { color: #c080e8; }
+
+.rmod-spell-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-dark);
+}
+.rmod-spell-row--unlocked { border-color: #4a5a40; background: #171c13; }
+
+.rmod-spell-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rmod-spell-name { font-size: 13px; font-weight: 600; color: var(--text-bright); }
+.rmod-spell-type { font-size: 10px; color: var(--text-muted); }
+.rmod-spell-desc { font-size: 11px; color: var(--text-muted); line-height: 1.3; }
+
+.rmod-spell-known { font-size: 11px; color: var(--success); flex-shrink: 0; }
+
+.rmod-spell-btn {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--accent);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rmod-spell-btn:hover { background: rgba(200,149,42,0.15); }
+.rmod-spell-btn--poor { border-color: var(--border); color: var(--text-muted); cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════════════
+   ARMY PANEL — hero slot + heroes bar
+═══════════════════════════════════════════════════ */
+
+.army-panel-heroes-bar {
+  padding: 4px 8px 0;
+}
+
+.army-heroes-btn {
+  width: 100%;
+  font-size: 12px;
+  text-align: left;
+  padding: 4px 10px;
+}
+.army-heroes-btn--alert {
+  border-color: #f0c030;
+  color: #f0c030;
+}
+
+/* Hero card slot — same size as unit cards, gold border, always first in grid */
+.hero-card-slot {
+  width: var(--card-w);
+  height: var(--card-h);
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 2px solid var(--accent);
+  background: linear-gradient(160deg, #2a2415 0%, #1a1508 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 0 8px rgba(200, 149, 42, 0.15);
+}
+.hero-card-slot:hover {
+  border-color: var(--accent-hover);
+  background: linear-gradient(160deg, #352c1a 0%, #1e180a 100%);
+}
+
+.hero-card-slot--empty {
+  border-style: dashed;
+  opacity: 0.7;
+}
+.hero-card-slot--empty:hover { opacity: 1; }
+
+.hero-card-slot--inactive { opacity: 0.6; }
+.hero-card-slot--wounded { border-color: #a04030; }
+
+.hero-slot-plus {
+  font-size: 18px;
+  color: var(--accent);
+  line-height: 1;
+}
+.hero-slot-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hero-slot-icon { font-size: 16px; line-height: 1; }
+.hero-slot-name {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  padding: 0 2px;
+}
+
+/* Mana bar — inside the hero card, at the bottom (position absolute) */
+.hero-slot-mana-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.hero-slot-mana-fill {
+  height: 100%;
+  background: #4488dd;
+  border-radius: 0;
+  transition: width 0.3s;
+}
+
+/* Level badge — circle in top-right corner */
+.hero-slot-level {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(20, 15, 5, 0.88);
+  border: 1px solid var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 900;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.hero-slot-status {
+  font-size: 8px;
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-weight: 700;
+}
+.hero-slot-status--wounded  { color: #c04030; }
+.hero-slot-status--transit  { color: #7080c0; }
+.hero-slot-status--levelup  { color: #f0c030; }
+
+/* ═══════════════════════════════════════════════════
+   PROVINCE MODAL — governor card area (between flag and title)
+═══════════════════════════════════════════════════ */
+
+#pmod-governor-area {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Governor uses the same hero-card-slot class; the mana bar is omitted */
+
+/* ── Hero tooltip bars ─────────────────────────── */
+
+.hero-tooltip__sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.hero-tooltip__bar-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  margin: 2px 0;
+}
+.hero-tooltip__bar-label {
+  width: 22px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.hero-tooltip__bar-track {
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.hero-tooltip__bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+.hero-tooltip__bar-fill--xp   { background: #c8a030; }
+.hero-tooltip__bar-fill--mana { background: #4488dd; }
+.hero-tooltip__bar-val {
+  font-size: 9px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.hero-tooltip__stat-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 4px 0;
+}
+.hero-tooltip__stat-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.hero-tooltip__stat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 50px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 3px;
+  padding: 2px 4px;
+}
+.hero-tooltip__stat-label {
+  font-size: 8px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.hero-tooltip__stat-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+/* ── Skill tags in hero tooltip ──────────────── */
+.hero-tooltip__skill-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.hero-tooltip__skill-tag--novice { border-color: rgba(100,140,80,0.4); color: #80c060; }
+.hero-tooltip__skill-tag--expert { border-color: rgba(80,120,180,0.4); color: #80b0e8; }
+.hero-tooltip__skill-tag--master { border-color: rgba(160,100,200,0.4); color: #c080e8; }
+
+/* ── Level-up stat banner ────────────────────── */
+.hpanel-levelup-stat-banner {
+  font-size: 13px;
+  color: var(--text);
+  background: rgba(240, 192, 48, 0.1);
+  border: 1px solid rgba(240, 192, 48, 0.3);
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+.hpanel-levelup-stat-banner strong { color: #f0c030; }
+
+/* ── Recruit section top row ─────────────────── */
+.hpanel-recruit-top {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.hpanel-recruit-info-block { flex: 1; min-width: 0; }
+.hpanel-recruit-skill {
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: help;
+  padding: 2px 0;
+}
+.hpanel-recruit-skill:hover { color: var(--accent); }
+
+/* ── Hero card in hero panel detail view ─────── */
+.hpanel-hero-card {
+  width: calc(var(--card-w) * 2);
+  height: calc(var(--card-h) * 2);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   HERO ASSIGN MODAL — small overlay
+═══════════════════════════════════════════════════ */
+
+#hero-assign-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#hero-assign-modal-overlay[hidden] { display: none; }
+
+#ham-box {
+  background: var(--bg-panel);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+  width: 380px;
+  max-width: 95vw;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ham-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.ham-hero-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ham-hero-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-dark);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.ham-hero-row:hover { border-color: var(--accent); }
+.ham-hero-row--disabled { opacity: 0.45; cursor: not-allowed; }
+.ham-hero-row--disabled:hover { border-color: var(--border); }
+.ham-none-row { border-style: dashed; }
+
+.ham-hero-info { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; }
+.ham-hero-name { font-size: 13px; font-weight: 600; color: var(--text-bright); }
+.ham-hero-class { font-size: 11px; color: var(--text-muted); }
+.ham-hero-level { font-size: 11px; color: var(--accent); flex-shrink: 0; }
+
+.ham-status { font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+.ham-status--wounded  { color: #c05040; }
+.ham-status--transit  { color: #7080c0; }
+.ham-status--assigned { color: var(--text-muted); }
+.ham-status--available { color: var(--success); }
+
+.ham-current-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(200,149,42,0.15);
+  border: 1px solid rgba(200,149,42,0.4);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.ham-close-btn { width: 100%; }

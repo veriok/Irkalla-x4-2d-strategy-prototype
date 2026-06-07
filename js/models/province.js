@@ -38,6 +38,9 @@ export function createProvince(raw) {
     coreOf:          null,   // factionId | null — which faction has core claim; never 'neutral'
     statusEffects:   [],     // [{ type: string, turnsRemaining: number }]
 
+    // hero governor (null if unoccupied)
+    governorId:      null,
+
     // visibility (from player's perspective, updated by fog-of-war.js)
     // 'visible' | 'explored' | 'unexplored'
     visibility:      'unexplored',

@@ -76,6 +76,11 @@ function createFactionState(faction) {
     appliedTechEffects:    [],           // effect objects from all unlocked techs
     globalMilitiaBonus:    0,            // cumulative militia bonus from techs
     woundChanceBonus:      0,            // additional wound-instead-of-destroy chance (necromantic_arts)
+    // ─── Hero system ─────────────────────────────────────
+    heroes:        [],    // hero instances owned by this faction
+    pendingHero:   null,  // { hero, cost: { gold: N }, expiresOn: turnNumber }
+    artifacts:     [],    // unequipped artifact instances { id, artifactId }
+    unlockedSpells: [],   // spell ids researched by this faction
   };
 }
 
@@ -149,14 +154,17 @@ export function initWorld(provinceDataArr, playerFactionId) {
     state.provinces.set(province.id, province);
   }
 
-  // Faction substitution: if player chose a non-default faction,
-  // replace the default faction's provinces with the player's faction
-  const playerFactionData = FACTION_MAP[playerFactionId];
-  const defaultForPlayerRace = DEFAULT_FACTION_PER_RACE[playerFactionData?.raceId];
-  if (defaultForPlayerRace && defaultForPlayerRace !== playerFactionId) {
-    for (const province of state.provinces.values()) {
-      if (province.ownerId === defaultForPlayerRace) province.ownerId = playerFactionId;
-      if (province.coreOf  === defaultForPlayerRace) province.coreOf  = playerFactionId;
+  // Faction substitution: map generator always uses the 4 default factions
+  // (kur_margal, poleis_aethera, sutekh_ra, draig_goch). If any playing faction
+  // is the alternate for its race, swap all province ownership to the actual playing faction.
+  for (const playingFactionId of playingFactionIds) {
+    const playingFactionData = FACTION_MAP[playingFactionId];
+    const defaultForRace = DEFAULT_FACTION_PER_RACE[playingFactionData?.raceId];
+    if (defaultForRace && defaultForRace !== playingFactionId) {
+      for (const province of state.provinces.values()) {
+        if (province.ownerId === defaultForRace) province.ownerId = playingFactionId;
+        if (province.coreOf  === defaultForRace) province.coreOf  = playingFactionId;
+      }
     }
   }
 
@@ -268,6 +276,62 @@ export function getCapitals(factionId) {
 /** Armies belonging to a faction */
 export function getArmiesByFaction(factionId) {
   return [...state.armies.values()].filter(a => a.factionId === factionId);
+}
+
+// ─── Hero helpers ─────────────────────────────────────────
+
+/**
+ * Compute the maximum number of heroes a faction can have.
+ * Counts heroCountBonus from main-building tiers on capital provinces
+ * plus hero_count_bonus tech effects.
+ */
+export function computeHeroCount(factionId) {
+  let count = 0;
+
+  // Building contributions (town_hall_1/2/3 each have heroCountBonus: 1)
+  for (const province of state.provinces.values()) {
+    if (province.ownerId !== factionId) continue;
+    if (!province.isCapital) continue;
+    for (const loc of province.locations) {
+      for (const b of loc.buildings) {
+        const bDef = BUILDING_MAP[b.buildingId];
+        count += bDef?.heroCountBonus ?? 0;
+      }
+    }
+  }
+
+  // Tech contributions
+  const fs = state.factions.get(factionId);
+  if (fs) {
+    for (const techDef of fs.appliedTechEffects) {
+      for (const eff of (techDef.effects ?? [])) {
+        if (eff.type === 'hero_count_bonus') count += eff.amount ?? 1;
+      }
+    }
+  }
+
+  return count;
+}
+
+/** Find a hero by id across a faction's hero list */
+export function getFactionHero(factionId, heroId) {
+  const fs = state.factions.get(factionId);
+  if (!fs) return null;
+  return fs.heroes.find(h => h.id === heroId) ?? null;
+}
+
+/** Find which faction owns a hero (searches all factions) */
+export function findHeroOwner(heroId) {
+  for (const [factionId, fs] of state.factions.entries()) {
+    if (fs.heroes.some(h => h.id === heroId)) return factionId;
+  }
+  return null;
+}
+
+/** Compute hero recruitment cost: 250 + 100 per existing hero */
+export function heroRecruitCost(factionId) {
+  const fs = state.factions.get(factionId);
+  return 250 + ((fs?.heroes?.length ?? 0) * 100);
 }
 
 // ─── Militia helpers ─────────────────────────────────────

@@ -7,7 +7,7 @@
 
 import { state, getProvince, getArmiesByFaction, getArmiesInProvince, selectArmy,
          startArmyMove, splitArmy, transferUnit,
-         getArmySupplyCap } from '../engine/game-state.js';
+         getArmySupplyCap, getFaction } from '../engine/game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
 import { isArmyActionUnlocked } from '../engine/faction-actions.js';
@@ -16,10 +16,18 @@ import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense 
 import { showReachableProvinces, renderArmyIcons, renderAllProvinces, cancelArmyMoveAndClear } from './map-view.js';
 import { showModal, hideModal } from './modal.js';
 import { createCard } from './card-renderer.js';
-import { showUnitTooltip, hideUnitTooltip, showActionTooltip, hideActionTooltip } from './tooltips.js';
+import { showUnitTooltip, hideUnitTooltip, showActionTooltip, hideActionTooltip, showHeroTooltip, hideHeroTooltip } from './tooltips.js';
 import { FACTION_ACTIONS } from '../data/faction-actions-data.js';
 import { getActionUnlockSource } from '../engine/faction-actions.js';
 import { ARMY_STATUS_MAP } from '../data/army-status-data.js';
+import { isHeroActive, getHeroMaxMana } from '../engine/hero-engine.js';
+import { HERO_CLASS_MAP } from '../data/hero-classes-data.js';
+import { heroGenderEmoji } from '../models/hero.js';
+import { openHeroAssignModal } from './hero-assign-modal.js';
+import { openHeroPanel } from './hero-panel.js';
+import { openSpellbook } from './spellbook-modal.js';
+import { SPELL_MAP, SPELLS } from '../data/hero-spells-data.js';
+import { getHeroSchoolTier } from '../engine/hero-engine.js';
 
 const armyListEl = document.getElementById('army-list');
 
@@ -79,6 +87,9 @@ export function renderArmyPanel() {
     const siblingArmies = getArmiesInProvince(army.provinceId)
       .filter(a => a.id !== army.id && a.factionId === army.factionId);
     const hasSiblings = siblingArmies.length > 0;
+
+    // ── Hero slot (first in unit grid, golden outline) ──
+    unitsEl.appendChild(_makeHeroSlot(army));
 
     for (const { typeId, count } of army.units) {
       const uDef = UNIT_MAP[typeId];
@@ -236,8 +247,31 @@ export function renderArmyPanel() {
 
 // ── Army Action Bar ───────────────────────────────────────────
 
+function _heroHasCastableSpells(hero, factionId) {
+  const fs = getFaction(factionId);
+  const unlocked = new Set(fs?.unlockedSpells ?? []);
+  return SPELLS.some(spell => {
+    if (!unlocked.has(spell.id)) return false;
+    return getHeroSchoolTier(hero, spell.schoolId) >= spell.tier;
+  });
+}
+
 function _getArmyActions(army) {
   const actions = [];
+
+  // Spellbook action — if army has an active hero with castable spells
+  const fs = getFaction(army.factionId);
+  const hero = fs?.heroes?.find(h => h.id === army.heroId) ?? null;
+  if (hero && isHeroActive(hero) && _heroHasCastableSpells(hero, army.factionId)) {
+    actions.push({
+      actionId: 'spellbook',
+      emoji: '📖',
+      label: 'Spellbook',
+      description: `Open ${hero.name}'s spellbook to queue combat spells or cast province spells.`,
+      enabled: true,
+      doAction: () => openSpellbook(hero, army),
+    });
+  }
 
   if (isArmyActionUnlocked(army, 'code_of_honor')) {
     const isActive   = (army.statusEffects ?? []).some(s => s.type === 'code_of_honor_stance');
@@ -299,7 +333,7 @@ function _renderArmyActionBar(army, containerEl) {
         action.doAction();
       });
     }
-    if (action.actionId && FACTION_ACTIONS[action.actionId]) {
+    if (action.actionId && action.actionId !== 'spellbook' && FACTION_ACTIONS[action.actionId]) {
       const actionDef = FACTION_ACTIONS[action.actionId];
       const unlockSrc = getActionUnlockSource(army.factionId, action.actionId);
       btn.addEventListener('mouseenter', () => showActionTooltip(actionDef, unlockSrc, btn));
@@ -309,6 +343,67 @@ function _renderArmyActionBar(army, containerEl) {
   }
 
   containerEl.appendChild(bar);
+}
+
+// ── Hero card slot ───────────────────────────────────────────
+
+function _makeHeroSlot(army) {
+  const slot = document.createElement('div');
+  slot.className = 'hero-card-slot';
+
+  const fs   = getFaction(army.factionId);
+  const hero = fs?.heroes?.find(h => h.id === army.heroId) ?? null;
+
+  if (!hero) {
+    slot.classList.add('hero-card-slot--empty');
+    slot.title = 'No hero — click to assign';
+    slot.innerHTML = `<span class="hero-slot-plus">+</span><span class="hero-slot-label">Hero</span>`;
+    slot.addEventListener('click', e => {
+      e.stopPropagation();
+      openHeroAssignModal({ targetType: 'army', targetId: army.id });
+    });
+    return slot;
+  }
+
+  const classDef  = HERO_CLASS_MAP[hero.classId];
+  const active    = isHeroActive(hero);
+  const isTransit = hero.assignment?.transitFor > 0;
+  const isWounded = hero.woundedFor > 0;
+
+  if (!active)   slot.classList.add('hero-card-slot--inactive');
+  if (isWounded) slot.classList.add('hero-card-slot--wounded');
+
+  let statusLine = '';
+  if (isWounded)            statusLine = `<span class="hero-slot-status hero-slot-status--wounded">⚔ ${hero.woundedFor}t</span>`;
+  else if (isTransit)       statusLine = `<span class="hero-slot-status hero-slot-status--transit">🚶 ${hero.assignment.transitFor}t</span>`;
+  else if (hero.pendingLevelUp) statusLine = `<span class="hero-slot-status hero-slot-status--levelup">⬆ Lv!</span>`;
+
+  // Mana bar — rendered inside the card at the bottom
+  const maxMana = getHeroMaxMana(hero);
+  const manaPct = maxMana > 0 ? Math.round((hero.mana / maxMana) * 100) : 0;
+  const manaBar = !isWounded
+    ? `<div class="hero-slot-mana-bar" title="Mana: ${hero.mana}/${maxMana}"><div class="hero-slot-mana-fill" style="width:${manaPct}%"></div></div>`
+    : '';
+
+  slot.innerHTML = `
+    <div class="hero-slot-level">${hero.level}</div>
+    <div class="hero-slot-icon">${classDef?.isSpellcaster ? '🧙' : '⚔'}</div>
+    <div class="hero-slot-name">${hero.name}</div>
+    ${statusLine}
+    ${manaBar}
+  `;
+
+  slot.addEventListener('mouseenter', () => {
+    const fDef = FACTION_MAP[army.factionId] ?? null;
+    showHeroTooltip(hero, fDef, slot);
+  });
+  slot.addEventListener('mouseleave', hideHeroTooltip);
+  slot.addEventListener('click', e => {
+    e.stopPropagation();
+    openHeroAssignModal({ targetType: 'army', targetId: army.id });
+  });
+
+  return slot;
 }
 
 // ── Unit card helper ─────────────────────────────────────────

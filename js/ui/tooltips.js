@@ -18,6 +18,10 @@ import { TRAIT_MAP } from '../data/traits-data.js';
 import { createNativePreviewCard } from './card-renderer.js';
 import { TECH_MAP } from '../data/techs-data.js';
 import { FACTION_ACTIONS } from '../data/faction-actions-data.js';
+import { HERO_CLASS_MAP } from '../data/hero-classes-data.js';
+import { HERO_SKILL_MAP } from '../data/hero-skills-data.js';
+import { heroGenderEmoji, xpForLevel, xpForNextLevel, MAX_HERO_LEVEL } from '../models/hero.js';
+import { getHeroMaxMana } from '../engine/hero-engine.js';
 
 // Build a flat map of all resource definitions for emoji / name lookups
 const ALL_RES = {};
@@ -173,6 +177,113 @@ export function hideUnitTooltip() {
   if (!unitTooltipEl) return;
   unitTooltipEl.classList.remove('visible');
   _hideTimer = setTimeout(() => { unitTooltipEl.hidden = true; }, 80);
+}
+
+export const hideHeroTooltip = hideUnitTooltip;
+
+export function showHeroTooltip(hero, factionDef, anchorEl) {
+  if (!unitTooltipEl || !hero || !anchorEl) return;
+  clearTimeout(_hideTimer);
+  unitTooltipEl.innerHTML = '';
+
+  const classDef = HERO_CLASS_MAP[hero.classId];
+
+  // Title
+  const title = document.createElement('div');
+  title.className = 'unit-tooltip__title';
+  title.textContent = `${hero.name} ${heroGenderEmoji(hero)}`;
+  unitTooltipEl.appendChild(title);
+
+  const subLine = document.createElement('div');
+  subLine.className = 'hero-tooltip__sub';
+  subLine.textContent = classDef?.name ?? hero.classId;
+  unitTooltipEl.appendChild(subLine);
+
+  // Hero card preview
+  const preview = createNativePreviewCard({
+    backgroundSrc: factionDef?.unitCardBgImg ?? null,
+    foregroundSrc: null,
+    fallbackIcon: classDef?.isSpellcaster ? '🧙' : '⚔',
+    fallbackName: hero.name,
+    fallbackSub: `Lv.${hero.level} ${classDef?.name ?? ''}`,
+  });
+  unitTooltipEl.appendChild(preview);
+
+  // XP bar
+  const maxMana = getHeroMaxMana(hero);
+  if (hero.level < MAX_HERO_LEVEL) {
+    const xpStart = xpForLevel(hero.level - 1);
+    const xpEnd   = xpForNextLevel(hero.level);
+    const pct     = Math.min(100, Math.round(((hero.experience - xpStart) / (xpEnd - xpStart)) * 100));
+    const xpBar = document.createElement('div');
+    xpBar.className = 'hero-tooltip__bar-row';
+    xpBar.innerHTML = `<span class="hero-tooltip__bar-label">XP</span><div class="hero-tooltip__bar-track"><div class="hero-tooltip__bar-fill hero-tooltip__bar-fill--xp" style="width:${pct}%"></div></div><span class="hero-tooltip__bar-val">${hero.experience}/${xpEnd}</span>`;
+    unitTooltipEl.appendChild(xpBar);
+  }
+
+  // Mana bar
+  const manaPct = maxMana > 0 ? Math.round((hero.mana / maxMana) * 100) : 0;
+  const manaBar = document.createElement('div');
+  manaBar.className = 'hero-tooltip__bar-row';
+  manaBar.innerHTML = `<span class="hero-tooltip__bar-label">MP</span><div class="hero-tooltip__bar-track"><div class="hero-tooltip__bar-fill hero-tooltip__bar-fill--mana" style="width:${manaPct}%"></div></div><span class="hero-tooltip__bar-val">${hero.mana}/${maxMana}</span>`;
+  unitTooltipEl.appendChild(manaBar);
+
+  // Stats — always show all 6, two rows of 3
+  const stats = document.createElement('div');
+  stats.className = 'hero-tooltip__stat-grid';
+  const STAT_ROWS = [
+    [['atk', '⚔ ATK'], ['def', '🛡 DEF'], ['tactics', '🎯 TAC']],
+    [['governance', '🏛 GOV'], ['knowledge', '📚 KNO'], ['spellpower', '✨ SPW']],
+  ];
+  for (const row of STAT_ROWS) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'hero-tooltip__stat-row';
+    for (const [key, label] of row) {
+      const cell = document.createElement('div');
+      cell.className = 'hero-tooltip__stat-cell';
+      cell.innerHTML = `<span class="hero-tooltip__stat-label">${label}</span><span class="hero-tooltip__stat-val">${hero.stats[key] ?? 0}</span>`;
+      rowEl.appendChild(cell);
+    }
+    stats.appendChild(rowEl);
+  }
+  unitTooltipEl.appendChild(stats);
+
+  // Skills — flex-wrap tag grid
+  if (hero.skills.length > 0) {
+    const skillBlock = document.createElement('div');
+    skillBlock.className = 'unit-tooltip__stats';
+    const skillTitle = document.createElement('div');
+    skillTitle.style.cssText = 'font-size:10px;color:var(--text-muted);margin-bottom:3px;';
+    skillTitle.textContent = 'Skills';
+    skillBlock.appendChild(skillTitle);
+    const tagRow = document.createElement('div');
+    tagRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;';
+    for (const { skillId, tier } of hero.skills) {
+      const sk = HERO_SKILL_MAP[skillId];
+      if (!sk) continue;
+      const tag = document.createElement('span');
+      tag.className = `hero-tooltip__skill-tag hero-tooltip__skill-tag--${tier}`;
+      tag.textContent = `${sk.name} · ${tier.charAt(0).toUpperCase() + tier.slice(1)}`;
+      tagRow.appendChild(tag);
+    }
+    skillBlock.appendChild(tagRow);
+    unitTooltipEl.appendChild(skillBlock);
+  }
+
+  unitTooltipEl.hidden = false;
+  requestAnimationFrame(() => {
+    const rect = anchorEl.getBoundingClientRect();
+    const tw = unitTooltipEl.offsetWidth;
+    const th = unitTooltipEl.offsetHeight;
+    let left = rect.right + 8;
+    let top  = rect.top;
+    if (left + tw > window.innerWidth  - 8) left = rect.left - tw - 8;
+    if (top  + th > window.innerHeight - 8) top  = window.innerHeight - th - 8;
+    top = Math.max(8, top);
+    unitTooltipEl.style.left = `${left}px`;
+    unitTooltipEl.style.top  = `${top}px`;
+    unitTooltipEl.classList.add('visible');
+  });
 }
 
 /**
@@ -402,6 +513,9 @@ function _buildTechHtml(techDef) {
   for (const eff of (techDef.effects ?? [])) {
     if (eff.scope === 'faction' && eff.type === 'army_support_limit') {
       effectParts.push(`⚔ Army supply cap: +${eff.amount}`);
+    }
+    if (eff.scope === 'faction' && eff.type === 'hero_count_bonus') {
+      effectParts.push(`🦸 Hero capacity: +${eff.amount ?? 1}`);
     }
   }
 
@@ -669,6 +783,147 @@ export function showProvinceStatusTooltip(effect, anchorEl) {
 }
 
 export const hideProvinceStatusTooltip = hideBuildingTooltip;
+
+// ─── Hero stat tooltip ─────────────────────────────────────────────────────────
+
+const _STAT_DESCRIPTIONS = {
+  atk:        ['⚔ Attack',      'Amplifies damage dealt by armies under this hero\'s command.'],
+  def:        ['🛡 Defense',    'Reduces damage taken by armies under this hero\'s command.'],
+  tactics:    ['🎯 Tactics',    'Improves combat initiative and grants tactical bonuses in battle.'],
+  governance: ['🏛 Governance', 'Increases income from provinces this hero governs.'],
+  knowledge:  ['📚 Knowledge',  'Determines maximum mana pool and capacity to learn spells.'],
+  spellpower: ['✨ Spellpower', 'Amplifies damage, healing, and potency of all spells cast.'],
+};
+
+export function showStatTooltip(statKey, statValue, anchorEl, effectiveVal = null) {
+  if (!tooltipEl) return;
+  clearTimeout(_hideTimer);
+  const [label, desc] = _STAT_DESCRIPTIONS[statKey] ?? [statKey, ''];
+  const hasBonus = effectiveVal !== null && effectiveVal !== statValue;
+  const valHtml = hasBonus
+    ? `<span style="color:#4aaa77;font-weight:700">${effectiveVal}</span> <span style="color:var(--text-muted);font-size:10px">(base&nbsp;${statValue})</span>`
+    : `${effectiveVal ?? statValue}`;
+  tooltipEl.innerHTML = `
+    <div class="btt-header">${label}: ${valHtml}</div>
+    <div class="btt-desc">${desc}</div>
+  `.trim();
+  tooltipEl.hidden = false;
+  requestAnimationFrame(() => {
+    const rect = anchorEl.getBoundingClientRect();
+    const tw = 200;
+    const th = tooltipEl.offsetHeight;
+    let left = rect.right + 8;
+    let top = rect.top;
+    if (left + tw > window.innerWidth - 8) left = rect.left - tw - 8;
+    if (top + th > window.innerHeight - 8) top = window.innerHeight - th - 8;
+    top = Math.max(8, top);
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top  = `${top}px`;
+    tooltipEl.classList.add('visible');
+  });
+}
+
+export const hideStatTooltip = hideBuildingTooltip;
+
+// ─── Hero skill tooltip ────────────────────────────────────────────────────────
+
+export function showSkillTooltip(skillId, tier, anchorEl) {
+  if (!tooltipEl) return;
+  clearTimeout(_hideTimer);
+  const skillDef = HERO_SKILL_MAP[skillId];
+  if (!skillDef) return;
+  const tierDef = skillDef.tiers.find(t => t.tier === tier);
+  const tierLabel = tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : '';
+  tooltipEl.innerHTML = `
+    <div class="btt-header">${skillDef.icon ?? ''} ${skillDef.name}</div>
+    <div class="btt-section"><div class="btt-row btt-bonus">▸ ${tierLabel}</div></div>
+    <div class="btt-desc">${tierDef?.description ?? ''}</div>
+  `.trim();
+  tooltipEl.hidden = false;
+  requestAnimationFrame(() => {
+    const rect = anchorEl.getBoundingClientRect();
+    const tw = 200;
+    const th = tooltipEl.offsetHeight;
+    let left = rect.right + 8;
+    let top = rect.top;
+    if (left + tw > window.innerWidth - 8) left = rect.left - tw - 8;
+    if (top + th > window.innerHeight - 8) top = window.innerHeight - th - 8;
+    top = Math.max(8, top);
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top  = `${top}px`;
+    tooltipEl.classList.add('visible');
+  });
+}
+
+export const hideSkillTooltip = hideBuildingTooltip;
+
+// ─── Artifact tooltip ──────────────────────────────────────────────────────
+
+const _ARTIFACT_RARITY_COLORS = {
+  common:    '#888888',
+  uncommon:  '#4488cc',
+  rare:      '#c8a030',
+  legendary: '#cc3030',
+};
+
+const _ARTIFACT_STAT_LABELS = {
+  atk: 'ATK', def: 'DEF', tactics: 'TAC',
+  governance: 'GOV', knowledge: 'KNO', spellpower: 'SPW',
+};
+
+export function showArtifactTooltip(artDef, anchorEl) {
+  if (!tooltipEl || !artDef) return;
+  clearTimeout(_hideTimer);
+
+  const rarityColor = _ARTIFACT_RARITY_COLORS[artDef.rarity] ?? 'var(--text-muted)';
+  const capRarity = artDef.rarity ? artDef.rarity.charAt(0).toUpperCase() + artDef.rarity.slice(1) : '';
+
+  const effectLines = (artDef.effects ?? []).map(eff => {
+    if (eff.type === 'hero_stat_bonus' && eff.stat) {
+      return `<div class="btt-row btt-bonus">▸ ${_ARTIFACT_STAT_LABELS[eff.stat] ?? eff.stat}: +${eff.amount}</div>`;
+    }
+    if (eff.type === 'army_unit_type_bonus') {
+      return `<div class="btt-row btt-bonus">▸ ${eff.unitType} ${eff.stat}: +${eff.percent}%</div>`;
+    }
+    if (eff.type === 'army_all_units_bonus') {
+      return `<div class="btt-row btt-bonus">▸ All units ${eff.stat}: +${eff.percent}%</div>`;
+    }
+    if (eff.type === 'province_income_bonus') {
+      return `<div class="btt-row btt-bonus">▸ Province income: +${eff.percent}%</div>`;
+    }
+    if (eff.type === 'hero_mana_bonus') {
+      return `<div class="btt-row btt-bonus">▸ Max mana: +${eff.amount}</div>`;
+    }
+    if (eff.type === 'army_movement_bonus') {
+      return `<div class="btt-row btt-bonus">▸ Army movement: +${eff.amount}</div>`;
+    }
+    return null;
+  }).filter(Boolean).join('');
+
+  tooltipEl.innerHTML = `
+    <div class="btt-header" style="color:${rarityColor}">${artDef.name}</div>
+    <div style="font-size:10px;color:${rarityColor};margin-bottom:4px">${capRarity}</div>
+    <div class="btt-desc">${artDef.description ?? ''}</div>
+    ${effectLines ? `<hr class="btt-hr"><div class="btt-section">${effectLines}</div>` : ''}
+  `.trim();
+
+  tooltipEl.hidden = false;
+  requestAnimationFrame(() => {
+    const rect = anchorEl.getBoundingClientRect();
+    const tw = 210;
+    const th = tooltipEl.offsetHeight;
+    let left = rect.right + 8;
+    let top  = rect.top;
+    if (left + tw > window.innerWidth  - 8) left = rect.left - tw - 8;
+    if (top  + th > window.innerHeight - 8) top  = window.innerHeight - th - 8;
+    top = Math.max(8, top);
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top  = `${top}px`;
+    tooltipEl.classList.add('visible');
+  });
+}
+
+export const hideArtifactTooltip = hideBuildingTooltip;
 
 // ─── Faction action tooltip ────────────────────────────────────────────────
 

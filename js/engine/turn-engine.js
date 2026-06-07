@@ -14,6 +14,7 @@
 import { state, addResources, getProvincesByFaction, getArmiesByFaction,
          checkElimination, getFaction, computeMilitiaMax,
          getArmiesInProvince, getProvince } from './game-state.js';
+import { isHeroActive, tickHeroesForFaction } from './hero-engine.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
@@ -110,6 +111,16 @@ export function computeProvinceIncomeBreakdown(province, factionId) {
         if (!resModifiers[eff.resourceId]) resModifiers[eff.resourceId] = [];
         resModifiers[eff.resourceId].push({ label: def.label, percent });
       }
+    }
+  }
+
+  // ── Governor income bonus (governance * 3% all resources) ─
+  if (province.governorId) {
+    const fs = getFaction(factionId);
+    const governor = fs?.heroes?.find(h => h.id === province.governorId) ?? null;
+    if (governor && isHeroActive(governor) && governor.stats.governance > 0) {
+      const govPercent = governor.stats.governance * 3;
+      allModifiers.push({ label: `Governor (${governor.name})`, percent: govPercent });
     }
   }
 
@@ -514,6 +525,12 @@ export async function endTurn(onComplete) {
     if (!prov || prov.ownerId !== army.factionId) continue;
     if (hasArmyMovedOrAttacked(army)) continue;
     regenArmyHp(army, UNIT_MAP, 0.2);
+  }
+
+  // ── Hero ticks: wounds, transit, mana regen, governor XP, rotation ──
+  for (const factionId of state.factions.keys()) {
+    if (state.eliminated.has(factionId)) continue;
+    tickHeroesForFaction(factionId, state.turn);
   }
 
   // ── Reset player army moves ──

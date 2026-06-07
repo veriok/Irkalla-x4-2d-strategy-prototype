@@ -136,6 +136,10 @@ export async function runAI(factionId) {
     const adjProvIds = fromProv.adjacentIds;
     let acted = false;
 
+    // Skip expansion/attacks for very small armies — they should consolidate or wait
+    const mySize = armySize(army);
+    if (mySize < 3) continue;
+
     // ── Priority 1 & 2: Expand or Attack ──
     const candidates = adjProvIds
       .map(id => getProvince(id))

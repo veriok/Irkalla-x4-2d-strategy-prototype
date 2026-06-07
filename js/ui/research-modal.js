@@ -11,12 +11,16 @@ import { TECH_MAP, buildFactionTechTree, resolveTechBaseCost } from '../data/tec
 import { createCard, getTechCardImage } from './card-renderer.js';
 import { TECH_ERAS } from '../data/enums.js';
 import { showTechTooltip, hideTechTooltip } from './tooltips.js';
+import { SPELL_SCHOOLS, SPELLS, getSpellsBySchool } from '../data/hero-spells-data.js';
+import { HERO_CLASSES } from '../data/hero-classes-data.js';
 
-const overlayEl   = document.getElementById('research-modal-overlay');
-const closeBtn    = document.getElementById('rmod-close');
-const poolEl      = document.getElementById('rmod-research-pool');
-const treeGridEl  = document.getElementById('rmod-tree-grid');
-const scrollEl    = document.getElementById('rmod-tree-scroll');
+const overlayEl    = document.getElementById('research-modal-overlay');
+const closeBtn     = document.getElementById('rmod-close');
+const poolEl       = document.getElementById('rmod-research-pool');
+const treeGridEl   = document.getElementById('rmod-tree-grid');
+const scrollEl     = document.getElementById('rmod-tree-scroll');
+const magicPanelEl = document.getElementById('rmod-magic-panel');
+const rmodBodyEl   = document.getElementById('rmod-body');
 
 let _isOpen     = false;
 let _activeEra  = TECH_ERAS.STONE;
@@ -76,7 +80,15 @@ function _render() {
     <span class="rmod-cost-multiplier">${pctIncrease > 0 ? `(costs +${pctIncrease}%)` : ''}</span>
   `;
 
-  _renderTree(techTree, fs);
+  const isMagicTab = _activeEra === 'magic';
+  if (scrollEl) scrollEl.hidden = isMagicTab;
+  if (magicPanelEl) magicPanelEl.hidden = !isMagicTab;
+
+  if (isMagicTab) {
+    _renderMagicTab(fs, factionId);
+  } else {
+    _renderTree(techTree, fs);
+  }
   _applyActiveEra();
 }
 
@@ -218,6 +230,99 @@ function _makeTechItem(techDef, fs, techTree) {
   }
 
   return wrapper;
+}
+
+// ── Magic Tab (Spell Research) ───────────────────────────
+
+const SPELL_TIER_COST = { 1: 75, 2: 150, 3: 250 };
+
+function _getFactionSpellSchools(factionId) {
+  const schoolIds = new Set();
+  for (const cls of HERO_CLASSES) {
+    if (cls.factionId === factionId) {
+      for (const schoolId of (cls.spellSchools ?? [])) schoolIds.add(schoolId);
+    }
+  }
+  return [...schoolIds].map(id => SPELL_SCHOOLS.find(s => s.id === id)).filter(Boolean);
+}
+
+function _renderMagicTab(fs, factionId) {
+  if (!magicPanelEl) return;
+  magicPanelEl.innerHTML = '';
+
+  const schools = _getFactionSpellSchools(factionId);
+  if (schools.length === 0) {
+    magicPanelEl.innerHTML = '<p class="rmod-magic-empty">This faction has no spell schools.</p>';
+    return;
+  }
+
+  const unlockedSpells = new Set(fs.unlockedSpells ?? []);
+  const researchBalance = Math.floor(fs.resources.research ?? 0);
+
+  for (const school of schools) {
+    const schoolEl = document.createElement('div');
+    schoolEl.className = 'rmod-spell-school';
+
+    const schoolHeader = document.createElement('div');
+    schoolHeader.className = 'rmod-spell-school-header';
+    schoolHeader.textContent = school.name;
+    schoolEl.appendChild(schoolHeader);
+
+    const spellsByTier = { 1: [], 2: [], 3: [] };
+    const schoolSpells = getSpellsBySchool(school.id) ?? [];
+    for (const spell of schoolSpells) {
+      if (spellsByTier[spell.tier]) spellsByTier[spell.tier].push(spell);
+    }
+
+    for (const tier of [1, 2, 3]) {
+      const tierLabel = ['Novice', 'Expert', 'Master'][tier - 1];
+      const cost = SPELL_TIER_COST[tier];
+
+      const tierGroup = document.createElement('div');
+      tierGroup.className = 'rmod-spell-tier-group';
+
+      const tierHeader = document.createElement('div');
+      tierHeader.className = `rmod-spell-tier-label rmod-spell-tier--${tierLabel.toLowerCase()}`;
+      tierHeader.textContent = `${tierLabel} (Tier ${tier}) — ${cost} 📚`;
+      tierGroup.appendChild(tierHeader);
+
+      for (const spell of spellsByTier[tier]) {
+        const isUnlocked = unlockedSpells.has(spell.id);
+        const canAffordSpell = researchBalance >= cost;
+
+        const row = document.createElement('div');
+        row.className = `rmod-spell-row${isUnlocked ? ' rmod-spell-row--unlocked' : ''}`;
+        row.innerHTML = `
+          <div class="rmod-spell-info">
+            <span class="rmod-spell-name">${spell.name}</span>
+            <span class="rmod-spell-type">${spell.type === 'combat' ? '⚔ Combat' : '🏛 Province'}</span>
+            <span class="rmod-spell-desc">${spell.description ?? ''}</span>
+          </div>
+          ${isUnlocked
+            ? '<span class="rmod-spell-known">✓ Known</span>'
+            : `<button class="rmod-spell-btn${!canAffordSpell ? ' rmod-spell-btn--poor' : ''}" ${!canAffordSpell ? 'disabled' : ''} data-spell-id="${spell.id}" data-cost="${cost}">${canAffordSpell ? `Research (${cost} 📚)` : `Need ${cost} 📚`}</button>`
+          }
+        `;
+
+        if (!isUnlocked && canAffordSpell) {
+          row.querySelector('.rmod-spell-btn')?.addEventListener('click', () => {
+            if ((fs.resources.research ?? 0) >= cost) {
+              fs.resources.research = Math.max(0, (fs.resources.research ?? 0) - cost);
+              fs.unlockedSpells = fs.unlockedSpells ?? [];
+              fs.unlockedSpells.push(spell.id);
+              _render();
+            }
+          });
+        }
+
+        tierGroup.appendChild(row);
+      }
+
+      schoolEl.appendChild(tierGroup);
+    }
+
+    magicPanelEl.appendChild(schoolEl);
+  }
 }
 
 // ── Event listeners ───────────────────────────────────────

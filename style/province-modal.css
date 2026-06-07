@@ -54,6 +54,16 @@
   flex-shrink: 0;
 }
 
+/* Governor card area — between flag and title */
+#pmod-governor-area {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border-right: 1px solid var(--border);
+}
+#pmod-governor-area:empty { display: none; }
+
 /* Faction flag — left column, full height of header content */
 #pmod-faction-flag {
   flex-shrink: 0;

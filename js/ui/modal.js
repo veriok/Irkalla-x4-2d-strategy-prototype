@@ -175,6 +175,12 @@ export function showCombatReportModal(reportId) {
       <span>📉 ${attName} losses: <strong>${report.attLostTotal ?? '?'}</strong></span>
       <span>📉 ${defName} losses: <strong>${report.defLostTotal ?? '?'}</strong></span>
     </div>
+    ${(report.attHeroXp || report.defHeroXp) ? `
+    <hr class="cr-divider">
+    <div class="cr-hero-xp">
+      ${report.attHeroXp ? `<span>🦸 ${report.attHeroName}: <strong>+${report.attHeroXp} XP</strong></span>` : ''}
+      ${report.defHeroXp ? `<span>🦸 ${report.defHeroName}: <strong>+${report.defHeroXp} XP</strong></span>` : ''}
+    </div>` : ''}
   `;
 
   showModal(`⚔ Battle Report — ${report.provinceName}`, body, [

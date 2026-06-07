@@ -96,7 +96,7 @@ export function createArmy(factionId, provinceId, units = []) {
     attackedThisTurn: false,
     movesLeft: 1,
     maxMoves: 1,
-    hasHero: false,          // placeholder for future hero system
+    heroId: null,            // id of the hero leading this army (null if none)
     statusEffects: [],       // army-scope statuses (rune bonuses, code of honor, etc.)
   };
 

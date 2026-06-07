@@ -11,7 +11,7 @@
  */
 
 import { generateMap, mapSharedEdges, mapNoisyEdgeData, MAP_SIZES, MAP_W, MAP_H } from './engine/map-generator.js';
-import { initWorld, state } from './engine/game-state.js';
+import { initWorld, state, getFaction } from './engine/game-state.js';
 import { updateFogOfWar } from './engine/fog-of-war.js';
 import { renderAllProvinces, renderArmyIcons, initMapEvents,
          registerMapCallbacks, initMapPan, setMinimapCallback } from './ui/map-view.js';
@@ -26,6 +26,10 @@ import { logTurn, logMessage } from './ui/event-log.js';
 import { FACTIONS, FACTION_MAP } from './data/factions-data.js';
 import { initMinimap, renderMinimap } from './ui/minimap.js';
 import { registerFactionReactions } from './engine/faction-reactions.js';
+import { openHeroPanel, initHeroPanel } from './ui/hero-panel.js';
+import { initHeroAssignModal } from './ui/hero-assign-modal.js';
+import { initSpellbook, initSpellbookListeners } from './ui/spellbook-modal.js';
+import { grantStartingHero } from './engine/hero-engine.js';
 
 // ─── World gen picker ─────────────────────────────────────
 
@@ -244,6 +248,11 @@ async function init() {
   state.noisyEdgeData = mapNoisyEdgeData;
   registerFactionReactions();
 
+  // Grant each faction a starting hero assigned to their capital army
+  for (const factionId of state.factions.keys()) {
+    grantStartingHero(factionId);
+  }
+
   // 6. Minimap init + wire callback
   initMinimap(MAP_W, MAP_H);
   setMinimapCallback(renderMinimap);
@@ -281,6 +290,34 @@ async function init() {
   // 13. Research button + open-research-modal event (fired by resource chip click)
   document.getElementById('research-btn')?.addEventListener('click', showResearchModal);
   document.addEventListener('open-research-modal', showResearchModal);
+
+  // Heroes button
+  initHeroPanel();
+  initHeroAssignModal();
+  document.addEventListener('open-hero-panel', openHeroPanel);
+
+  // Spellbook
+  initSpellbook();
+  initSpellbookListeners();
+
+  // Hero event notifications
+  document.addEventListener('hero-wounded', ({ detail }) => {
+    const fs = getFaction(detail.factionId);
+    const hero = fs?.heroes?.find(h => h.id === detail.heroId);
+    if (hero) logMessage(`⚔ ${hero.name} has been wounded and will recover in ${hero.woundedFor} turns.`);
+    renderArmyPanel();
+  });
+  document.addEventListener('artifact-acquired', ({ detail }) => {
+    if (detail.artifactName) logMessage(`💎 Artifact acquired: ${detail.artifactName}!`);
+  });
+  document.addEventListener('hero-can-level', ({ detail }) => {
+    logMessage(`⬆ ${detail.heroName} can level up to Level ${detail.newLevel}!`);
+    renderResourceBar();
+  });
+  document.addEventListener('hero-leveled', () => {
+    renderResourceBar();
+    renderArmyPanel();
+  });
 
   // 14. Army panel: re-render immediately on tech unlock (unit stat changes)
   document.addEventListener('technology-researched', ({ detail }) => {

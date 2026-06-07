@@ -90,6 +90,10 @@ export const GAME_EVENTS = Object.freeze({
   PROVINCE_CAPTURED: 'province_captured',
   ARMY_CASUALTIES:   'army_casualties',
   TECH_RESEARCHED:   'tech_researched',
+  HERO_WOUNDED:      'hero_wounded',
+  ARTIFACT_ACQUIRED: 'artifact_acquired',
+  HERO_CAN_LEVEL:    'hero_can_level',
+  HERO_LEVELED:      'hero_leveled',
 });
 
 export const FACTION_REACTION_IDS = Object.freeze({
@@ -98,4 +102,165 @@ export const FACTION_REACTION_IDS = Object.freeze({
   DRAIG_GOCH_PRESTIGE_ON_CAPTURE: 'draig_goch_prestige_on_capture',
   CLANS_RAID_ON_CAPTURE:          'clans_raid_on_capture',
   SUTEKH_RA_MUMMY_SPAWN:          'sutekh_ra_mummy_spawn',
+});
+
+// ─── Hero System Enums ────────────────────────────────────
+
+export const HERO_CLASS_IDS = Object.freeze({
+  // Kur Margal (Dwarf undead)
+  DEATH_KNIGHT:     'death_knight',
+  LICH:             'lich',
+  // Iron Freeholds (Dwarf industrial)
+  IRONLORD:         'ironlord',
+  RUNESMITH:        'runesmith',
+  // Draig Goch (Human dragon)
+  DRAGONKNIGHT:     'dragonknight',
+  FLAME_HERALD:     'flame_herald',
+  // Auric Empire (Human imperial)
+  LEGIONNAIRE:      'legionnaire',
+  INQUISITOR:       'inquisitor',
+  // Poleis Aethera (Elf celestial)
+  STAR_GUARDIAN:    'star_guardian',
+  STARWEAVER:       'starweaver',
+  // Archonate Greyhaven (Elf arcane)
+  ARCANIST:         'arcanist',
+  GREY_SCHOLAR:     'grey_scholar',
+  // Sutekh-Ra (Lizard Egyptian)
+  TOMB_WARDEN:      'tomb_warden',
+  HIEROPHANT:       'hierophant',
+  // Clans First Scale (Lizard primal)
+  SCALELORD:        'scalelord',
+  SPIRIT_CALLER:    'spirit_caller',
+});
+
+export const HERO_SKILL_IDS = Object.freeze({
+  // Combat skills
+  INFANTRY_LEADER:   'infantry_leader',
+  CAVALRY_LEADER:    'cavalry_leader',
+  ARCHER_LEADER:     'archer_leader',
+  SIEGE_EXPERT_SKILL:'siege_expert_skill',
+  BATTLE_HARDENED:   'battle_hardened',
+  ANTI_CAVALRY_SKILL:'anti_cavalry_skill',
+  // Governance skills
+  ADMINISTRATOR:     'administrator',
+  TRADER:            'trader',
+  BUILDER:           'builder',
+  // Magic skills (also serve as spell school gates)
+  FIRE_MAGIC:        'fire_magic',
+  EARTH_MAGIC:       'earth_magic',
+  AIR_MAGIC:         'air_magic',
+  ARCANE_MAGIC:      'arcane_magic',
+  RUNE_MAGIC:        'rune_magic',
+  DEATH_MAGIC:       'death_magic',
+  NATURE_MAGIC:      'nature_magic',
+  ANCIENT_MAGIC:     'ancient_magic',
+  ORDER_MAGIC:       'order_magic',
+  LIGHT_MAGIC:       'light_magic',
+  // Mana skill
+  MANA_MASTERY:      'mana_mastery',
+});
+
+export const SPELL_SCHOOL_IDS = Object.freeze({
+  FIRE:    'fire',
+  EARTH:   'earth',
+  AIR:     'air',
+  ARCANE:  'arcane',
+  RUNE:    'rune',
+  DEATH:   'death',
+  NATURE:  'nature',
+  ANCIENT: 'ancient',
+  ORDER:   'order',
+  LIGHT:   'light',
+});
+
+export const SPELL_IDS = Object.freeze({
+  // Fire spells
+  EMBER_SHOT:       'ember_shot',
+  FIREBALL:         'fireball',
+  INFERNO:          'inferno',
+  // Earth spells
+  STONE_SKIN:       'stone_skin',
+  TREMOR:           'tremor',
+  EARTHQUAKE:       'earthquake',
+  // Air spells
+  GUST:             'gust',
+  LIGHTNING_BOLT:   'lightning_bolt',
+  CHAIN_LIGHTNING:  'chain_lightning',
+  // Arcane spells
+  ARCANE_BOLT:      'arcane_bolt',
+  BLINK:            'blink',
+  ARCANE_STORM:     'arcane_storm',
+  // Rune spells
+  RUNE_SHIELD:      'rune_shield',
+  RUNE_FORGE:       'rune_forge',
+  RUNE_STORM:       'rune_storm',
+  // Death spells
+  CORPSE_RISE:      'corpse_rise',
+  DEATH_WAIL:       'death_wail',
+  PLAGUE:           'plague',
+  // Nature spells
+  ENTANGLE:         'entangle',
+  REGROWTH:         'regrowth',
+  CALL_OF_THE_WILD: 'call_of_the_wild',
+  // Ancient spells
+  ANCIENT_CURSE:    'ancient_curse',
+  SANDSTORM:        'sandstorm',
+  ANCESTORS_MIGHT:  'ancestors_might',
+  // Order spells
+  RALLY:            'rally',
+  DIVINE_SHIELD:    'divine_shield',
+  HOLY_WRATH:       'holy_wrath',
+  // Light spells
+  HEALING_LIGHT:    'healing_light',
+  SMITE:            'smite',
+  RADIANCE:         'radiance',
+});
+
+export const ARTIFACT_SLOTS = Object.freeze({
+  WEAPON:     'weapon',
+  ARMOR:      'armor',
+  ACCESSORY1: 'accessory1',
+  ACCESSORY2: 'accessory2',
+});
+
+export const ARTIFACT_IDS = Object.freeze({
+  // Weapons
+  SWORD_OF_IRON:       'sword_of_iron',
+  RUNIC_BLADE:         'runic_blade',
+  DRAGONBONE_SPEAR:    'dragonbone_spear',
+  COMMANDERS_MACE:     'commanders_mace',
+  SPECTRAL_SCYTHE:     'spectral_scythe',
+  // Armor
+  IRON_PLATE:          'iron_plate',
+  DRAGONSCALE_MAIL:    'dragonscale_mail',
+  ANCIENT_SHELL_ARMOR: 'ancient_shell_armor',
+  MOONWEAVE_ROBE:      'moonweave_robe',
+  WARDENS_SHIELD:      'wardens_shield',
+  // Accessories
+  RING_OF_GOLD:        'ring_of_gold',
+  TACTICIANS_PENDANT:  'tacticians_pendant',
+  SCHOLARS_TOME:       'scholars_tome',
+  GOVERNORS_SEAL:      'governors_seal',
+  AMULET_OF_SWIFTNESS: 'amulet_of_swiftness',
+  MANA_CRYSTAL:        'mana_crystal',
+  WARLORDS_BANNER:     'warlords_banner',
+  NATURE_CHARM:        'nature_charm',
+  RUNE_STONE:          'rune_stone',
+  DEATH_TALISMAN:      'death_talisman',
+});
+
+export const HERO_STATS = Object.freeze({
+  ATK:        'atk',
+  DEF:        'def',
+  TACTICS:    'tactics',
+  GOVERNANCE: 'governance',
+  KNOWLEDGE:  'knowledge',
+  SPELLPOWER: 'spellpower',
+});
+
+export const ARTIFACT_RARITIES = Object.freeze({
+  COMMON:    'common',
+  UNCOMMON:  'uncommon',
+  RARE:      'rare',
+  LEGENDARY: 'legendary',
 });
