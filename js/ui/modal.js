@@ -132,6 +132,7 @@ export function showDenCombatReportModal(result) {
 export function showCombatReportModal(reportId) {
   const report = state.combatReports.find(r => r.reportId === reportId);
   if (!report) return;
+  if (report.isDen) { showDenCombatReportModal(report); return; }
 
   const attFaction = FACTION_MAP[report.attackerFactionId];
   const defFaction = FACTION_MAP[report.defenderFactionId];

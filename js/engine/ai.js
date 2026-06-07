@@ -20,6 +20,7 @@ import { state, getProvince, getProvincesByFaction, getArmiesByFaction,
          removeArmy } from './game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { resolveCombat } from './combat.js';
+import { logCapture } from '../ui/event-log.js';
 import { BUILDING_MAP, getBuildingsForLocation } from '../data/buildings-data.js';
 import { getRecruitableUnits, UNIT_MAP } from '../data/units-data.js';
 import { armyAttackStrength, armyDefenseStrength, armySize, armyTotalCount,
@@ -164,6 +165,7 @@ export async function runAI(factionId) {
         if (!hasArmy && !hasMilitia) {
           moveArmy(army.id, target.id);
           captureProvince(target.id, factionId);
+          logCapture(FACTION_MAP[factionId]?.name ?? factionId, target.name);
           army.targetProvinceId = null;
           acted = true;
           await delay(AI_DELAY_MS);
@@ -252,9 +254,40 @@ export async function runAI(factionId) {
           if (!nextStep) {
             army.targetProvinceId = null;
           } else {
-            moveArmy(army.id, nextStep);
-            acted = true;
-            await delay(AI_DELAY_MS);
+            const nextStepProv = getProvince(nextStep);
+            if (!nextStepProv || nextStepProv.ownerId === factionId) {
+              moveArmy(army.id, nextStep);
+              acted = true;
+            } else {
+              // Next step is non-faction territory — must fight or capture, not just walk in
+              const hasMilitia = (nextStepProv.militia?.current ?? 0) > 0;
+              const stepArmies = getArmiesInProvince(nextStep);
+              const hasArmy    = stepArmies.length > 0;
+              if (nextStepProv.ownerId === 'neutral' && !hasArmy && !hasMilitia) {
+                moveArmy(army.id, nextStep);
+                captureProvince(nextStep, factionId);
+                logCapture(FACTION_MAP[factionId]?.name ?? factionId, nextStepProv.name);
+                army.targetProvinceId = null;
+                acted = true;
+              } else {
+                const atkStr  = armyAttackStrength(army, UNIT_MAP);
+                const defArmy = stepArmies.find(a => a.factionId !== factionId) ?? null;
+                const defStr  = defArmy
+                  ? armyDefenseStrength(defArmy, UNIT_MAP)
+                  : hasMilitia ? (nextStepProv.militia?.current ?? 0) * 2 : 0;
+                if (atkStr >= defStr * 0.8) {
+                  const combatResult = resolveCombat(army.id, nextStep);
+                  if (combatResult && playerCanSee(nextStep)) {
+                    import('../ui/event-log.js').then(({ logCombat }) => logCombat(combatResult));
+                  }
+                  army.targetProvinceId = null;
+                  acted = true;
+                } else {
+                  army.targetProvinceId = null; // too weak — abandon target
+                }
+              }
+            }
+            if (acted) await delay(AI_DELAY_MS);
           }
         }
       }
@@ -289,9 +322,39 @@ export async function runAI(factionId) {
           army.targetProvinceId = bestTarget;
           const nextStep = findNextStep(army.provinceId, bestTarget, factionId);
           if (nextStep) {
-            moveArmy(army.id, nextStep);
-            acted = true;
-            await delay(AI_DELAY_MS);
+            const nextStepProv = getProvince(nextStep);
+            if (!nextStepProv || nextStepProv.ownerId === factionId) {
+              moveArmy(army.id, nextStep);
+              acted = true;
+            } else {
+              const hasMilitia = (nextStepProv.militia?.current ?? 0) > 0;
+              const stepArmies = getArmiesInProvince(nextStep);
+              const hasArmy    = stepArmies.length > 0;
+              if (nextStepProv.ownerId === 'neutral' && !hasArmy && !hasMilitia) {
+                moveArmy(army.id, nextStep);
+                captureProvince(nextStep, factionId);
+                logCapture(FACTION_MAP[factionId]?.name ?? factionId, nextStepProv.name);
+                army.targetProvinceId = null;
+                acted = true;
+              } else {
+                const atkStr  = armyAttackStrength(army, UNIT_MAP);
+                const defArmy = stepArmies.find(a => a.factionId !== factionId) ?? null;
+                const defStr  = defArmy
+                  ? armyDefenseStrength(defArmy, UNIT_MAP)
+                  : hasMilitia ? (nextStepProv.militia?.current ?? 0) * 2 : 0;
+                if (atkStr >= defStr * 0.8) {
+                  const combatResult = resolveCombat(army.id, nextStep);
+                  if (combatResult && playerCanSee(nextStep)) {
+                    import('../ui/event-log.js').then(({ logCombat }) => logCombat(combatResult));
+                  }
+                  army.targetProvinceId = null;
+                  acted = true;
+                } else {
+                  army.targetProvinceId = null;
+                }
+              }
+            }
+            if (acted) await delay(AI_DELAY_MS);
           }
         }
       }

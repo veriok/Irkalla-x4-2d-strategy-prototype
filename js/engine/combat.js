@@ -36,7 +36,7 @@ import { flashCombat, flashConquest } from '../ui/map-view.js';
 import { logCapture, logMessage } from '../ui/event-log.js';
 import { emit } from './game-events.js';
 import { GAME_EVENTS, UNIT_TYPES } from '../data/enums.js';
-import { isHeroActive, addHeroExperience, woundHero } from './hero-engine.js';
+import { isHeroActive, addHeroExperience, woundHero, getHeroArmyBonuses } from './hero-engine.js';
 import { ARTIFACT_MAP, rollRandomArtifact } from '../data/artifacts-data.js';
 import { SPELL_MAP } from '../data/hero-spells-data.js';
 import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense, getSiegeExpertReduction } from './tech-effects.js';
@@ -89,6 +89,14 @@ function _emitArmyCasualties(army, pendingCasualties, province, role, outcome) {
 
 function _d6() { return Math.floor(Math.random() * 6) + 1; }
 function _d8() { return Math.floor(Math.random() * 8) + 1; }
+
+function _getHeroTacticsBonus(army) {
+  if (!army?.heroId) return 0;
+  const fs = getFaction(army.factionId);
+  const hero = fs?.heroes?.find(h => h.id === army.heroId);
+  if (!hero || !isHeroActive(hero)) return 0;
+  return Math.floor((hero.attributes.tactics ?? 0) / 2);
+}
 function _clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
 function _pickBestDefenderArmy(defArmies) {
@@ -428,7 +436,7 @@ function _castHeroCombatSpells(army, ownUnits, enemyUnits, roundNum) {
     if (hero.mana < spell.manaCost) continue;
 
     hero.mana = Math.max(0, hero.mana - spell.manaCost);
-    const spellpower = hero.stats.spellpower ?? 0;
+    const spellpower = hero.attributes.spellpower ?? 0;
     const baseDmg = (spell.baseDamage ?? 0) + spellpower;
 
     if (spell.effectType === 'damage_all' || spell.damageType === 'damage_all') {
@@ -608,8 +616,8 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
       break;
     }
 
-    const attTac = _d6();
-    const defTac = _d6();
+    const attTac = _d6() + _getHeroTacticsBonus(attArmy);
+    const defTac = _d6() + _getHeroTacticsBonus(enemyDefArmy);
     const diff = attTac - defTac;
     const attBestChance = _clamp(0.5 + diff * 0.1, 0, 1);
     const defBestChance = _clamp(0.5 - diff * 0.1, 0, 1);
@@ -1025,7 +1033,8 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
     logMessage(`⚔ ${factionDef?.name ?? army.factionId} failed to clear the monster den in ${prov.name}.`);
   }
 
-  return {
+  const denResult = {
+    isDen:           true,
     outcome,
     rounds,
     treasure,
@@ -1038,4 +1047,10 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
     factionId:        army.factionId,
     turn:             state.turn,
   };
+  denResult.summary = outcome === 'attacker'
+    ? `⚔ Monster den cleared in ${prov.name}!`
+    : `💀 Repelled by monsters in ${prov.name}.`;
+  const denReportId = addCombatReport(denResult);
+  denResult.reportId = denReportId;
+  return denResult;
 }

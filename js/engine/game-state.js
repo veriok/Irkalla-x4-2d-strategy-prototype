@@ -81,6 +81,7 @@ function createFactionState(faction) {
     pendingHero:   null,  // { hero, cost: { gold: N }, expiresOn: turnNumber }
     artifacts:     [],    // unequipped artifact instances { id, artifactId }
     unlockedSpells: [],   // spell ids researched by this faction
+    spellbooks:    { ...(faction.startingSpellbooks ?? {}) }, // schoolId → count (0–3)
   };
 }
 

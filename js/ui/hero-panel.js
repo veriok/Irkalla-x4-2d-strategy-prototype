@@ -457,12 +457,12 @@ function _renderHeroDetail(fs) {
   const statsEl = document.createElement('div');
   statsEl.className = 'hpanel-stats';
   const statEntries = [
-    ['atk',        '⚔ ATK',    hero.stats.atk],
-    ['def',        '🛡 DEF',    hero.stats.def],
-    ['tactics',    '🎯 TAC',    hero.stats.tactics],
-    ['governance', '🏛 GOV',    hero.stats.governance],
-    ['knowledge',  '📚 KNO',    hero.stats.knowledge],
-    ['spellpower', '✨ SPW',    hero.stats.spellpower],
+    ['atk',        '⚔ ATK',    hero.attributes.atk],
+    ['def',        '🛡 DEF',    hero.attributes.def],
+    ['tactics',    '🎯 TAC',    hero.attributes.tactics],
+    ['governance', '🏛 GOV',    hero.attributes.governance],
+    ['knowledge',  '📚 KNO',    hero.attributes.knowledge],
+    ['spellpower', '✨ SPW',    hero.attributes.spellpower],
   ];
   for (const [key, label, base] of statEntries) {
     const bonus = artBonuses[key] ?? 0;

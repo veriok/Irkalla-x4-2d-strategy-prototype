@@ -16,14 +16,14 @@ const MALE_NAMES   = ['Grimbold', 'Aldric', 'Varen', 'Torvald', 'Edric', 'Hakon'
 const FEMALE_NAMES = ['Aelith', 'Brienna', 'Caela', 'Drysi', 'Elara', 'Fyria', 'Gara', 'Helith', 'Isara', 'Jorana', 'Kessa', 'Lyra', 'Myra', 'Nira', 'Oria'];
 const NEUTRAL_NAMES = ['Ashveil', 'Brinok', 'Corvus', 'Draleth', 'Eryx', 'Fenix', 'Grael', 'Hex', 'Ixal', 'Jax'];
 
-/** Compute max mana for a hero based on knowledge stat */
+/** Compute max mana for a hero based on knowledge attribute */
 export function heroMaxMana(hero) {
-  return hero.stats.knowledge * 10;
+  return hero.attributes.knowledge * 10;
 }
 
 /** Compute mana regen per turn (base + knowledge scaling + skill bonus) */
 export function heroManaRegen(hero) {
-  let regen = 2 + Math.floor(hero.stats.knowledge / 10);
+  let regen = 2 + Math.floor(hero.attributes.knowledge / 10);
   for (const skill of hero.skills) {
     if (skill.effectType === 'hero_mana_regen') {
       regen += skill.effectAmount ?? 0;
@@ -64,10 +64,10 @@ export function createHero(classId, factionId, opts = {}) {
     factionId,
     level:              1,
     experience:         0,
-    stats:              { ...classDef.baseStats },
+    attributes:         { ...classDef.baseAttributes },
     skills:             [],           // [{ skillId, tier: 'novice'|'expert'|'master' }]
     artifacts:          { weapon: null, armor: null, accessory1: null, accessory2: null },
-    mana:               classDef.baseStats.knowledge * 10,
+    mana:               classDef.baseAttributes.knowledge * 10,
     woundedFor:         0,
     assignment:         null,         // { type: 'army'|'province', id, transitFor }
     pendingLevelUp:     false,

@@ -247,3 +247,197 @@
   animation: tech-blink 1.2s ease-in-out 2;
 }
 
+/* ── Magic Tab ───────────────────────────────────── */
+
+#rmod-magic-panel {
+  flex: 1;
+  overflow: auto;
+  padding: 20px 24px 32px;
+}
+
+.rmod-magic-empty {
+  color: var(--text-dim, #888);
+  font-style: italic;
+  margin-top: 16px;
+}
+
+/* Spellbook shelf */
+.rmod-spellbook-shelf {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+.rmod-spellbook-shelf-label {
+  font-size: 0.75rem;
+  color: var(--text-dim, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.rmod-spellbook-books {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+.rmod-spellbook-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 36px;
+  border-radius: 2px 1px 1px 2px;
+  font-size: 11px;
+  cursor: default;
+  box-shadow: inset -2px 0 3px rgba(0,0,0,0.35), 1px 1px 2px rgba(0,0,0,0.4);
+  border-left: 2px solid rgba(255,255,255,0.12);
+  transition: transform 0.1s;
+}
+.rmod-spellbook-cover:hover {
+  transform: translateY(-3px);
+}
+
+/* School navigation (pagination) */
+.rmod-school-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.rmod-school-nav-btn {
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+.rmod-school-nav-btn:hover:not(:disabled) {
+  background: var(--bg-panel-alt);
+  border-color: var(--accent);
+}
+.rmod-school-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.rmod-school-nav-info {
+  font-size: 0.8rem;
+  color: var(--text-dim, #888);
+}
+
+/* 3-column spell school grid */
+.rmod-spell-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.rmod-spell-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rmod-spell-school-header {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-bright, #ddd);
+  padding: 6px 0 4px;
+  border-bottom: 2px solid var(--school-color, rgba(255,255,255,0.1));
+  margin-bottom: 8px;
+}
+
+.rmod-spell-tier-group {
+  margin-bottom: 10px;
+}
+.rmod-spell-tier-group--locked {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.rmod-spell-tier-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim, #888);
+  padding: 3px 0;
+  margin-bottom: 4px;
+}
+.rmod-spell-tier-label--locked {
+  color: rgba(255,255,255,0.3);
+  font-style: italic;
+}
+
+.rmod-spell-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 4px;
+  gap: 8px;
+}
+.rmod-spell-row--unlocked {
+  border-color: rgba(76,175,80,0.3);
+  background: rgba(76,175,80,0.06);
+}
+.rmod-spell-row--locked {
+  opacity: 0.45;
+}
+.rmod-spell-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.rmod-spell-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-bright, #ddd);
+}
+.rmod-spell-type {
+  font-size: 0.7rem;
+  color: var(--text-dim, #888);
+}
+.rmod-spell-desc {
+  font-size: 0.72rem;
+  color: var(--text-mid, #aaa);
+  font-style: italic;
+}
+.rmod-spell-known {
+  font-size: 0.8rem;
+  color: #4caf50;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rmod-spell-btn {
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--accent, #c8952a);
+  background: rgba(200,149,42,0.12);
+  color: var(--accent, #c8952a);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.rmod-spell-btn:hover:not(:disabled) {
+  background: rgba(200,149,42,0.25);
+}
+.rmod-spell-btn--poor {
+  border-color: rgba(255,255,255,0.2);
+  color: var(--text-dim, #888);
+  background: transparent;
+}
+

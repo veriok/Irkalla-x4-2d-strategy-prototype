@@ -136,6 +136,9 @@ function handleProvinceClick(provinceId) {
         _afterMove(postMoveProvinceId);
         if (combatResult) {
           import('../ui/event-log.js').then(({ logCombat }) => logCombat(combatResult));
+          if (combatResult.reportId) {
+            import('../ui/modal.js').then(({ showCombatReportModal }) => showCombatReportModal(combatResult.reportId));
+          }
         }
       });
     } else {

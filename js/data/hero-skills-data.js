@@ -3,23 +3,27 @@
  *
  * All hero skill definitions. Each skill has up to 3 tiers: novice, expert, master.
  *
- * Magic school skills (FIRE_MAGIC, EARTH_MAGIC, etc.) use tier to gate spell casting:
- *   novice → can cast tier 1 spells of that school
- *   expert → can cast tier 2 spells of that school
- *   master → can cast tier 3 spells of that school
+ * attribute:  links to HERO_ATTRIBUTES key; roll weight = class.statWeights[attribute].
+ *             null = flat fallback weight of 10 while unset.
+ * required:   skillId that must already be learned before this skill can roll.
+ * spellbook:  SPELL_SCHOOL_IDS value — skill only rolls if faction.spellbooks[spellbook] >= 1.
  *
- * Effect shape (applied via hero-engine.js getHeroArmyBonuses / getHeroProvinceBonuses):
- *   type: 'army_unit_type_bonus'  — { unitType, stat: 'attack'|'defense', percent }
- *   type: 'army_all_units_bonus'  — { stat: 'attack'|'defense', percent }
- *   type: 'hero_stat_bonus'       — direct stat bonuses (e.g. for future use)
- *   type: 'province_income_bonus' — { percent } (all resources)
- *   type: 'hero_mana_regen'       — { amount } extra mana per turn
- *   type: 'hero_spell_school'     — { schoolId, tier } (gate for casting, no numeric bonus)
- *   type: 'army_movement_bonus'   — { amount }
- *   type: 'army_defense_percent'  — { percent } (province defense bonus for governor)
+ * Effect types (applied via hero-engine.js getHeroArmyBonuses / getHeroProvinceBonuses):
+ *   army_unit_type_bonus         — { unitType, stat: 'attack'|'defense', percent }
+ *   army_unit_type_multi_bonus   — { unitType, bonuses: [{stat, percent}…] }
+ *   army_anti_unit_type_bonus    — { targetUnitType, stat, percent }
+ *   army_all_units_multi_bonus   — { bonuses: [{stat, percent}…] }
+ *   province_income_bonus        — { percent }
+ *   province_flat_gold           — { amount }
+ *   province_build_speed         — { amount }
+ *   hero_mana_regen              — { amount }
+ *   hero_max_mana                — { percent }
+ *   hero_channeling              — { tier } (gates spell casting by tier)
+ *   hero_spell_school            — { schoolId, tier } (school-specific efficiency; future use)
+ *   reduce_fortification         — { percent }
  */
 
-import { HERO_SKILL_IDS, UNIT_TYPES, SPELL_SCHOOL_IDS } from './enums.js';
+import { HERO_SKILL_IDS, HERO_ATTRIBUTES, UNIT_TYPES, SPELL_SCHOOL_IDS } from './enums.js';
 
 export const HERO_SKILLS = [
 
@@ -30,6 +34,9 @@ export const HERO_SKILLS = [
     name: 'Infantry Leader',
     category: 'combat',
     icon: '⚔️',
+    attribute: null,
+    required: null,
+    spellbook: null,
     tiers: [
       {
         tier: 'novice',
@@ -54,6 +61,9 @@ export const HERO_SKILLS = [
     name: 'Cavalry Leader',
     category: 'combat',
     icon: '🐎',
+    attribute: null,
+    required: null,
+    spellbook: null,
     tiers: [
       {
         tier: 'novice',
@@ -68,7 +78,7 @@ export const HERO_SKILLS = [
       {
         tier: 'master',
         description: '+25% cavalry attack, +15% cavalry defense.',
-        effect: { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, bonuses: [{ stat: 'attack', percent: 35 }, { stat: 'defense', percent: 20 }]},
+        effect: { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, bonuses: [{ stat: 'attack', percent: 35 }, { stat: 'defense', percent: 20 }] },
       },
     ],
   },
@@ -78,6 +88,9 @@ export const HERO_SKILLS = [
     name: 'Archer Leader',
     category: 'combat',
     icon: '🏹',
+    attribute: null,
+    required: null,
+    spellbook: null,
     tiers: [
       {
         tier: 'novice',
@@ -102,6 +115,9 @@ export const HERO_SKILLS = [
     name: 'Siege Expert',
     category: 'combat',
     icon: '🏰',
+    attribute: null,
+    required: null,
+    spellbook: null,
     tiers: [
       {
         tier: 'novice',
@@ -121,12 +137,14 @@ export const HERO_SKILLS = [
     ],
   },
 
-  // increase wound chance by 5% per tier, so less losses! Rename field medicine?
   {
     id: HERO_SKILL_IDS.BATTLE_HARDENED,
     name: 'Battle Hardened',
     category: 'combat',
     icon: '🛡️',
+    attribute: null,
+    required: null,
+    spellbook: null,
     tiers: [
       {
         tier: 'novice',
@@ -146,12 +164,14 @@ export const HERO_SKILLS = [
     ],
   },
 
-  // Construct buff that applies to construct units (for kur-margal)
   {
     id: HERO_SKILL_IDS.ANTI_CAVALRY_SKILL,
     name: 'Anti-Cavalry',
     category: 'combat',
     icon: '⚡',
+    attribute: null,
+    required: null,
+    spellbook: null,
     tiers: [
       {
         tier: 'novice',
@@ -173,12 +193,14 @@ export const HERO_SKILLS = [
 
   // ─── Governance Skills ────────────────────────────────────
 
-  // This is redundant with governor bonus, change it into province cost reduction 8/16/24%
   {
     id: HERO_SKILL_IDS.ADMINISTRATOR,
     name: 'Administrator',
     category: 'governance',
     icon: '📜',
+    attribute: null,
+    required: null,
+    spellbook: null,
     tiers: [
       {
         tier: 'novice',
@@ -203,6 +225,9 @@ export const HERO_SKILLS = [
     name: 'Trader',
     category: 'governance',
     icon: '💰',
+    attribute: null,
+    required: null,
+    spellbook: null,
     tiers: [
       {
         tier: 'novice',
@@ -227,6 +252,9 @@ export const HERO_SKILLS = [
     name: 'Builder',
     category: 'governance',
     icon: '🔨',
+    attribute: null,
+    required: null,
+    spellbook: null,
     tiers: [
       {
         tier: 'novice',
@@ -246,63 +274,16 @@ export const HERO_SKILLS = [
     ],
   },
 
-  // ─── Mana Skill ───────────────────────────────────────────
-
-  // A skill that increase offensive spell damage by 10/20/30%
-  {
-    id: HERO_SKILL_IDS.OFFENSIVE_SPELL_POWER,
-    name: 'Offensive Spell Power',
-    category: 'magic',
-    icon: '🔥',
-    tiers: [
-      {
-        tier: 'novice',
-        description: '+10% offensive spell damage.',
-        effect: { type: 'hero_offensive_spell_power', percent: 10 },
-      },
-      {
-        tier: 'expert',
-        description: '+20% offensive spell damage.',
-        effect: { type: 'hero_offensive_spell_power', percent: 20 },
-      },
-      {
-        tier: 'master',
-        description: '+30% offensive spell damage.',
-        effect: { type: 'hero_offensive_spell_power', percent: 30 },
-      },
-    ],
-  },
-
-  // A skill that increase boons (buffs) spellpower by 10/20/30%
-  {
-    id: HERO_SKILL_IDS.BOON_SPELL_POWER,
-    name: 'Boon Spell Power',
-    category: 'magic',
-    icon: '✨',
-    tiers: [
-      {
-        tier: 'novice',
-        description: '+10% boon spell power.',
-        effect: { type: 'hero_boon_spell_power', percent: 10 },
-      },
-      {
-        tier: 'expert',
-        description: '+20% boon spell power.',
-        effect: { type: 'hero_boon_spell_power', percent: 20 },
-      },
-      {
-        tier: 'master',
-        description: '+30% boon spell power.',
-        effect: { type: 'hero_boon_spell_power', percent: 30 },
-      },
-    ],
-  },
+  // ─── Mana Skills ──────────────────────────────────────────
 
   {
     id: HERO_SKILL_IDS.MANA_MASTERY,
     name: 'Mana Mastery',
     category: 'magic',
     icon: '💧',
+    attribute: null,
+    required: null,
+    spellbook: null,
     tiers: [
       {
         tier: 'novice',
@@ -322,12 +303,14 @@ export const HERO_SKILLS = [
     ],
   },
 
-  // Add skill that increase max mana by 10/20/30%
   {
     id: HERO_SKILL_IDS.MANA_CAPACITY,
     name: 'Mana Capacity',
     category: 'magic',
     icon: '🔮',
+    attribute: null,
+    required: null,
+    spellbook: null,
     tiers: [
       {
         tier: 'novice',
@@ -347,18 +330,51 @@ export const HERO_SKILLS = [
     ],
   },
 
+  // ─── Channeling — universal magic prerequisite ─────────────
+
+  {
+    id: HERO_SKILL_IDS.CHANNELING,
+    name: 'Channeling',
+    category: 'magic',
+    icon: '🌊',
+    attribute: HERO_ATTRIBUTES.KNOWLEDGE,
+    required: null,
+    spellbook: null,
+    tiers: [
+      {
+        tier: 'novice',
+        description: 'Can cast all tier 1 spells from schools your faction has spellbooks for.',
+        effect: { type: 'hero_channeling', tier: 1 },
+      },
+      {
+        tier: 'expert',
+        description: 'Can also cast tier 2 spells from schools with 2+ spellbooks.',
+        effect: { type: 'hero_channeling', tier: 2 },
+      },
+      {
+        tier: 'master',
+        description: 'Can cast all spell tiers from schools with 3 spellbooks.',
+        effect: { type: 'hero_channeling', tier: 3 },
+      },
+    ],
+  },
+
   // ─── Magic School Skills ──────────────────────────────────
-  // These gate spell casting by tier. No numerical combat effect.
+  // Require CHANNELING. Only roll if faction has a spellbook for the school.
+  // Boost the efficiency of spells in that school (effect tiers TBD by engine).
 
   {
     id: HERO_SKILL_IDS.FIRE_MAGIC,
     name: 'Fire Magic',
     category: 'magic',
     icon: '🔥',
+    attribute: null,
+    required: HERO_SKILL_IDS.CHANNELING,
+    spellbook: SPELL_SCHOOL_IDS.FIRE,
     tiers: [
-      { tier: 'novice', description: 'Unlocks Fire Magic tier 1 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 1 } },
-      { tier: 'expert', description: 'Unlocks Fire Magic tier 2 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 2 } },
-      { tier: 'master', description: 'Unlocks Fire Magic tier 3 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 3 } },
+      { tier: 'novice', description: 'Novice in Fire Magic. Boosts fire spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 1 } },
+      { tier: 'expert', description: 'Expert in Fire Magic. Further boosts fire spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 2 } },
+      { tier: 'master', description: 'Master of Fire Magic. Maximum fire spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 3 } },
     ],
   },
   {
@@ -366,10 +382,13 @@ export const HERO_SKILLS = [
     name: 'Earth Magic',
     category: 'magic',
     icon: '🪨',
+    attribute: null,
+    required: HERO_SKILL_IDS.CHANNELING,
+    spellbook: SPELL_SCHOOL_IDS.EARTH,
     tiers: [
-      { tier: 'novice', description: 'Unlocks Earth Magic tier 1 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 1 } },
-      { tier: 'expert', description: 'Unlocks Earth Magic tier 2 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 2 } },
-      { tier: 'master', description: 'Unlocks Earth Magic tier 3 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 3 } },
+      { tier: 'novice', description: 'Novice in Earth Magic. Boosts earth spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 1 } },
+      { tier: 'expert', description: 'Expert in Earth Magic. Further boosts earth spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 2 } },
+      { tier: 'master', description: 'Master of Earth Magic. Maximum earth spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 3 } },
     ],
   },
   {
@@ -377,10 +396,13 @@ export const HERO_SKILLS = [
     name: 'Air Magic',
     category: 'magic',
     icon: '🌪️',
+    attribute: null,
+    required: HERO_SKILL_IDS.CHANNELING,
+    spellbook: SPELL_SCHOOL_IDS.AIR,
     tiers: [
-      { tier: 'novice', description: 'Unlocks Air Magic tier 1 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 1 } },
-      { tier: 'expert', description: 'Unlocks Air Magic tier 2 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 2 } },
-      { tier: 'master', description: 'Unlocks Air Magic tier 3 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 3 } },
+      { tier: 'novice', description: 'Novice in Air Magic. Boosts air spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 1 } },
+      { tier: 'expert', description: 'Expert in Air Magic. Further boosts air spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 2 } },
+      { tier: 'master', description: 'Master of Air Magic. Maximum air spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 3 } },
     ],
   },
   {
@@ -388,10 +410,13 @@ export const HERO_SKILLS = [
     name: 'Arcane Magic',
     category: 'magic',
     icon: '✨',
+    attribute: null,
+    required: HERO_SKILL_IDS.CHANNELING,
+    spellbook: SPELL_SCHOOL_IDS.ARCANE,
     tiers: [
-      { tier: 'novice', description: 'Unlocks Arcane Magic tier 1 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 1 } },
-      { tier: 'expert', description: 'Unlocks Arcane Magic tier 2 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 2 } },
-      { tier: 'master', description: 'Unlocks Arcane Magic tier 3 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 3 } },
+      { tier: 'novice', description: 'Novice in Arcane Magic. Boosts arcane spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 1 } },
+      { tier: 'expert', description: 'Expert in Arcane Magic. Further boosts arcane spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 2 } },
+      { tier: 'master', description: 'Master of Arcane Magic. Maximum arcane spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 3 } },
     ],
   },
   {
@@ -399,10 +424,13 @@ export const HERO_SKILLS = [
     name: 'Rune Magic',
     category: 'magic',
     icon: '᚛',
+    attribute: null,
+    required: HERO_SKILL_IDS.CHANNELING,
+    spellbook: SPELL_SCHOOL_IDS.RUNE,
     tiers: [
-      { tier: 'novice', description: 'Unlocks Rune Magic tier 1 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 1 } },
-      { tier: 'expert', description: 'Unlocks Rune Magic tier 2 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 2 } },
-      { tier: 'master', description: 'Unlocks Rune Magic tier 3 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 3 } },
+      { tier: 'novice', description: 'Novice in Rune Magic. Boosts rune spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 1 } },
+      { tier: 'expert', description: 'Expert in Rune Magic. Further boosts rune spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 2 } },
+      { tier: 'master', description: 'Master of Rune Magic. Maximum rune spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 3 } },
     ],
   },
   {
@@ -410,10 +438,13 @@ export const HERO_SKILLS = [
     name: 'Death Magic',
     category: 'magic',
     icon: '💀',
+    attribute: null,
+    required: HERO_SKILL_IDS.CHANNELING,
+    spellbook: SPELL_SCHOOL_IDS.DEATH,
     tiers: [
-      { tier: 'novice', description: 'Unlocks Death Magic tier 1 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 1 } },
-      { tier: 'expert', description: 'Unlocks Death Magic tier 2 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 2 } },
-      { tier: 'master', description: 'Unlocks Death Magic tier 3 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 3 } },
+      { tier: 'novice', description: 'Novice in Death Magic. Boosts death spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 1 } },
+      { tier: 'expert', description: 'Expert in Death Magic. Further boosts death spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 2 } },
+      { tier: 'master', description: 'Master of Death Magic. Maximum death spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 3 } },
     ],
   },
   {
@@ -421,10 +452,13 @@ export const HERO_SKILLS = [
     name: 'Nature Magic',
     category: 'magic',
     icon: '🌿',
+    attribute: null,
+    required: HERO_SKILL_IDS.CHANNELING,
+    spellbook: SPELL_SCHOOL_IDS.NATURE,
     tiers: [
-      { tier: 'novice', description: 'Unlocks Nature Magic tier 1 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 1 } },
-      { tier: 'expert', description: 'Unlocks Nature Magic tier 2 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 2 } },
-      { tier: 'master', description: 'Unlocks Nature Magic tier 3 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 3 } },
+      { tier: 'novice', description: 'Novice in Nature Magic. Boosts nature spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 1 } },
+      { tier: 'expert', description: 'Expert in Nature Magic. Further boosts nature spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 2 } },
+      { tier: 'master', description: 'Master of Nature Magic. Maximum nature spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 3 } },
     ],
   },
   {
@@ -432,10 +466,13 @@ export const HERO_SKILLS = [
     name: 'Ancient Magic',
     category: 'magic',
     icon: '🏺',
+    attribute: null,
+    required: HERO_SKILL_IDS.CHANNELING,
+    spellbook: SPELL_SCHOOL_IDS.ANCIENT,
     tiers: [
-      { tier: 'novice', description: 'Unlocks Ancient Magic tier 1 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 1 } },
-      { tier: 'expert', description: 'Unlocks Ancient Magic tier 2 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 2 } },
-      { tier: 'master', description: 'Unlocks Ancient Magic tier 3 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 3 } },
+      { tier: 'novice', description: 'Novice in Ancient Magic. Boosts ancient spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 1 } },
+      { tier: 'expert', description: 'Expert in Ancient Magic. Further boosts ancient spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 2 } },
+      { tier: 'master', description: 'Master of Ancient Magic. Maximum ancient spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 3 } },
     ],
   },
   {
@@ -443,10 +480,13 @@ export const HERO_SKILLS = [
     name: 'Order Magic',
     category: 'magic',
     icon: '⚖️',
+    attribute: null,
+    required: HERO_SKILL_IDS.CHANNELING,
+    spellbook: SPELL_SCHOOL_IDS.ORDER,
     tiers: [
-      { tier: 'novice', description: 'Unlocks Order Magic tier 1 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 1 } },
-      { tier: 'expert', description: 'Unlocks Order Magic tier 2 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 2 } },
-      { tier: 'master', description: 'Unlocks Order Magic tier 3 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 3 } },
+      { tier: 'novice', description: 'Novice in Order Magic. Boosts order spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 1 } },
+      { tier: 'expert', description: 'Expert in Order Magic. Further boosts order spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 2 } },
+      { tier: 'master', description: 'Master of Order Magic. Maximum order spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 3 } },
     ],
   },
   {
@@ -454,10 +494,13 @@ export const HERO_SKILLS = [
     name: 'Light Magic',
     category: 'magic',
     icon: '☀️',
+    attribute: null,
+    required: HERO_SKILL_IDS.CHANNELING,
+    spellbook: SPELL_SCHOOL_IDS.LIGHT,
     tiers: [
-      { tier: 'novice', description: 'Unlocks Light Magic tier 1 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 1 } },
-      { tier: 'expert', description: 'Unlocks Light Magic tier 2 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 2 } },
-      { tier: 'master', description: 'Unlocks Light Magic tier 3 spells.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 3 } },
+      { tier: 'novice', description: 'Novice in Light Magic. Boosts light spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 1 } },
+      { tier: 'expert', description: 'Expert in Light Magic. Further boosts light spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 2 } },
+      { tier: 'master', description: 'Master of Light Magic. Maximum light spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 3 } },
     ],
   },
 ];

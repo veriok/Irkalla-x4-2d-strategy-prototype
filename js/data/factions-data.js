@@ -10,7 +10,7 @@
  * Implementations live in js/engine/faction-reactions.js.
  */
 
-import { RACE_IDS, FACTION_IDS, FACTION_REACTION_IDS, GOLD_RESOURCE, RESEARCH_RESOURCE } from './enums.js';
+import { RACE_IDS, FACTION_IDS, FACTION_REACTION_IDS, GOLD_RESOURCE, RESEARCH_RESOURCE, SPELL_SCHOOL_IDS } from './enums.js';
 
 export const FACTIONS = [
 
@@ -46,6 +46,7 @@ export const FACTIONS = [
     playstyle: 'Defensive. Construct vanguard holds the line while undead elites ramp slowly. Soul resurrection makes dwarf units nearly unkillable when souls are plentiful.',
     biomePrefs: { primary: 'mountains', secondary: 'tundra' },
     startingUnits: [{ unitId: 'clay_golem', count: 2 }, { unitId: 'undead_levy', count: 1 }],
+    startingSpellbooks: { [SPELL_SCHOOL_IDS.DEATH]: 3, [SPELL_SCHOOL_IDS.RUNE]: 3 },
     onProvinceCapture: [FACTION_REACTION_IDS.KUR_MARGAL_SOUL_HARVEST],
     onArmyCasualties:       [FACTION_REACTION_IDS.KUR_MARGAL_SOUL_RESURRECTION],
   },
@@ -77,6 +78,7 @@ export const FACTIONS = [
     playstyle: 'Balanced. Economically flexible with strong siege capability and province fortification. Airship mobility counters slow dwarf movement.',
     biomePrefs: { primary: 'mountains', secondary: 'coastal' },
     startingUnits: [{ unitId: 'clan_fighter', count: 2 }, { unitId: 'clan_crossbowman', count: 1 }],
+    startingSpellbooks: { [SPELL_SCHOOL_IDS.EARTH]: 3, [SPELL_SCHOOL_IDS.RUNE]: 3 },
     startingActions: ['fortify_province'],
   },
 
@@ -111,6 +113,7 @@ export const FACTIONS = [
     playstyle: 'Aggressive. Honor-driven combat unlocks elite dragon warriors. Code of Honor army ability provides burst combat power.',
     biomePrefs: { primary: 'tundra', secondary: 'forest' },
     startingUnits: [{ unitId: 'draig_warrior', count: 2 }, { unitId: 'draig_bowman', count: 1 }],
+    startingSpellbooks: { [SPELL_SCHOOL_IDS.FIRE]: 2, [SPELL_SCHOOL_IDS.ORDER]: 2 },
     onProvinceCapture: [FACTION_REACTION_IDS.DRAIG_GOCH_PRESTIGE_ON_CAPTURE],
   },
 
@@ -141,6 +144,7 @@ export const FACTIONS = [
     playstyle: 'Economic. Rush production with Contracts, hire instant mercenaries, and use reduced conquest penalties to rapidly integrate captured territory.',
     biomePrefs: { primary: 'plains', secondary: 'coastal' },
     startingUnits: [{ unitId: 'imperial_levy', count: 2 }, { unitId: 'imperial_archer', count: 1 }],
+    startingSpellbooks: { [SPELL_SCHOOL_IDS.ORDER]: 3, [SPELL_SCHOOL_IDS.AIR]: 3 },
   },
 
   // ═══════════════════════════════════════════════════════
@@ -174,6 +178,7 @@ export const FACTIONS = [
     playstyle: 'Wide. Naval expansion and fast movement. Clearing ruins/dens yields double rewards. Philosophy reduces research cost spiral.',
     biomePrefs: { primary: 'coastal', secondary: 'forest' },
     startingUnits: [{ unitId: 'aethera_hoplite', count: 2 }, { unitId: 'aethera_ranger', count: 1 }],
+    startingSpellbooks: { [SPELL_SCHOOL_IDS.AIR]: 3, [SPELL_SCHOOL_IDS.ARCANE]: 3 },
   },
 
   {
@@ -203,6 +208,7 @@ export const FACTIONS = [
     playstyle: 'Tall defensive. Tribute from Tribute Halls enables instant conscription. Phalanx formations are nearly unbreakable when stacked.',
     biomePrefs: { primary: 'forest', secondary: 'coastal' },
     startingUnits: [{ unitId: 'archonate_levy', count: 2 }, { unitId: 'phalanx_soldier', count: 1 }],
+    startingSpellbooks: { [SPELL_SCHOOL_IDS.ARCANE]: 3, [SPELL_SCHOOL_IDS.EARTH]: 3 },
     startingActions: ['conscript_levies'],
   },
 
@@ -237,6 +243,7 @@ export const FACTIONS = [
     playstyle: 'Balanced. Sun Priest auras buff armies. Moon Zealots have a 25% chance to return as undead mummies when slain. Celestial Blessings provide combat burst power.',
     biomePrefs: { primary: 'desert', secondary: 'plains' },
     startingUnits: [{ unitId: 'river_skirmisher', count: 2 }, { unitId: 'sun_warrior', count: 1 }],
+    startingSpellbooks: { [SPELL_SCHOOL_IDS.DEATH]: 3, [SPELL_SCHOOL_IDS.FIRE]: 3 },
     onArmyCasualties: [FACTION_REACTION_IDS.SUTEKH_RA_MUMMY_SPAWN],
   },
 
@@ -275,6 +282,7 @@ export const FACTIONS = [
       { scope: 'faction', type: 'build_time_bonus',   target: 'all',      amount: 1 },
     ],
 
+    startingSpellbooks: { [SPELL_SCHOOL_IDS.NATURE]: 3, [SPELL_SCHOOL_IDS.ANCIENT]: 3 },
     onProvinceCapture: [FACTION_REACTION_IDS.CLANS_RAID_ON_CAPTURE],
   },
 ];

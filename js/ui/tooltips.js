@@ -241,7 +241,7 @@ export function showHeroTooltip(hero, factionDef, anchorEl) {
     for (const [key, label] of row) {
       const cell = document.createElement('div');
       cell.className = 'hero-tooltip__stat-cell';
-      cell.innerHTML = `<span class="hero-tooltip__stat-label">${label}</span><span class="hero-tooltip__stat-val">${hero.stats[key] ?? 0}</span>`;
+      cell.innerHTML = `<span class="hero-tooltip__stat-label">${label}</span><span class="hero-tooltip__stat-val">${hero.attributes[key] ?? 0}</span>`;
       rowEl.appendChild(cell);
     }
     stats.appendChild(rowEl);

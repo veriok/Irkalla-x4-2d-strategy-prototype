@@ -58,6 +58,7 @@ import { resolveMonsterDenCombat } from '../engine/combat.js';
 import { renderArmyPanel } from './army-panel.js';
 import { showResearchModalAndHighlight } from './research-modal.js';
 import { showDenCombatReportModal } from './modal.js';
+import { logCombat } from './event-log.js';
 import { isHeroActive, getHeroProvinceBonuses } from '../engine/hero-engine.js';
 import { HERO_CLASS_MAP } from '../data/hero-classes-data.js';
 import { heroGenderEmoji } from '../models/hero.js';
@@ -862,14 +863,15 @@ function _renderEmptySlotBuildMenu(prov, loc) {
   for (const bDef of [...available, ...blocked]) {
     const isBlocked    = !availableIds.has(bDef.id);
     const blockedByDef = isBlocked ? _mainBuildingBlocker(bDef, loc.type, installedIds) : null;
-    const affordable = canAfford(state.playerFactionId, bDef.cost);
-    const costStr    = _costStr(bDef.cost, allRes);
+    const { cost: effCost, buildTurns: effTurns } = _effectiveBuildingCost(bDef);
+    const affordable = canAfford(state.playerFactionId, effCost);
+    const costStr    = _costStr(effCost, allRes);
     const alreadyQ   = prov.productionQueue?.some(i => i.type === 'building' && i.id === bDef.id);
 
     const row = _makeActionRow({
       cardOpts: { variant: 'building', compositeSrc: bDef.cardImg ?? null, fallbackIcon: bDef.emoji ?? '🏗', fallbackName: bDef.name, fallbackSub: '' },
       name: bDef.name,
-      costLabel: `${costStr} · ${bDef.buildTurns}t`,
+      costLabel: `${costStr} · ${effTurns}t`,
       hint: isBlocked
         ? `Needs ${blockedByDef?.name ?? '???'}`
         : alreadyQ ? 'Already queued' : queueFull ? 'Queue full' : !affordable ? "Can't afford" : '',
@@ -877,8 +879,8 @@ function _renderEmptySlotBuildMenu(prov, loc) {
       affordable: !isBlocked && affordable,
       onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(bDef, el, { locationType: loc.type })); el.addEventListener('mouseleave', hideBuildingTooltip); },
       onClick: !isBlocked ? () => {
-        if (!spendResources(state.playerFactionId, bDef.cost)) return;
-        enqueueProduction(prov, { type: 'building', id: bDef.id, locationId: loc.id, turnsRemaining: Math.max(1, bDef.buildTurns - _getGovernorBuildSpeedBonus(prov)) });
+        if (!spendResources(state.playerFactionId, effCost)) return;
+        enqueueProduction(prov, { type: 'building', id: bDef.id, locationId: loc.id, turnsRemaining: Math.max(1, effTurns - _getGovernorBuildSpeedBonus(prov)) });
         renderResourceBar();
         _selectedSlotKey = null;
         _render();
@@ -1096,6 +1098,7 @@ function _renderMonsterDenSidebar(prov, loc) {
       renderResourceBar();
       renderArmyPanel();
       hideProvinceModal();
+      logCombat(result);
       showDenCombatReportModal(result);
     });
     row.appendChild(fightBtn);

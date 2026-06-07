@@ -9,7 +9,8 @@ import { HERO_CLASS_MAP, getHeroClassesForFaction } from '../data/hero-classes-d
 import { HERO_SKILL_MAP, TIER_ORDER, tierIndex, nextTier } from '../data/hero-skills-data.js';
 import { ARTIFACT_MAP } from '../data/artifacts-data.js';
 import { createHero, heroMaxMana, XP_THRESHOLDS, MAX_HERO_LEVEL, MAX_HERO_SKILLS } from '../models/hero.js';
-import { GAME_EVENTS, HERO_STATS } from '../data/enums.js';
+import { GAME_EVENTS, HERO_ATTRIBUTES } from '../data/enums.js';
+import { HERO_SKILLS } from '../data/hero-skills-data.js';
 import { emit } from './game-events.js';
 import {
   state, getFaction, getProvince, computeHeroCount, getFactionHero, heroRecruitCost,
@@ -159,22 +160,37 @@ export function recruitPendingHero(factionId) {
 }
 
 /**
- * Pick one weighted-random novice skill from a class's skillWeights and add it to the hero.
- * Used for starting heroes (pending pool and game-start grant).
+ * Give a hero their starting skill.
+ * If the class defines startingSkill, that skill is always granted at novice.
+ * Otherwise a single skill is picked via attribute-weighted random from the pool
+ * (no required/spellbook gates — it's the very first skill).
  */
 export function addRandomStartingSkill(hero, classDef) {
-  const entries = Object.entries(classDef?.skillWeights ?? {});
-  if (entries.length === 0) return;
-  const total = entries.reduce((s, [, w]) => s + w, 0);
-  let rand = Math.random() * total;
-  for (const [skillId, weight] of entries) {
-    rand -= weight;
-    if (rand <= 0) {
-      hero.skills.push({ skillId, tier: 'novice' });
-      return;
-    }
+  if (classDef?.startingSkill) {
+    hero.skills.push({ skillId: classDef.startingSkill, tier: 'novice' });
+    return;
   }
-  hero.skills.push({ skillId: entries[0][0], tier: 'novice' }); // fallback
+
+  // Build attribute-weighted pool for martial heroes
+  const pool = [];
+  for (const skill of HERO_SKILLS) {
+    if (skill.required) continue; // skip skills that need a prerequisite
+    const weight = skill.attribute != null
+      ? (classDef?.statWeights?.[skill.attribute] ?? 0)
+      : 10;
+    if (weight <= 0) continue;
+    pool.push({ skillId: skill.id, weight });
+  }
+
+  if (pool.length === 0) return;
+
+  const total = pool.reduce((s, p) => s + p.weight, 0);
+  let r = Math.random() * total;
+  for (const p of pool) {
+    r -= p.weight;
+    if (r <= 0) { hero.skills.push({ skillId: p.skillId, tier: 'novice' }); return; }
+  }
+  hero.skills.push({ skillId: pool[0].skillId, tier: 'novice' }); // fallback
 }
 
 /**
@@ -232,27 +248,43 @@ export function addHeroExperience(hero, xp) {
  * Rules:
  *  - If hero has < 5 skills: can offer new skills OR upgrades to existing ones
  *  - If hero has 5 skills: can only offer upgrades to existing skills that aren't master yet
- *  - Weighted random from class.skillWeights
+ *  - Weight per skill = class.statWeights[skill.attribute] (or 10 if attribute is null)
+ *  - Skills in class.blockedSkills are never offered
+ *  - Skills with a required prerequisite are only offered if the hero already has it
+ *  - Magic school skills are only offered if the faction has ≥1 spellbook for that school
  *  - Deduplicates choices
  */
 export function generateSkillChoices(hero) {
   const classDef = HERO_CLASS_MAP[hero.classId];
   if (!classDef) return [];
 
+  const fs = getFaction(hero.factionId);
+  const spellbooks = fs?.spellbooks ?? {};
+  const blockedSkills = new Set(classDef.blockedSkills ?? []);
   const existingSkillMap = Object.fromEntries(hero.skills.map(s => [s.skillId, s.tier]));
+  const learnedSkillIds = new Set(hero.skills.map(s => s.skillId));
   const skillsFull = hero.skills.length >= MAX_HERO_SKILLS;
 
-  // Build weighted pool
+  // Build weighted pool from all skills
   const pool = [];
-  for (const [skillId, weight] of Object.entries(classDef.skillWeights)) {
+  for (const skill of HERO_SKILLS) {
+    const skillId = skill.id;
+
+    if (blockedSkills.has(skillId)) continue;
+    if (skill.required && !learnedSkillIds.has(skill.required)) continue;
+    if (skill.spellbook && (spellbooks[skill.spellbook] ?? 0) < 1) continue;
+
+    const weight = skill.attribute != null
+      ? (classDef.statWeights[skill.attribute] ?? 0)
+      : 10;
+    if (weight <= 0) continue;
+
     const existing = existingSkillMap[skillId];
     if (existing) {
-      // Can upgrade if not master
       if (existing !== 'master') {
         pool.push({ skillId, upgradeTier: nextTier(existing), isUpgrade: true, weight });
       }
     } else if (!skillsFull) {
-      // New skill
       pool.push({ skillId, upgradeTier: 'novice', isUpgrade: false, weight });
     }
   }
@@ -262,7 +294,6 @@ export function generateSkillChoices(hero) {
   const picks = [];
   const usedSkillIds = new Set();
 
-  // Pick up to 3 weighted-random choices
   for (let attempt = 0; attempt < 20 && picks.length < 3; attempt++) {
     const choice = _weightedRandom(pool);
     if (!choice || usedSkillIds.has(choice.skillId)) continue;
@@ -299,8 +330,8 @@ export function applyLevelUp(hero, skillChoice) {
   const statGainKey = hero.pendingStatGain ?? _weightedRandomStat(classDef.statWeights);
   hero.pendingStatGain = null;
 
-  if (statGainKey && hero.stats[statGainKey] !== undefined) {
-    hero.stats[statGainKey] += 1;
+  if (statGainKey && hero.attributes[statGainKey] !== undefined) {
+    hero.attributes[statGainKey] += 1;
   }
 
   // Apply skill choice
@@ -362,7 +393,7 @@ function _weightedRandomStat(weights) {
  *
  * Returns:
  * {
- *   flatAtk: number,          — flat attack bonus (hero.stats.atk * 2%)... applied as percent
+ *   flatAtk: number,          — flat attack bonus (hero.attributes.atk * 2%)... applied as percent
  *   flatDef: number,
  *   unitTypeBonuses: [{ unitType, stat, percent }],
  *   allUnitsBonuses: [{ stat, percent }],
@@ -374,9 +405,9 @@ export function getHeroArmyBonuses(hero) {
   if (!hero) return null;
 
   const result = {
-    statAtk: hero.stats.atk,         // each point → 2% bonus to all army attack
-    statDef: hero.stats.def,         // each point → 2% bonus to all army defense
-    statTactics: hero.stats.tactics,
+    statAtk: hero.attributes.atk,         // each point → 2% bonus to all army attack
+    statDef: hero.attributes.def,         // each point → 2% bonus to all army defense
+    statTactics: hero.attributes.tactics,
     unitTypeBonuses: [],
     allUnitsBonuses: [],
     movementBonus: 0,
@@ -400,9 +431,9 @@ export function getHeroArmyBonuses(hero) {
     if (!artDef) continue;
     for (const eff of (artDef.effects ?? [])) {
       if (eff.type === 'hero_stat_bonus') {
-        if (eff.stat === HERO_STATS.ATK) result.statAtk += eff.amount;
-        else if (eff.stat === HERO_STATS.DEF) result.statDef += eff.amount;
-        else if (eff.stat === HERO_STATS.TACTICS) result.statTactics += eff.amount;
+        if (eff.stat === HERO_ATTRIBUTES.ATK) result.statAtk += eff.amount;
+        else if (eff.stat === HERO_ATTRIBUTES.DEF) result.statDef += eff.amount;
+        else if (eff.stat === HERO_ATTRIBUTES.TACTICS) result.statTactics += eff.amount;
       } else if (eff.type === 'army_unit_type_bonus') {
         result.unitTypeBonuses.push({ unitType: eff.unitType, stat: eff.stat, percent: eff.percent });
       } else if (eff.type === 'army_all_units_bonus') {
@@ -451,7 +482,7 @@ function _applySkillEffect(effect, result) {
 export function getHeroProvinceBonuses(hero) {
   if (!hero) return { incomePercent: 0, flatGold: 0, buildSpeedBonus: 0 };
 
-  let incomePercent = hero.stats.governance * 3; // 3% per governance point
+  let incomePercent = hero.attributes.governance * 3; // 3% per governance point
   let flatGold = 0;
   let buildSpeedBonus = 0;
 
@@ -472,7 +503,7 @@ export function getHeroProvinceBonuses(hero) {
     const artDef = ARTIFACT_MAP[artId];
     if (!artDef) continue;
     for (const eff of (artDef.effects ?? [])) {
-      if (eff.type === 'hero_stat_bonus' && eff.stat === HERO_STATS.GOVERNANCE) {
+      if (eff.type === 'hero_stat_bonus' && eff.stat === HERO_ATTRIBUTES.GOVERNANCE) {
         incomePercent += eff.amount * 3;
       } else if (eff.type === 'province_income_bonus') {
         incomePercent += eff.percent;
@@ -488,7 +519,7 @@ export function getHeroProvinceBonuses(hero) {
  */
 export function getHeroMaxMana(hero) {
   if (!hero) return 0;
-  let max = hero.stats.knowledge * 10;
+  let max = hero.attributes.knowledge * 10;
   for (const slot of ['weapon', 'armor', 'accessory1', 'accessory2']) {
     const artId = hero.artifacts[slot];
     if (!artId) continue;
@@ -506,7 +537,7 @@ export function getHeroMaxMana(hero) {
  */
 export function getHeroManaRegen(hero) {
   if (!hero) return 0;
-  let regen = 2 + Math.floor(hero.stats.knowledge / 10);
+  let regen = 2 + Math.floor(hero.attributes.knowledge / 10);
   for (const { skillId, tier } of hero.skills) {
     const skillDef = HERO_SKILL_MAP[skillId];
     if (!skillDef) continue;
@@ -521,14 +552,14 @@ export function getHeroManaRegen(hero) {
  */
 export function getHeroSpellpower(hero) {
   if (!hero) return 0;
-  let sp = hero.stats.spellpower;
+  let sp = hero.attributes.spellpower;
   for (const slot of ['weapon', 'armor', 'accessory1', 'accessory2']) {
     const artId = hero.artifacts[slot];
     if (!artId) continue;
     const artDef = ARTIFACT_MAP[artId];
     if (!artDef) continue;
     for (const eff of (artDef.effects ?? [])) {
-      if (eff.type === 'hero_stat_bonus' && eff.stat === HERO_STATS.SPELLPOWER) sp += eff.amount;
+      if (eff.type === 'hero_stat_bonus' && eff.stat === HERO_ATTRIBUTES.SPELLPOWER) sp += eff.amount;
     }
   }
   return sp;
@@ -552,19 +583,37 @@ export function getHeroSchoolTier(hero, schoolId) {
 
 /**
  * Get all spells a hero can currently cast.
- * Requires SPELL_MAP passed in (avoids circular imports from Phase 3 module).
- * Returns array of spellDefs the hero has school skill for.
+ * Casting requires:
+ *  1. The spell is in fs.unlockedSpells (researched).
+ *  2. The hero has CHANNELING at a tier >= the spell's tier.
+ *  3. The faction has enough spellbooks for the spell's school tier.
  */
 export function getHeroCastableSpells(hero, factionId, SPELL_MAP) {
   if (!hero || !SPELL_MAP) return [];
   const fs = getFaction(factionId);
   if (!fs) return [];
+
+  const channelingTier = _getHeroChannelingTier(hero);
+  const spellbooks = fs.spellbooks ?? {};
+
   return Object.values(SPELL_MAP).filter(spell => {
     if (!fs.unlockedSpells.includes(spell.id)) return false;
     if (spell.factionOnly && !spell.factionOnly.includes(factionId)) return false;
-    const heroTier = getHeroSchoolTier(hero, spell.schoolId);
-    return heroTier >= spell.tier;
+    if (channelingTier < spell.tier) return false;
+    if ((spellbooks[spell.schoolId] ?? 0) < spell.tier) return false;
+    return true;
   });
+}
+
+/** Returns the casting tier granted by the hero's CHANNELING skill (0 if none). */
+function _getHeroChannelingTier(hero) {
+  for (const { skillId, tier } of hero.skills) {
+    const skillDef = HERO_SKILL_MAP[skillId];
+    if (!skillDef) continue;
+    const tierDef = skillDef.tiers.find(t => t.tier === tier);
+    if (tierDef?.effect?.type === 'hero_channeling') return tierDef.effect.tier;
+  }
+  return 0;
 }
 
 // ─── Artifact equipping ───────────────────────────────────

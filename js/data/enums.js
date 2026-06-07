@@ -145,7 +145,9 @@ export const HERO_SKILL_IDS = Object.freeze({
   ADMINISTRATOR:     'administrator',
   TRADER:            'trader',
   BUILDER:           'builder',
-  // Magic skills (also serve as spell school gates)
+  // Channeling — universal magic prerequisite
+  CHANNELING:        'channeling',
+  // Magic school skills (boost spell efficiency; require CHANNELING)
   FIRE_MAGIC:        'fire_magic',
   EARTH_MAGIC:       'earth_magic',
   AIR_MAGIC:         'air_magic',
@@ -156,8 +158,9 @@ export const HERO_SKILL_IDS = Object.freeze({
   ANCIENT_MAGIC:     'ancient_magic',
   ORDER_MAGIC:       'order_magic',
   LIGHT_MAGIC:       'light_magic',
-  // Mana skill
+  // Mana skills
   MANA_MASTERY:      'mana_mastery',
+  MANA_CAPACITY:     'mana_capacity',
 });
 
 export const SPELL_SCHOOL_IDS = Object.freeze({
@@ -249,7 +252,7 @@ export const ARTIFACT_IDS = Object.freeze({
   DEATH_TALISMAN:      'death_talisman',
 });
 
-export const HERO_STATS = Object.freeze({
+export const HERO_ATTRIBUTES = Object.freeze({
   ATK:        'atk',
   DEF:        'def',
   TACTICS:    'tactics',

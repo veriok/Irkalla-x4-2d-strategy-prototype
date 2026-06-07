@@ -105,7 +105,7 @@ const REACTION_HANDLERS = {
     fs.resources.gold = (fs.resources.gold ?? 0) + gold;
 
     for (const loc of (data.province.locations ?? [])) {
-      if (!loc.isControllable || loc.locationType === 'main_settlement') continue;
+      if (!loc.isControllable || loc.type === 'main_settlement') continue;
       if (Math.random() < 0.10) {
         loc._raidDestroyed = true;
       } else if (!loc._raidDestroyed && (loc.buildings ?? []).length > 0 && Math.random() < 0.25) {

@@ -11,8 +11,7 @@ import { TECH_MAP, buildFactionTechTree, resolveTechBaseCost } from '../data/tec
 import { createCard, getTechCardImage } from './card-renderer.js';
 import { TECH_ERAS } from '../data/enums.js';
 import { showTechTooltip, hideTechTooltip } from './tooltips.js';
-import { SPELL_SCHOOLS, SPELLS, getSpellsBySchool } from '../data/hero-spells-data.js';
-import { HERO_CLASSES } from '../data/hero-classes-data.js';
+import { SPELL_SCHOOLS, SPELL_SCHOOL_MAP, getSpellsBySchool } from '../data/hero-spells-data.js';
 
 const overlayEl    = document.getElementById('research-modal-overlay');
 const closeBtn     = document.getElementById('rmod-close');
@@ -22,8 +21,10 @@ const scrollEl     = document.getElementById('rmod-tree-scroll');
 const magicPanelEl = document.getElementById('rmod-magic-panel');
 const rmodBodyEl   = document.getElementById('rmod-body');
 
-let _isOpen     = false;
-let _activeEra  = TECH_ERAS.STONE;
+let _isOpen          = false;
+let _activeEra       = TECH_ERAS.STONE;
+let _magicSchoolPage = 0;
+const SCHOOLS_PER_PAGE = 3;
 
 // ── Public API ────────────────────────────────────────────
 
@@ -236,76 +237,183 @@ function _makeTechItem(techDef, fs, techTree) {
 
 const SPELL_TIER_COST = { 1: 75, 2: 150, 3: 250 };
 
-function _getFactionSpellSchools(factionId) {
-  const schoolIds = new Set();
-  for (const cls of HERO_CLASSES) {
-    if (cls.factionId === factionId) {
-      for (const schoolId of (cls.spellSchools ?? [])) schoolIds.add(schoolId);
+/** Returns school defs for schools where the faction has at least 1 spellbook, in canonical order. */
+function _getFactionSpellSchools(fs) {
+  const spellbooks = fs.spellbooks ?? {};
+  return SPELL_SCHOOLS
+    .filter(s => (spellbooks[s.id] ?? 0) >= 1)
+    .map(s => SPELL_SCHOOL_MAP[s.id])
+    .filter(Boolean);
+}
+
+/** Bookshelf: flat row of coloured book covers, one per spellbook owned. */
+function _renderSpellbookShelf(fs) {
+  const spellbooks = fs.spellbooks ?? {};
+  const shelfEl = document.createElement('div');
+  shelfEl.className = 'rmod-spellbook-shelf';
+
+  const label = document.createElement('span');
+  label.className = 'rmod-spellbook-shelf-label';
+  label.textContent = 'Spellbooks';
+  shelfEl.appendChild(label);
+
+  const booksRow = document.createElement('div');
+  booksRow.className = 'rmod-spellbook-books';
+
+  for (const school of SPELL_SCHOOLS) {
+    const count = spellbooks[school.id] ?? 0;
+    if (count === 0) continue;
+    for (let i = 0; i < count; i++) {
+      const cover = document.createElement('div');
+      cover.className = 'rmod-spellbook-cover';
+      cover.title = `${school.name} — ${count} spellbook${count !== 1 ? 's' : ''}`;
+      cover.style.backgroundColor = school.color ?? '#444';
+      cover.textContent = school.icon;
+      booksRow.appendChild(cover);
     }
   }
-  return [...schoolIds].map(id => SPELL_SCHOOLS.find(s => s.id === id)).filter(Boolean);
+
+  shelfEl.appendChild(booksRow);
+  return shelfEl;
 }
 
 function _renderMagicTab(fs, factionId) {
   if (!magicPanelEl) return;
   magicPanelEl.innerHTML = '';
 
-  const schools = _getFactionSpellSchools(factionId);
-  if (schools.length === 0) {
-    magicPanelEl.innerHTML = '<p class="rmod-magic-empty">This faction has no spell schools.</p>';
+  const spellbooks = fs.spellbooks ?? {};
+  const allSchools = _getFactionSpellSchools(fs);
+
+  magicPanelEl.appendChild(_renderSpellbookShelf(fs));
+
+  if (allSchools.length === 0) {
+    const emptyEl = document.createElement('p');
+    emptyEl.className = 'rmod-magic-empty';
+    emptyEl.textContent = 'This faction has no spellbooks.';
+    magicPanelEl.appendChild(emptyEl);
     return;
   }
+
+  const totalPages = Math.ceil(allSchools.length / SCHOOLS_PER_PAGE);
+  if (_magicSchoolPage >= totalPages) _magicSchoolPage = 0;
+
+  if (allSchools.length > SCHOOLS_PER_PAGE) {
+    magicPanelEl.appendChild(_renderSchoolPageNav(totalPages, fs, factionId));
+  }
+
+  const visibleSchools = allSchools.slice(
+    _magicSchoolPage * SCHOOLS_PER_PAGE,
+    (_magicSchoolPage + 1) * SCHOOLS_PER_PAGE,
+  );
+
+  const gridEl = document.createElement('div');
+  gridEl.className = 'rmod-spell-grid';
 
   const unlockedSpells = new Set(fs.unlockedSpells ?? []);
   const researchBalance = Math.floor(fs.resources.research ?? 0);
 
-  for (const school of schools) {
-    const schoolEl = document.createElement('div');
-    schoolEl.className = 'rmod-spell-school';
+  for (const school of visibleSchools) {
+    const bookCount = spellbooks[school.id] ?? 0;
+    gridEl.appendChild(_renderSchoolCol(school, bookCount, unlockedSpells, researchBalance, fs));
+  }
 
-    const schoolHeader = document.createElement('div');
-    schoolHeader.className = 'rmod-spell-school-header';
-    schoolHeader.textContent = school.name;
-    schoolEl.appendChild(schoolHeader);
+  magicPanelEl.appendChild(gridEl);
+}
 
-    const spellsByTier = { 1: [], 2: [], 3: [] };
-    const schoolSpells = getSpellsBySchool(school.id) ?? [];
-    for (const spell of schoolSpells) {
-      if (spellsByTier[spell.tier]) spellsByTier[spell.tier].push(spell);
+function _renderSchoolPageNav(totalPages, fs, factionId) {
+  const navEl = document.createElement('div');
+  navEl.className = 'rmod-school-nav';
+
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'rmod-school-nav-btn';
+  prevBtn.textContent = '◄';
+  prevBtn.disabled = _magicSchoolPage === 0;
+  prevBtn.addEventListener('click', () => {
+    _magicSchoolPage = Math.max(0, _magicSchoolPage - 1);
+    _renderMagicTab(fs, factionId);
+  });
+
+  const pageInfo = document.createElement('span');
+  pageInfo.className = 'rmod-school-nav-info';
+  pageInfo.textContent = `${_magicSchoolPage + 1} / ${totalPages}`;
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'rmod-school-nav-btn';
+  nextBtn.textContent = '►';
+  nextBtn.disabled = _magicSchoolPage >= totalPages - 1;
+  nextBtn.addEventListener('click', () => {
+    _magicSchoolPage = Math.min(totalPages - 1, _magicSchoolPage + 1);
+    _renderMagicTab(fs, factionId);
+  });
+
+  navEl.appendChild(prevBtn);
+  navEl.appendChild(pageInfo);
+  navEl.appendChild(nextBtn);
+  return navEl;
+}
+
+function _renderSchoolCol(school, bookCount, unlockedSpells, researchBalance, fs) {
+  const col = document.createElement('div');
+  col.className = 'rmod-spell-col';
+
+  const header = document.createElement('div');
+  header.className = 'rmod-spell-school-header';
+  header.textContent = `${school.icon} ${school.name}`;
+  if (school.color) header.style.setProperty('--school-color', school.color + '99');
+  col.appendChild(header);
+
+  const schoolSpells = getSpellsBySchool(school.id) ?? [];
+  const spellsByTier = { 1: [], 2: [], 3: [] };
+  for (const spell of schoolSpells) {
+    if (spellsByTier[spell.tier]) spellsByTier[spell.tier].push(spell);
+  }
+
+  for (const tier of [1, 2, 3]) {
+    const locked = bookCount < tier;
+    const tierLabel = ['Novice', 'Expert', 'Master'][tier - 1];
+    const cost = SPELL_TIER_COST[tier];
+
+    const tierGroup = document.createElement('div');
+    tierGroup.className = `rmod-spell-tier-group${locked ? ' rmod-spell-tier-group--locked' : ''}`;
+
+    const tierHeader = document.createElement('div');
+    tierHeader.className = 'rmod-spell-tier-label';
+    if (locked) {
+      tierHeader.classList.add('rmod-spell-tier-label--locked');
+      tierHeader.textContent = `${tierLabel} — needs ${tier} spellbook${tier > 1 ? 's' : ''}`;
+    } else {
+      tierHeader.textContent = `${tierLabel} — ${cost} 📚`;
     }
+    tierGroup.appendChild(tierHeader);
 
-    for (const tier of [1, 2, 3]) {
-      const tierLabel = ['Novice', 'Expert', 'Master'][tier - 1];
-      const cost = SPELL_TIER_COST[tier];
+    for (const spell of spellsByTier[tier]) {
+      const isUnlocked = unlockedSpells.has(spell.id);
+      const canAffordSpell = !locked && researchBalance >= cost;
 
-      const tierGroup = document.createElement('div');
-      tierGroup.className = 'rmod-spell-tier-group';
+      const row = document.createElement('div');
+      row.className = `rmod-spell-row${isUnlocked ? ' rmod-spell-row--unlocked' : ''}${locked ? ' rmod-spell-row--locked' : ''}`;
 
-      const tierHeader = document.createElement('div');
-      tierHeader.className = `rmod-spell-tier-label rmod-spell-tier--${tierLabel.toLowerCase()}`;
-      tierHeader.textContent = `${tierLabel} (Tier ${tier}) — ${cost} 📚`;
-      tierGroup.appendChild(tierHeader);
+      const infoEl = document.createElement('div');
+      infoEl.className = 'rmod-spell-info';
+      infoEl.innerHTML = `
+        <span class="rmod-spell-name">${spell.name}</span>
+        <span class="rmod-spell-type">${spell.type === 'combat' ? '⚔ Combat' : '🏛 Province'}</span>
+        <span class="rmod-spell-desc">${spell.description ?? ''}</span>
+      `;
+      row.appendChild(infoEl);
 
-      for (const spell of spellsByTier[tier]) {
-        const isUnlocked = unlockedSpells.has(spell.id);
-        const canAffordSpell = researchBalance >= cost;
-
-        const row = document.createElement('div');
-        row.className = `rmod-spell-row${isUnlocked ? ' rmod-spell-row--unlocked' : ''}`;
-        row.innerHTML = `
-          <div class="rmod-spell-info">
-            <span class="rmod-spell-name">${spell.name}</span>
-            <span class="rmod-spell-type">${spell.type === 'combat' ? '⚔ Combat' : '🏛 Province'}</span>
-            <span class="rmod-spell-desc">${spell.description ?? ''}</span>
-          </div>
-          ${isUnlocked
-            ? '<span class="rmod-spell-known">✓ Known</span>'
-            : `<button class="rmod-spell-btn${!canAffordSpell ? ' rmod-spell-btn--poor' : ''}" ${!canAffordSpell ? 'disabled' : ''} data-spell-id="${spell.id}" data-cost="${cost}">${canAffordSpell ? `Research (${cost} 📚)` : `Need ${cost} 📚`}</button>`
-          }
-        `;
-
-        if (!isUnlocked && canAffordSpell) {
-          row.querySelector('.rmod-spell-btn')?.addEventListener('click', () => {
+      if (!locked) {
+        if (isUnlocked) {
+          const known = document.createElement('span');
+          known.className = 'rmod-spell-known';
+          known.textContent = '✓ Known';
+          row.appendChild(known);
+        } else {
+          const btn = document.createElement('button');
+          btn.className = `rmod-spell-btn${!canAffordSpell ? ' rmod-spell-btn--poor' : ''}`;
+          btn.disabled = !canAffordSpell;
+          btn.textContent = canAffordSpell ? `Research (${cost} 📚)` : `Need ${cost} 📚`;
+          btn.addEventListener('click', () => {
             if ((fs.resources.research ?? 0) >= cost) {
               fs.resources.research = Math.max(0, (fs.resources.research ?? 0) - cost);
               fs.unlockedSpells = fs.unlockedSpells ?? [];
@@ -313,16 +421,17 @@ function _renderMagicTab(fs, factionId) {
               _render();
             }
           });
+          row.appendChild(btn);
         }
-
-        tierGroup.appendChild(row);
       }
 
-      schoolEl.appendChild(tierGroup);
+      tierGroup.appendChild(row);
     }
 
-    magicPanelEl.appendChild(schoolEl);
+    col.appendChild(tierGroup);
   }
+
+  return col;
 }
 
 // ── Event listeners ───────────────────────────────────────
@@ -330,7 +439,8 @@ overlayEl?.addEventListener('click', e => {
   const tab = e.target.closest('.rmod-era-tab');
   if (!tab) return;
   _activeEra = tab.dataset.era;
-  _applyActiveEra();
+  _magicSchoolPage = 0;
+  _render();
 });
 
 closeBtn?.addEventListener('click', hideResearchModal);
