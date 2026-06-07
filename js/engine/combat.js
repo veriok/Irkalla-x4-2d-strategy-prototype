@@ -451,78 +451,122 @@ function _buildCombatNarrative(rounds) {
   return rounds.map((text, idx) => ({ round: idx + 1, text }));
 }
 
-function _resolveHeroSpells(attackers, defenders, attArmy, defArmy, roundNum) {
-  const attLines = _castHeroCombatSpells(attArmy, attackers, defenders, roundNum);
-  const defLines = _castHeroCombatSpells(defArmy, defenders, attackers, roundNum);
-  return [...attLines, ...defLines];
+function _resolveHeroSpells(attackers, defenders, attArmy, defArmy, militiaPool, roundNum) {
+  const attResult = _castHeroCombatSpells(attArmy, defArmy, militiaPool, attackers, defenders, roundNum);
+  const defResult = _castHeroCombatSpells(defArmy, attArmy, null,        defenders, attackers, roundNum);
+  return {
+    lines:         [...attResult.lines, ...defResult.lines],
+    attCasualties: attResult.casualties,
+    defCasualties: defResult.casualties,
+  };
 }
 
-function _castHeroCombatSpells(army, ownUnits, enemyUnits, roundNum) {
-  if (!army?.heroId) return [];
+function _castHeroCombatSpells(army, enemyArmy, enemyMilitia, ownUnits, enemyUnits, roundNum) {
+  const empty = { lines: [], casualties: [] };
+  if (!army?.heroId) return empty;
   const fs = getFaction(army.factionId);
   const hero = fs?.heroes?.find(h => h.id === army.heroId);
-  if (!hero || !isHeroActive(hero)) return [];
+  if (!hero || !isHeroActive(hero)) return empty;
 
-  // Slot index = roundNum - 1; empty slot means no spell this round
   const entry = hero.combatSpellQueue?.[roundNum - 1];
-  if (!entry) return [];
+  if (!entry) return empty;
 
   const ownPower   = ownUnits.reduce((s, u)  => s + u.attack + u.defense, 0);
   const enemyPower = enemyUnits.reduce((s, u) => s + u.attack + u.defense, 0);
-  const isWeaker   = ownPower < enemyPower * 0.5;
+  if (entry.condition === 'if_not_weaker' && ownPower < enemyPower * 0.5) return empty;
 
-  const lines = [];
-
-  if (entry.condition === 'if_not_weaker' && isWeaker) return [];
   const spell = SPELL_MAP[entry.spellId];
-  if (!spell || spell.type !== 'combat') return [];
-  if (hero.mana < spell.manaCost) return [];
+  if (!spell || spell.type !== 'combat') return empty;
+  if (hero.mana < spell.manaCost) return empty;
 
   hero.mana = Math.max(0, hero.mana - spell.manaCost);
-    const spellpower = hero.attributes.spellpower ?? 0;
-    const baseDmg = (spell.baseDamage ?? 0) + spellpower;
+  const spellpower = hero.attributes.spellpower ?? 0;
+  const baseDmg = (spell.baseDamage ?? 0) + spellpower;
+  const lines = [];
+  const casualties = [];
 
-    if (spell.effectType === 'damage_all' || spell.damageType === 'damage_all') {
-      const targets = spell.targetType?.includes('ally') ? ownUnits : enemyUnits;
-      let totalDmg = 0;
-      let killed = 0;
-      const dmg = Math.max(1, baseDmg);
-      for (const target of targets) {
-        totalDmg += Math.min(target.hp, dmg);
-        target.hp = Math.max(0, target.hp - dmg);
-        if (target.hp <= 0) killed++;
-      }
-      const targetLabel = spell.targetType?.includes('ally') ? 'allied forces' : 'enemy forces';
-      const killStr = killed > 0 ? ` ${killed} unit${killed > 1 ? 's' : ''} killed!` : '';
-      lines.push(`${hero.name} casts '${spell.name}', dealing ${totalDmg} damage to ${targetLabel}!${killStr}`);
+  if (spell.effectType === 'damage_all' || spell.damageType === 'damage_all') {
+    const isAlly      = spell.targetType?.includes('ally');
+    const targets     = isAlly ? ownUnits   : enemyUnits;
+    const targetArmy  = isAlly ? army       : enemyArmy;
+    const targetMilia = isAlly ? null       : enemyMilitia;
 
-    } else if (spell.effectType === 'damage_random' || spell.damageType === 'damage_random') {
-      const targets = spell.targetType?.includes('ally') ? ownUnits : enemyUnits;
-      const alive = targets.filter(t => t.hp > 0);
-      if (alive.length > 0) {
-        const target = alive[Math.floor(Math.random() * alive.length)];
-        const dmg = Math.max(1, Math.round(baseDmg * 1.5));
-        const actual = Math.min(target.hp, dmg);
-        target.hp = Math.max(0, target.hp - dmg);
-        const unitName = UNIT_MAP[target.typeId]?.name ?? target.typeId;
-        const killStr = target.hp <= 0 ? ' Killed!' : '';
-        lines.push(`${hero.name} casts '${spell.name}', dealing ${actual} damage to ${unitName}!${killStr}`);
-      }
-
-    } else if ((spell.effectType === 'buff' || spell.effectType === 'debuff') && spell.buffEffect) {
-      const targets = spell.targetType?.includes('enemy') ? enemyUnits : ownUnits;
-      const { stat, amount = 0 } = spell.buffEffect;
-      for (const target of targets) {
-        if (stat === 'attack') target.attack += amount;
-        else if (stat === 'defense') target.defense += amount;
-        else if (stat === 'maxHp') target.maxHp = Math.max(1, (target.maxHp ?? 1) + amount);
-      }
-      const targetLabel = spell.targetType?.includes('enemy') ? 'enemy forces' : 'allied forces';
-      const sign = amount >= 0 ? '+' : '';
-      lines.push(`${hero.name} casts '${spell.name}' on ${targetLabel} (${sign}${amount} ${stat}).`);
+    const armyDmgMap    = new Map();
+    const militiaDmgMap = new Map();
+    const dmg = Math.max(1, baseDmg);
+    for (const t of targets) {
+      if (t.pool === 'army')    armyDmgMap.set(t.key, dmg);
+      else if (t.pool === 'militia') militiaDmgMap.set(t.key, dmg);
     }
 
-  return lines;
+    let destroyed = 0, hpLost = 0;
+    if (targetArmy && armyDmgMap.size > 0) {
+      const r = _applyBatchDamageToArmy(targetArmy, armyDmgMap, WOUND_CHANCE);
+      destroyed += r.destroyed; hpLost += r.hpLost;
+      casualties.push(...r.pendingCasualties);
+    }
+    if (targetMilia && militiaDmgMap.size > 0) {
+      const r = _applyBatchDamageToMilitia(targetMilia, militiaDmgMap);
+      destroyed += r.destroyed; hpLost += r.hpLost;
+    }
+
+    const targetLabel = isAlly ? 'allied forces' : 'enemy forces';
+    const killStr = destroyed > 0 ? ` ${destroyed} unit${destroyed > 1 ? 's' : ''} destroyed!` : '';
+    lines.push(`${hero.name} casts '${spell.name}', dealing ${hpLost} damage to ${targetLabel}!${killStr}`);
+
+  } else if (spell.effectType === 'damage_random' || spell.damageType === 'damage_random') {
+    const isAlly      = spell.targetType?.includes('ally');
+    const targetArmy  = isAlly ? army      : enemyArmy;
+    const targetMilia = isAlly ? null      : enemyMilitia;
+
+    // Re-read from real pools so prior spells' kills are already excluded
+    const alive = [];
+    if (targetArmy) {
+      for (const [typeId, arr] of Object.entries(targetArmy.hp?.active ?? {})) {
+        for (let i = 0; i < arr.length; i++) {
+          if (arr[i] > 0) alive.push({ pool: 'army', typeId, key: `a:${typeId}:${i}` });
+        }
+      }
+    }
+    if (targetMilia) {
+      for (let i = 0; i < (targetMilia.hp?.length ?? 0); i++) {
+        if (targetMilia.hp[i] > 0) alive.push({ pool: 'militia', typeId: targetMilia.unitId, key: `m:${i}` });
+      }
+    }
+
+    if (alive.length > 0) {
+      const target = alive[Math.floor(Math.random() * alive.length)];
+      const dmg    = Math.max(1, Math.round(baseDmg * 1.5));
+      const dmgMap = new Map([[target.key, dmg]]);
+      let hpLost = 0, destroyed = 0;
+      if (target.pool === 'army' && targetArmy) {
+        const r = _applyBatchDamageToArmy(targetArmy, dmgMap, WOUND_CHANCE);
+        hpLost = r.hpLost; destroyed = r.destroyed;
+        casualties.push(...r.pendingCasualties);
+      } else if (target.pool === 'militia' && targetMilia) {
+        const r = _applyBatchDamageToMilitia(targetMilia, dmgMap);
+        hpLost = r.hpLost; destroyed = r.destroyed;
+      }
+      const unitName = UNIT_MAP[target.typeId]?.name ?? target.typeId;
+      const killStr  = destroyed > 0 ? ' Unit Destroyed!' : '';
+      lines.push(`${hero.name} casts '${spell.name}', dealing ${hpLost} damage to ${unitName}!${killStr}`);
+    }
+
+  } else if ((spell.effectType === 'buff' || spell.effectType === 'debuff') && spell.buffEffect) {
+    // Buffs modify the local snapshot — stats apply to this round's combat calculations
+    const targets = spell.targetType?.includes('enemy') ? enemyUnits : ownUnits;
+    const { stat, amount = 0 } = spell.buffEffect;
+    for (const t of targets) {
+      if (stat === 'attack') t.attack += amount;
+      else if (stat === 'defense') t.defense += amount;
+      else if (stat === 'maxHp') t.maxHp = Math.max(1, (t.maxHp ?? 1) + amount);
+    }
+    const targetLabel = spell.targetType?.includes('enemy') ? 'enemy forces' : 'allied forces';
+    const sign = amount >= 0 ? '+' : '';
+    lines.push(`${hero.name} casts '${spell.name}' on ${targetLabel} (${sign}${amount} ${stat}).`);
+  }
+
+  return { lines, casualties };
 }
 
 function _heroXpForCombat(winnerHero, loserHero, enemyArmy, ownArmy) {
@@ -676,8 +720,10 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     ];
 
     // Spell resolution fires before unit attacks; narrative lines prepend the round
-    const spellLines = _resolveHeroSpells(attackers, defenders, attArmy, enemyDefArmy, roundNum);
-    for (const line of spellLines) rounds.push(line);
+    const spellResult = _resolveHeroSpells(attackers, defenders, attArmy, enemyDefArmy, militiaPool, roundNum);
+    for (const line of spellResult.lines) rounds.push(line);
+    attPendingCasualties.push(...spellResult.attCasualties);
+    defPendingCasualties.push(...spellResult.defCasualties);
 
     if (attackers.length === 0) {
       outcome = 'defender';
