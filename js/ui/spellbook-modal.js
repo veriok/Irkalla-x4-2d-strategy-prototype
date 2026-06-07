@@ -10,7 +10,7 @@
  */
 
 import { state, getFaction } from '../engine/game-state.js';
-import { getHeroSchoolTier, getHeroMaxMana, getHeroSpellpower } from '../engine/hero-engine.js';
+import { getHeroCastableSpells, getHeroMaxMana, getHeroSpellpower } from '../engine/hero-engine.js';
 import { SPELL_MAP, SPELLS } from '../data/hero-spells-data.js';
 
 // ── State ────────────────────────────────────────────────────
@@ -51,14 +51,9 @@ export function initSpellbook() {
 // ── Helpers ───────────────────────────────────────────────────
 
 function _getCastableSpells(hero, factionId) {
-  const fs = getFaction(factionId);
-  const unlocked = new Set(fs?.unlockedSpells ?? []);
-  return SPELLS.filter(spell => {
-    if (!unlocked.has(spell.id)) return false;
-    // Check hero has the school skill at sufficient tier
-    const schoolTier = getHeroSchoolTier(hero, spell.schoolId);
-    return schoolTier >= spell.tier;
-  });
+  // Gate: spell researched (unlockedSpells) + CHANNELING tier >= spell.tier + spellbooks[school] >= spell.tier
+  const castable = new Set(getHeroCastableSpells(hero, factionId, SPELL_MAP).map(s => s.id));
+  return SPELLS.filter(s => castable.has(s.id));
 }
 
 function _spellDamageLabel(spell, hero) {

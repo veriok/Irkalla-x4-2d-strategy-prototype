@@ -20,14 +20,13 @@ import { showUnitTooltip, hideUnitTooltip, showActionTooltip, hideActionTooltip,
 import { FACTION_ACTIONS } from '../data/faction-actions-data.js';
 import { getActionUnlockSource } from '../engine/faction-actions.js';
 import { ARMY_STATUS_MAP } from '../data/army-status-data.js';
-import { isHeroActive, getHeroMaxMana } from '../engine/hero-engine.js';
+import { isHeroActive, getHeroMaxMana, getHeroCastableSpells } from '../engine/hero-engine.js';
 import { HERO_CLASS_MAP } from '../data/hero-classes-data.js';
 import { heroGenderEmoji } from '../models/hero.js';
 import { openHeroAssignModal } from './hero-assign-modal.js';
 import { openHeroPanel } from './hero-panel.js';
 import { openSpellbook } from './spellbook-modal.js';
 import { SPELL_MAP, SPELLS } from '../data/hero-spells-data.js';
-import { getHeroSchoolTier } from '../engine/hero-engine.js';
 
 const armyListEl = document.getElementById('army-list');
 
@@ -248,12 +247,7 @@ export function renderArmyPanel() {
 // ── Army Action Bar ───────────────────────────────────────────
 
 function _heroHasCastableSpells(hero, factionId) {
-  const fs = getFaction(factionId);
-  const unlocked = new Set(fs?.unlockedSpells ?? []);
-  return SPELLS.some(spell => {
-    if (!unlocked.has(spell.id)) return false;
-    return getHeroSchoolTier(hero, spell.schoolId) >= spell.tier;
-  });
+  return getHeroCastableSpells(hero, factionId, SPELL_MAP).length > 0;
 }
 
 function _getArmyActions(army) {

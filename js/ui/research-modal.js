@@ -235,7 +235,7 @@ function _makeTechItem(techDef, fs, techTree) {
 
 // ── Magic Tab (Spell Research) ───────────────────────────
 
-const SPELL_TIER_COST = { 1: 75, 2: 150, 3: 250 };
+const SPELL_TIER_COST = { 1: 25, 2: 50, 3: 75 };
 
 /** Returns school defs for schools where the faction has at least 1 spellbook, in canonical order. */
 function _getFactionSpellSchools(fs) {

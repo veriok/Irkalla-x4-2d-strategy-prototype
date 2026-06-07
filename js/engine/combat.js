@@ -452,53 +452,77 @@ function _buildCombatNarrative(rounds) {
 }
 
 function _resolveHeroSpells(attackers, defenders, attArmy, defArmy, roundNum) {
-  // Attacker hero spells
-  _castHeroCombatSpells(attArmy, attackers, defenders, roundNum);
-  // Defender hero spells
-  _castHeroCombatSpells(defArmy, defenders, attackers, roundNum);
+  const attLines = _castHeroCombatSpells(attArmy, attackers, defenders, roundNum);
+  const defLines = _castHeroCombatSpells(defArmy, defenders, attackers, roundNum);
+  return [...attLines, ...defLines];
 }
 
 function _castHeroCombatSpells(army, ownUnits, enemyUnits, roundNum) {
-  if (!army?.heroId) return;
+  if (!army?.heroId) return [];
   const fs = getFaction(army.factionId);
   const hero = fs?.heroes?.find(h => h.id === army.heroId);
-  if (!hero || !isHeroActive(hero)) return;
-  if (!hero.combatSpellQueue || hero.combatSpellQueue.length === 0) return;
+  if (!hero || !isHeroActive(hero)) return [];
 
-  // Check condition: if_not_weaker compares total power
-  const ownPower  = ownUnits.reduce((s, u)  => s + u.attack + u.defense, 0);
+  // Slot index = roundNum - 1; empty slot means no spell this round
+  const entry = hero.combatSpellQueue?.[roundNum - 1];
+  if (!entry) return [];
+
+  const ownPower   = ownUnits.reduce((s, u)  => s + u.attack + u.defense, 0);
   const enemyPower = enemyUnits.reduce((s, u) => s + u.attack + u.defense, 0);
-  const isWeaker = ownPower < enemyPower * 0.5;
+  const isWeaker   = ownPower < enemyPower * 0.5;
 
-  for (const entry of hero.combatSpellQueue) {
-    if (entry.condition === 'if_not_weaker' && isWeaker) continue;
-    const spell = SPELL_MAP[entry.spellId];
-    if (!spell || spell.type !== 'combat') continue;
-    if (hero.mana < spell.manaCost) continue;
+  const lines = [];
 
-    hero.mana = Math.max(0, hero.mana - spell.manaCost);
+  if (entry.condition === 'if_not_weaker' && isWeaker) return [];
+  const spell = SPELL_MAP[entry.spellId];
+  if (!spell || spell.type !== 'combat') return [];
+  if (hero.mana < spell.manaCost) return [];
+
+  hero.mana = Math.max(0, hero.mana - spell.manaCost);
     const spellpower = hero.attributes.spellpower ?? 0;
     const baseDmg = (spell.baseDamage ?? 0) + spellpower;
 
     if (spell.effectType === 'damage_all' || spell.damageType === 'damage_all') {
       const targets = spell.targetType?.includes('ally') ? ownUnits : enemyUnits;
+      let totalDmg = 0;
+      let killed = 0;
+      const dmg = Math.max(1, baseDmg);
       for (const target of targets) {
-        target.hp = Math.max(0, target.hp - Math.max(1, baseDmg));
+        totalDmg += Math.min(target.hp, dmg);
+        target.hp = Math.max(0, target.hp - dmg);
+        if (target.hp <= 0) killed++;
       }
+      const targetLabel = spell.targetType?.includes('ally') ? 'allied forces' : 'enemy forces';
+      const killStr = killed > 0 ? ` ${killed} unit${killed > 1 ? 's' : ''} killed!` : '';
+      lines.push(`${hero.name} casts '${spell.name}', dealing ${totalDmg} damage to ${targetLabel}!${killStr}`);
+
     } else if (spell.effectType === 'damage_random' || spell.damageType === 'damage_random') {
       const targets = spell.targetType?.includes('ally') ? ownUnits : enemyUnits;
-      if (targets.length > 0) {
-        const target = targets[Math.floor(Math.random() * targets.length)];
-        target.hp = Math.max(0, target.hp - Math.max(1, Math.round(baseDmg * 1.5)));
+      const alive = targets.filter(t => t.hp > 0);
+      if (alive.length > 0) {
+        const target = alive[Math.floor(Math.random() * alive.length)];
+        const dmg = Math.max(1, Math.round(baseDmg * 1.5));
+        const actual = Math.min(target.hp, dmg);
+        target.hp = Math.max(0, target.hp - dmg);
+        const unitName = UNIT_MAP[target.typeId]?.name ?? target.typeId;
+        const killStr = target.hp <= 0 ? ' Killed!' : '';
+        lines.push(`${hero.name} casts '${spell.name}', dealing ${actual} damage to ${unitName}!${killStr}`);
       }
-    } else if (spell.effectType === 'buff' && spell.buffEffect) {
+
+    } else if ((spell.effectType === 'buff' || spell.effectType === 'debuff') && spell.buffEffect) {
       const targets = spell.targetType?.includes('enemy') ? enemyUnits : ownUnits;
+      const { stat, amount = 0 } = spell.buffEffect;
       for (const target of targets) {
-        target[spell.buffEffect.stat === 'attack' ? 'attack' : 'defense'] +=
-          spell.buffEffect.amount ?? 0;
+        if (stat === 'attack') target.attack += amount;
+        else if (stat === 'defense') target.defense += amount;
+        else if (stat === 'maxHp') target.maxHp = Math.max(1, (target.maxHp ?? 1) + amount);
       }
+      const targetLabel = spell.targetType?.includes('enemy') ? 'enemy forces' : 'allied forces';
+      const sign = amount >= 0 ? '+' : '';
+      lines.push(`${hero.name} casts '${spell.name}' on ${targetLabel} (${sign}${amount} ${stat}).`);
     }
-  }
+
+  return lines;
 }
 
 function _heroXpForCombat(winnerHero, loserHero, enemyArmy, ownArmy) {
@@ -651,8 +675,9 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
       ..._collectMilitiaUnits(militiaPool),
     ];
 
-    // Hero spell resolution (before unit attacks, modifies unit objects in-place)
-    _resolveHeroSpells(attackers, defenders, attArmy, enemyDefArmy, roundNum);
+    // Spell resolution fires before unit attacks; narrative lines prepend the round
+    const spellLines = _resolveHeroSpells(attackers, defenders, attArmy, enemyDefArmy, roundNum);
+    for (const line of spellLines) rounds.push(line);
 
     if (attackers.length === 0) {
       outcome = 'defender';
