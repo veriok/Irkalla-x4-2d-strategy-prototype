@@ -25,6 +25,7 @@ import {
 import { dequeueProduction } from '../models/province.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP, getMilitiaUnitIdForFaction } from '../data/units-data.js';
+import { getEffectiveUnitStats } from '../engine/tech-effects.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { renderResourceBar } from './resource-bar.js';
 import {
@@ -109,7 +110,9 @@ export function showProvincePanel(provinceId) {
     const militiaDef    = UNIT_MAP[militiaUnitId];
     militiaCountEl.onmouseenter = () => {
       if (!militiaDef) return;
-      showUnitTooltip(militiaDef, faction, militiaCountEl);
+      const fakeArmy = { provinceId: prov.id, heroId: prov.governorId ?? undefined, units: [] };
+      const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(militiaUnitId, prov.ownerId, UNIT_MAP, fakeArmy);
+      showUnitTooltip(militiaDef, faction, militiaCountEl, null, null, effAtk, effDef);
     };
     militiaCountEl.onmouseleave = () => hideUnitTooltip();
     militiaCountEl.style.cursor = militiaDef ? 'help' : 'default';

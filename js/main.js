@@ -24,6 +24,7 @@ import { initHotkeys } from './ui/hotkeys.js';
 import { initEndTurnButton }   from './ui/end-turn-btn.js';
 import { logTurn, logMessage } from './ui/event-log.js';
 import { FACTIONS, FACTION_MAP } from './data/factions-data.js';
+import { SPELL_SCHOOL_MAP } from './data/hero-spells-data.js';
 import { initMinimap, renderMinimap } from './ui/minimap.js';
 import { registerFactionReactions } from './engine/faction-reactions.js';
 import { openHeroPanel, initHeroPanel } from './ui/hero-panel.js';
@@ -138,6 +139,17 @@ function showWorldGenPicker() {
 
 // ─── Faction picker ───────────────────────────────────────
 
+let _fcTooltipEl = null;
+function _getFcTooltip() {
+  if (!_fcTooltipEl) {
+    _fcTooltipEl = document.createElement('div');
+    _fcTooltipEl.className = 'fc-playstyle-tooltip';
+    _fcTooltipEl.hidden = true;
+    document.body.appendChild(_fcTooltipEl);
+  }
+  return _fcTooltipEl;
+}
+
 function buildFactionPickerEl(onPick) {
   const container = document.createElement('div');
   container.className = 'faction-picker-container';
@@ -172,6 +184,25 @@ function buildFactionPickerEl(onPick) {
       const card = document.createElement('div');
       card.className = 'faction-card';
       card.style.setProperty('--fc', f.color);
+      const sbooksEntries = Object.entries(f.startingSpellbooks ?? {});
+      const sbooksTooltip = sbooksEntries
+        .map(([schoolId, count]) => {
+          const school = SPELL_SCHOOL_MAP[schoolId];
+          return `${school?.name ?? schoolId}: ${count}`;
+        })
+        .join(' · ');
+      const sbooksHtml = sbooksEntries
+        .flatMap(([schoolId, count]) => {
+          const school = SPELL_SCHOOL_MAP[schoolId];
+          return Array.from({ length: count }, () =>
+            `<span class="fc-spellbook-cover" style="background:${school?.color ?? '#555'}">${school?.icon ?? '📖'}</span>`
+          );
+        })
+        .join('');
+      const sbooksRow = sbooksHtml
+        ? `<div class="fc-spellbooks" title="${sbooksTooltip}">${sbooksHtml}</div>`
+        : '';
+
       card.innerHTML = `
         <div class="faction-card-flag-wrap">
           <img class="faction-card-flag" src="${f.flagImg ?? ''}" alt="${f.name} flag" />
@@ -179,11 +210,32 @@ function buildFactionPickerEl(onPick) {
         <div class="faction-card-name">${f.name}</div>
         <div class="faction-card-full">${f.fullName}</div>
         <div class="faction-card-desc">${f.description}</div>
-        <div class="faction-card-play">📖 ${f.playstyle}</div>
+        ${sbooksRow}
       `;
+
+      // Playstyle tag — tooltip on hover
+      const playstyleTag = document.createElement('div');
+      playstyleTag.className = 'fc-playstyle-tag';
+      playstyleTag.textContent = '📖 Playstyle';
+      playstyleTag.addEventListener('mouseenter', () => {
+        const tt = _getFcTooltip();
+        const lines = f.playstyle.split(' · ');
+        tt.innerHTML = lines.map((l, i) =>
+          i === 0
+            ? `<div class="fc-tt-type">${l}</div>`
+            : `<div class="fc-tt-line">${l}</div>`
+        ).join('');
+        tt.hidden = false;
+        const rect = playstyleTag.getBoundingClientRect();
+        tt.style.left = `${rect.left + rect.width / 2}px`;
+        tt.style.top  = `${rect.bottom + 6}px`;
+      });
+      playstyleTag.addEventListener('mouseleave', () => { _getFcTooltip().hidden = true; });
+      card.appendChild(playstyleTag);
+
       const btn = document.createElement('button');
       btn.className = 'btn-primary faction-card-btn';
-      btn.textContent = `Play as ${f.name}`;
+      btn.textContent = `Play as ${f.shortName ?? f.name}`;
       btn.addEventListener('click', () => onPick(f.id));
       card.appendChild(btn);
       container.appendChild(card);

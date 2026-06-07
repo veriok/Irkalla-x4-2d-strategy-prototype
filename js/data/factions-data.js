@@ -22,11 +22,12 @@ export const FACTIONS = [
     id: FACTION_IDS.KUR_MARGAL,
     raceId: RACE_IDS.DWARF,
     name: 'Kur-Margal',
+    shortName: 'Kur-Margal',
     fullName: 'The Undying Kingdom',
     description:
-      'An ancient realm of undead dwarves ruled by the Eternal Sorcerer-King. ' +
+      'An ancient realm of undead dwarves ruled by the eternal Sorcerer-King. ' +
       'Awakened from their tomb-cities after millennia of silence, their bronze-clad legions march ' +
-      'alongside soul-bound constructs powered by the spirits of a civilization sacrificed for immortality.',
+      'alongside soul-bound constructs powered by sacrificed souls.',
     emoji: '💀',
     flagImg: 'assets/flags/kur_margal_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/kur_margal-unit-bg.png',
@@ -43,22 +44,23 @@ export const FACTIONS = [
     },
     startingResources: { gold: 50, research: 0, runes: 20, souls: 20 },
     unitEmoji: '💀',
-    playstyle: 'Defensive. Construct vanguard holds the line while undead elites ramp slowly. Soul resurrection makes dwarf units nearly unkillable when souls are plentiful.',
+    playstyle: 'Aggressive · Soul Resurrection keeps undead dwarves on the field indefinitely. Need souls to recruit elite units.',
     biomePrefs: { primary: 'mountains', secondary: 'tundra' },
     startingUnits: [{ unitId: 'clay_golem', count: 2 }, { unitId: 'undead_levy', count: 1 }],
     startingSpellbooks: { [SPELL_SCHOOL_IDS.DEATH]: 3, [SPELL_SCHOOL_IDS.RUNE]: 3 },
     onProvinceCapture: [FACTION_REACTION_IDS.KUR_MARGAL_SOUL_HARVEST],
-    onArmyCasualties:       [FACTION_REACTION_IDS.KUR_MARGAL_SOUL_RESURRECTION],
+    onArmyCasualties: [FACTION_REACTION_IDS.KUR_MARGAL_SOUL_RESURRECTION],
   },
 
   {
     id: FACTION_IDS.IRON_FREEHOLDS,
     raceId: RACE_IDS.DWARF,
     name: 'The Iron Freeholds',
+    shortName: 'Freeholds',
     fullName: 'The Descendants of the Last Rebellion',
     description:
       'A confederation of fiercely independent dwarf clans who rejected eternal servitude and chose freedom over immortality. ' +
-      'Inventors, traders, explorers, airship captains, and sea-raiders — they answer to no ruler beyond their own clan councils.',
+      'Inventors, traders, airship captains, and sea-raiders — they answer to no ruler beyond their own clan councils.',
     emoji: '⚙️',
     flagImg: 'assets/flags/freeholds_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/iron_freeholds-unit-bg.png',
@@ -75,7 +77,7 @@ export const FACTIONS = [
     },
     startingResources: { gold: 50, research: 0, runes: 20, schematics: 20 },
     unitEmoji: '⚙️',
-    playstyle: 'Balanced. Economically flexible with strong siege capability and province fortification. Airship mobility counters slow dwarf movement.',
+    playstyle: 'Defensive · Fortify provinces and bring strong siege capability. Airship mobility overcomes slow dwarf marching speed.',
     biomePrefs: { primary: 'mountains', secondary: 'coastal' },
     startingUnits: [{ unitId: 'clan_fighter', count: 2 }, { unitId: 'clan_crossbowman', count: 1 }],
     startingSpellbooks: { [SPELL_SCHOOL_IDS.EARTH]: 3, [SPELL_SCHOOL_IDS.RUNE]: 3 },
@@ -90,10 +92,11 @@ export const FACTIONS = [
     id: FACTION_IDS.DRAIG_GOCH,
     raceId: RACE_IDS.HUMAN,
     name: 'Y Draig Goch',
+    shortName: 'Y Draig Goch',
     fullName: 'The Crimson Dragon Dominion',
     description:
-      'A rigid realm of dragon-worshipping warrior nobility where honor, lineage, and duty define every aspect of life. ' +
-      'From the forests of the north, its disciplined warriors seek to embody the wisdom and might of the great dragons they revere.',
+      'A rigid realm of dragon-worshipping warrior nobility where honor, lineage, and duty govern every aspect of life. ' +
+      'From the northern forests, its disciplined warriors seek to embody the wisdom and might of the great dragons they revere.',
     emoji: '🐉',
     flagImg: 'assets/flags/y_draig_goch_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/draig_goch-unit-bg.png',
@@ -110,7 +113,7 @@ export const FACTIONS = [
     },
     startingResources: { gold: 50, research: 0, prestige: 20, dragon_essence: 20 },
     unitEmoji: '🐉',
-    playstyle: 'Aggressive. Honor-driven combat unlocks elite dragon warriors. Code of Honor army ability provides burst combat power.',
+    playstyle: 'Aggressive · Heroes centric. Elite units require honor. Weak magic.',
     biomePrefs: { primary: 'tundra', secondary: 'forest' },
     startingUnits: [{ unitId: 'draig_warrior', count: 2 }, { unitId: 'draig_bowman', count: 1 }],
     startingSpellbooks: { [SPELL_SCHOOL_IDS.FIRE]: 2, [SPELL_SCHOOL_IDS.ORDER]: 2 },
@@ -121,10 +124,11 @@ export const FACTIONS = [
     id: FACTION_IDS.AURIC_EMPIRE,
     raceId: RACE_IDS.HUMAN,
     name: 'The Auric Empire',
+    shortName: 'Empire',
     fullName: 'The Throne of Golden Sails',
     description:
       'A sprawling commercial empire where merchant dynasties wield influence behind the Imperial Throne. ' +
-      'Masters of trade, diplomacy, and intrigue, they bind distant lands together through contracts, coin, and commerce, preferring wealth and negotiation to open war.',
+      'Masters of trade, diplomacy, and intrigue, they bind distant lands through coin and contracts, preferring negotiation to open war.',
     emoji: '💰',
     flagImg: 'assets/flags/auric_empire_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/auric_empire-unit-bg.png',
@@ -141,7 +145,7 @@ export const FACTIONS = [
     },
     startingResources: { gold: 50, research: 0, prestige: 20, contracts: 20 },
     unitEmoji: '💰',
-    playstyle: 'Economic. Rush production with Contracts, hire instant mercenaries, and use reduced conquest penalties to rapidly integrate captured territory.',
+    playstyle: 'Balanced · Contracts rush builds or hire instant mercenaries. · Reduced conquest penalties integrate territory fast.',
     biomePrefs: { primary: 'plains', secondary: 'coastal' },
     startingUnits: [{ unitId: 'imperial_levy', count: 2 }, { unitId: 'imperial_archer', count: 1 }],
     startingSpellbooks: { [SPELL_SCHOOL_IDS.ORDER]: 3, [SPELL_SCHOOL_IDS.AIR]: 3 },
@@ -155,10 +159,11 @@ export const FACTIONS = [
     id: FACTION_IDS.POLEIS_AETHERA,
     raceId: RACE_IDS.ELF,
     name: 'Poleis tou Aethera',
+    shortName: 'Poleis',
     fullName: 'The League of Azure Towers',
     description:
-      'A league of prosperous maritime city-states renowned for their philosophers, explorers, artists, and sailors. ' +
-      'Admirers of beauty and knowledge, they cultivate an image of refinement while pursuing the interests of their cities with unwavering pragmatism.',
+      'A league of prosperous maritime city-states renowned for their philosophers, explorers, and sailors. ' +
+      'They project an image of refinement and culture while pursuing each city-state\'s interests with sharp, calculating pragmatism.',
     emoji: '🌿',
     flagImg: 'assets/flags/aethera_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/poleis_aethera-unit-bg.png',
@@ -175,7 +180,7 @@ export const FACTIONS = [
     },
     startingResources: { gold: 50, research: 0, aether: 20, philosophy: 20 },
     unitEmoji: '🌿',
-    playstyle: 'Wide. Naval expansion and fast movement. Clearing ruins/dens yields double rewards. Philosophy reduces research cost spiral.',
+    playstyle: 'Balanced · Fast movement and naval expansion across the map. Philosophy cuts research costs.',
     biomePrefs: { primary: 'coastal', secondary: 'forest' },
     startingUnits: [{ unitId: 'aethera_hoplite', count: 2 }, { unitId: 'aethera_ranger', count: 1 }],
     startingSpellbooks: { [SPELL_SCHOOL_IDS.AIR]: 3, [SPELL_SCHOOL_IDS.ARCANE]: 3 },
@@ -185,10 +190,11 @@ export const FACTIONS = [
     id: FACTION_IDS.ARCHONATE_GREYHAVEN,
     raceId: RACE_IDS.ELF,
     name: 'The Archonate of Greyhaven',
+    shortName: 'Archonate',
     fullName: 'The Eternal Phalanx',
     description:
       'A militaristic elven state where discipline outweighs freedom and every citizen is raised to serve the realm. ' +
-      'Sustained by vast subject castes and governed by a warrior aristocracy, it believes that strength, sacrifice, and order are the foundations of civilization.',
+      'Governed by a warrior aristocracy that holds strength, sacrifice, and order as the only true foundations of civilization.',
     emoji: '🛡️',
     flagImg: 'assets/flags/greyhaven_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/archonate_greyhaven-unit-bg.png',
@@ -205,7 +211,7 @@ export const FACTIONS = [
     },
     startingResources: { gold: 50, research: 0, aether: 20, tribute: 20 },
     unitEmoji: '🛡️',
-    playstyle: 'Tall defensive. Tribute from Tribute Halls enables instant conscription. Phalanx formations are nearly unbreakable when stacked.',
+    playstyle: 'Defensive · Tribute Halls fund instant conscription on demand. Phalanx formations are nearly unbreakable when stacked.',
     biomePrefs: { primary: 'forest', secondary: 'coastal' },
     startingUnits: [{ unitId: 'archonate_levy', count: 2 }, { unitId: 'phalanx_soldier', count: 1 }],
     startingSpellbooks: { [SPELL_SCHOOL_IDS.ARCANE]: 3, [SPELL_SCHOOL_IDS.EARTH]: 3 },
@@ -220,10 +226,11 @@ export const FACTIONS = [
     id: FACTION_IDS.SUTEKH_RA,
     raceId: RACE_IDS.LIZARD,
     name: 'The Dual Kingdom of Sutekh-Ra',
+    shortName: 'Dual Kingdom',
     fullName: 'The Throne Beneath Sun and Moon',
     description:
-      'An ancient river kingdom governed by rival priesthoods devoted to the celestial twins of day and night. ' +
-      'While the Pharaoh serves as sacred intermediary between the gods and the world, the true struggle for power unfolds behind temple walls.',
+      'An ancient lizardmen kingdom governed by rival priesthoods devoted to the celestial twins of sun and moon. ' +
+      'The Pharaoh serves as sacred intermediary between gods and world, while the true struggle for power plays out behind temple walls.',
     emoji: '☀️',
     flagImg: 'assets/flags/dual_kingdom_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/sutekh_ra-unit-bg.png',
@@ -240,7 +247,7 @@ export const FACTIONS = [
     },
     startingResources: { gold: 50, research: 0, ancient_lore: 20, faith: 20 },
     unitEmoji: '☀️',
-    playstyle: 'Balanced. Sun Priest auras buff armies. Moon Zealots have a 25% chance to return as undead mummies when slain. Celestial Blessings provide combat burst power.',
+    playstyle: 'Balanced · Moon Zealots return as Risen Mummies when slain. Sun Priest auras provide combat boons.',
     biomePrefs: { primary: 'desert', secondary: 'plains' },
     startingUnits: [{ unitId: 'river_skirmisher', count: 2 }, { unitId: 'sun_warrior', count: 1 }],
     startingSpellbooks: { [SPELL_SCHOOL_IDS.DEATH]: 3, [SPELL_SCHOOL_IDS.FIRE]: 3 },
@@ -251,10 +258,11 @@ export const FACTIONS = [
     id: FACTION_IDS.CLANS_FIRST_SCALE,
     raceId: RACE_IDS.LIZARD,
     name: 'The Clans of the First Scale',
+    shortName: 'Clans',
     fullName: 'The Children of Fang and Thunder',
     description:
-      'A loose confederation of warrior clans who live by the law of strength and survival. ' +
-      'Bound to the great beasts of their homelands, they raid, hunt, and wage war alongside monstrous creatures, believing that the strong have the right to claim what they can hold.',
+      'A loose confederation of warrior clans living by the law of strength and survival. ' +
+      'Bound to the great beasts of their homelands, they raid and wage war alongside monstrous creatures, claiming by force what others cannot hold.',
     emoji: '🦎',
     flagImg: 'assets/flags/clans_flag.png',
     unitCardBgImg: 'assets/cards/backgrounds/clans_first_scale-unit-bg.png',
@@ -271,7 +279,7 @@ export const FACTIONS = [
     },
     startingResources: { gold: 50, research: 0, ancient_lore: 20, beasts: 20 },
     unitEmoji: '🦎',
-    playstyle: 'Raiding. Conquest rewards gold and may destroy enemy buildings. Beast Spawn fills armies from the land itself. Build costs are high but raid income compensates.',
+    playstyle: 'Aggressive · Raiding captured provinces yields gold and damages buildings. · Beast Spawn fills armies for free; high build costs offset by raid income.',
     biomePrefs: { primary: 'forest', secondary: 'swamp' },
     startingUnits: [{ unitId: 'beast_tamer', count: 2 }, { unitId: 'clan_raider', count: 1 }],
 

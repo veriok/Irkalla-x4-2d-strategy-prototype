@@ -113,9 +113,19 @@ function _militiaPoolForProvince(province) {
   const unitId = getMilitiaUnitIdForFaction(province.ownerId ?? 'neutral');
   const unitDef = UNIT_MAP[unitId] ?? UNIT_MAP.militia_neutral;
   const hp = Math.max(1, unitDef?.maxHp ?? 5);
+  // Apply tech + governor bonuses (governor via provinceId fall-through in getEffectiveUnitStats)
+  const factionId = province.ownerId !== 'neutral' ? province.ownerId : null;
+  const fakeArmy = factionId
+    ? { provinceId: province.id, heroId: province.governorId ?? undefined, units: [] }
+    : null;
+  const { attack: effectiveAtk, defense: effectiveDef } = factionId
+    ? getEffectiveUnitStats(unitId, factionId, UNIT_MAP, fakeArmy)
+    : { attack: unitDef?.attack ?? 0, defense: unitDef?.defense ?? 0 };
   return {
     unitId,
     unitDef,
+    effectiveAtk,
+    effectiveDef,
     hp: Array.from({ length: count }, () => hp),
   };
 }
@@ -127,7 +137,7 @@ function _militiaCount(pool) {
 function _militiaDefense(pool) {
   const n = _militiaCount(pool);
   if (n <= 0 || !pool?.unitDef) return 0;
-  return n * (pool.unitDef.defense ?? 0);
+  return n * (pool.effectiveDef ?? pool.unitDef.defense ?? 0);
 }
 
 function _ensureHpPools(army) {
@@ -257,8 +267,8 @@ function _collectMilitiaUnits(pool) {
       typeId: pool.unitId,
       hp,
       maxHp: Math.max(1, pool.unitDef.maxHp ?? 5),
-      attack: pool.unitDef.attack ?? 0,
-      defense: pool.unitDef.defense ?? 0,
+      attack: pool.effectiveAtk ?? pool.unitDef.attack ?? 0,
+      defense: pool.effectiveDef ?? pool.unitDef.defense ?? 0,
       unitType: pool.unitDef.unitType ?? null,
       traitIds: [],
     });
@@ -755,19 +765,25 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
       const u = UNIT_MAP[typeId];
       return s + ((u?.attack ?? 0) + (u?.defense ?? 0)) * count;
     }, 0);
+    const _milPow = (pool) => {
+      const n = _militiaCount(pool);
+      const u = pool?.unitDef;
+      return n > 0 && u ? ((u.attack ?? 0) + (u.defense ?? 0)) * n : 0;
+    };
+    const _randXp = (base) => Math.round(base * (0.9 + Math.random() * 0.3));
 
     let attHeroXp = 0, defHeroXp = 0;
     if (outcome === 'attacker') {
-      const pow = _power(enemyDefArmy);
-      attHeroXp = attHero && isHeroActive(attHero) ? 20 + Math.floor(pow / 10) : 0;
-      defHeroXp = defHero && isHeroActive(defHero) ? 5 : 0;
+      const pow = _power(enemyDefArmy) + _milPow(militiaPool);
+      attHeroXp = attHero && isHeroActive(attHero) ? _randXp(25 + Math.floor(pow / 8)) : 0;
+      defHeroXp = defHero && isHeroActive(defHero) ? _randXp(8) : 0;
     } else if (outcome === 'defender') {
       const pow = _power(attArmy);
-      defHeroXp = defHero && isHeroActive(defHero) ? 20 + Math.floor(pow / 10) : 0;
-      attHeroXp = attHero && isHeroActive(attHero) ? 5 : 0;
+      defHeroXp = defHero && isHeroActive(defHero) ? _randXp(25 + Math.floor(pow / 8)) : 0;
+      attHeroXp = attHero && isHeroActive(attHero) ? _randXp(8) : 0;
     } else {
-      attHeroXp = attHero && isHeroActive(attHero) ? 5 : 0;
-      defHeroXp = defHero && isHeroActive(defHero) ? 5 : 0;
+      attHeroXp = attHero && isHeroActive(attHero) ? _randXp(8) : 0;
+      defHeroXp = defHero && isHeroActive(defHero) ? _randXp(8) : 0;
     }
 
     // Stamp XP onto result so the battle report can display it
@@ -992,7 +1008,9 @@ export function resolveMonsterDenCombat(armyId, locationId, provinceId) {
     const fs = getFaction(army.factionId);
     const hero = fs?.heroes?.find(h => h.id === army.heroId) ?? null;
     if (hero && isHeroActive(hero)) {
-      const xp = outcome === 'attacker' ? 15 : 5;
+      const monPow = ((monDef.attack ?? 0) + (monDef.defense ?? 0)) * Math.max(1, startEnemyCount);
+      const base = outcome === 'attacker' ? 20 + Math.floor(monPow / 8) : 8;
+      const xp = Math.round(base * (0.9 + Math.random() * 0.3));
       addHeroExperience(hero, xp);
     }
     if (outcome === 'defender' && armySize(army) <= 0) {

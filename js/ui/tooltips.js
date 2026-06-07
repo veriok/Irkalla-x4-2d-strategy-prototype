@@ -78,7 +78,8 @@ export function showUnitTooltip(uDef, factionDef, anchorEl, currentHp = null, ma
 
   const title = document.createElement('div');
   title.className = 'unit-tooltip__title';
-  title.textContent = uDef.name ?? 'Unknown Unit';
+  const tierNum = uDef.isMilitia ? 0 : (uDef.tier ?? 1);
+  title.innerHTML = `<span>${uDef.name ?? 'Unknown Unit'}</span><span class="unit-tooltip__tier">T${tierNum}</span>`;
   unitTooltipEl.appendChild(title);
 
   const preview = createNativePreviewCard({

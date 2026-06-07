@@ -910,7 +910,7 @@
   justify-content: center;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
   box-shadow: inset 0 0 8px rgba(200, 149, 42, 0.15);
 }
