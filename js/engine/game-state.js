@@ -26,6 +26,7 @@ import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
 import { TECH_MAP, resolveTechBaseCost } from '../data/techs-data.js';
+import { HERO_SKILL_MAP } from '../data/hero-skills-data.js';
 import { createProvince } from '../models/province.js';
 import {
   createArmy,
@@ -352,6 +353,16 @@ export function computeMilitiaMax(province) {
   }
   const fs = state.factions.get(province.ownerId);
   total += fs?.globalMilitiaBonus ?? 0;
+  // Governor Castellan militia bonus
+  if (province.governorId && fs) {
+    const governor = fs.heroes?.find(h => h.id === province.governorId);
+    if (governor && governor.woundedFor === 0 && (!governor.assignment || governor.assignment.transitFor === 0)) {
+      for (const { skillId, tier } of (governor.skills ?? [])) {
+        const tierDef = HERO_SKILL_MAP[skillId]?.tiers.find(t => t.tier === tier);
+        if (tierDef?.effect?.type === 'province_militia_bonus') total += tierDef.effect.amount;
+      }
+    }
+  }
   return total;
 }
 

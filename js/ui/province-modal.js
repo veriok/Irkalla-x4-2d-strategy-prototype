@@ -64,14 +64,24 @@ import { HERO_CLASS_MAP } from '../data/hero-classes-data.js';
 import { heroGenderEmoji } from '../models/hero.js';
 import { openHeroAssignModal } from './hero-assign-modal.js';
 
-// ─── Build speed helper (governor Builder skill) ──────────
-/** Returns the governor's build-time reduction in turns (0 if no active governor). */
-function _getGovernorBuildSpeedBonus(prov) {
-  if (!prov.governorId) return 0;
+// ─── Governor province bonus helpers ─────────────────────
+
+function _getGovernorBonuses(prov) {
+  if (!prov.governorId) return null;
   const fs = getFaction(state.playerFactionId);
   const governor = fs?.heroes?.find(h => h.id === prov.governorId) ?? null;
-  if (!governor || !isHeroActive(governor)) return 0;
-  return getHeroProvinceBonuses(governor).buildSpeedBonus ?? 0;
+  if (!governor || !isHeroActive(governor)) return null;
+  return getHeroProvinceBonuses(governor);
+}
+
+/** Returns the governor's build-time reduction in turns (0 if no active governor). */
+function _getGovernorBuildSpeedBonus(prov) {
+  return _getGovernorBonuses(prov)?.buildSpeedBonus ?? 0;
+}
+
+/** Returns the governor's building cost discount percent (0 if none). */
+function _getGovernorBuildDiscountPercent(prov) {
+  return _getGovernorBonuses(prov)?.buildDiscountPercent ?? 0;
 }
 
 // ─── Recruit speed helper ─────────────────────────────────
@@ -88,8 +98,8 @@ function _getProvinceRecruitSpeed(prov) {
 }
 
 // ─── Build cost modifier helper ───────────────────────────
-/** Apply faction build cost modifiers (e.g. Clans +50% buildings). Returns { cost, buildTurns } */
-function _effectiveBuildingCost(bDef) {
+/** Apply faction build cost modifiers + governor discount. Returns { cost, buildTurns } */
+function _effectiveBuildingCost(bDef, prov = null) {
   const factionId = state.playerFactionId;
   const faction   = FACTION_MAP[factionId];
   const fs        = getFaction(factionId);
@@ -97,9 +107,11 @@ function _effectiveBuildingCost(bDef) {
     faction?.effects ?? [],
     fs?.appliedTechEffects ?? []
   );
+  const govDiscount = prov ? _getGovernorBuildDiscountPercent(prov) : 0;
   const cost = {};
   for (const [res, amt] of Object.entries(bDef.cost ?? {})) {
-    cost[res] = Math.ceil(amt * buildingMultiplier);
+    const base = Math.ceil(amt * buildingMultiplier);
+    cost[res] = govDiscount > 0 ? Math.max(0, Math.ceil(base * (1 - govDiscount / 100))) : base;
   }
   return { cost, buildTurns: bDef.buildTurns + timePenalty };
 }
@@ -740,7 +752,7 @@ function _renderSlotActions(prov, loc, buildingId) {
     const alreadyQueued = prov.productionQueue?.some(
       item => item.type === 'building' && item.id === upgradeDef.id
     );
-    const { cost: effCost, buildTurns: effTurns } = _effectiveBuildingCost(upgradeDef);
+    const { cost: effCost, buildTurns: effTurns } = _effectiveBuildingCost(upgradeDef, prov);
     const costStr = _costStr(effCost, allRes);
     const affordable = canAfford(state.playerFactionId, effCost);
 
@@ -870,7 +882,7 @@ function _renderEmptySlotBuildMenu(prov, loc) {
   for (const bDef of [...available, ...blocked]) {
     const isBlocked    = !availableIds.has(bDef.id);
     const blockedByDef = isBlocked ? _mainBuildingBlocker(bDef, loc.type, installedIds) : null;
-    const { cost: effCost, buildTurns: effTurns } = _effectiveBuildingCost(bDef);
+    const { cost: effCost, buildTurns: effTurns } = _effectiveBuildingCost(bDef, prov);
     const affordable = canAfford(state.playerFactionId, effCost);
     const costStr    = _costStr(effCost, allRes);
     const alreadyQ   = prov.productionQueue?.some(i => i.type === 'building' && i.id === bDef.id);
@@ -1165,13 +1177,18 @@ function _renderRecruit(prov) {
   sidebarActEl.appendChild(header);
 
   const recruitSpeed = _getProvinceRecruitSpeed(prov);
+  const govBonuses   = _getGovernorBonuses(prov);
+  const govCostDiscount   = govBonuses?.unitCostDiscountPercent ?? 0;
+  const govRecruitSpeed   = govBonuses?.unitRecruitSpeedBonus   ?? 0;
+  const totalRecruitSpeed = recruitSpeed + govRecruitSpeed;
 
   for (const { uDef, locationId } of units) {
-    const affordable  = canAfford(state.playerFactionId, uDef.cost) && !queueFull;
+    const recruitCost = _applyDiscount(uDef.cost, govCostDiscount);
+    const affordable  = canAfford(state.playerFactionId, recruitCost) && !queueFull;
     const stackSize   = uDef.stackSize ?? 1;
     const displayName = stackSize > 1 ? `${stackSize}× ${uDef.name}` : uDef.name;
-    const costStr     = _costStr(uDef.cost, allRes);
-    const effectiveTurns = Math.max(1, uDef.buildTurns - recruitSpeed);
+    const costStr     = _costStr(recruitCost, allRes);
+    const effectiveTurns = Math.max(1, uDef.buildTurns - totalRecruitSpeed);
 
     const row = document.createElement('div');
     row.className = 'pmod-recruit-row';
@@ -1207,7 +1224,7 @@ function _renderRecruit(prov) {
     btn.disabled    = !affordable;
     btn.title       = !affordable ? (queueFull ? 'Queue full' : "Can't afford") : `Recruit ×${stackSize}`;
     btn.addEventListener('click', () => {
-      if (!spendResources(state.playerFactionId, uDef.cost)) return;
+      if (!spendResources(state.playerFactionId, recruitCost)) return;
       enqueueProduction(prov, { type: 'unit', id: uDef.id, locationId, turnsRemaining: effectiveTurns });
       renderResourceBar();
       _render();
@@ -1493,6 +1510,15 @@ export function renderProvinceActionBar(prov, containerEl, onRefresh) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────
+
+function _applyDiscount(cost, discountPercent) {
+  if (!discountPercent || !cost) return cost;
+  const result = {};
+  for (const [res, amt] of Object.entries(cost)) {
+    result[res] = Math.max(0, Math.ceil(amt * (1 - discountPercent / 100)));
+  }
+  return result;
+}
 
 function _costStr(cost, allRes) {
   return Object.entries(cost ?? {})

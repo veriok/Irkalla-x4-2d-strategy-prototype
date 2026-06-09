@@ -36,7 +36,7 @@ import { flashCombat, flashConquest } from '../ui/map-view.js';
 import { logCapture, logMessage } from '../ui/event-log.js';
 import { emit } from './game-events.js';
 import { GAME_EVENTS, UNIT_TYPES } from '../data/enums.js';
-import { isHeroActive, addHeroExperience, woundHero, getHeroArmyBonuses } from './hero-engine.js';
+import { isHeroActive, addHeroExperience, woundHero, getHeroArmyBonuses, getHeroWoundChanceBonus, getHeroProvinceBonuses } from './hero-engine.js';
 import { ARTIFACT_MAP, rollRandomArtifact } from '../data/artifacts-data.js';
 import { SPELL_MAP } from '../data/hero-spells-data.js';
 import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense, getSiegeExpertReduction } from './tech-effects.js';
@@ -672,6 +672,14 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
       if (eff.type === 'defense_percent') statusDefensePercent += (eff.amount ?? 0) * (se.stacks ?? 1);
     }
   }
+  // Governor Stalwart defense bonus
+  if (targetP.governorId && targetP.ownerId !== 'neutral') {
+    const defFactionState = getFaction(targetP.ownerId);
+    const governor = defFactionState?.heroes?.find(h => h.id === targetP.governorId);
+    if (governor && isHeroActive(governor)) {
+      statusDefensePercent += getHeroProvinceBonuses(governor).defensePercent ?? 0;
+    }
+  }
   const statusDefMult = 1 + statusDefensePercent / 100;
   // Siege Expert trait reduces the defender's fortification/terrain bonus
   const siegeReduction = getSiegeExpertReduction(attArmy, UNIT_MAP);
@@ -762,8 +770,8 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     const attDamage = _sumDamage(damageToDef);
     const defDamage = _sumDamage(damageToAtt);
 
-    const attWoundChance = Math.min(0.95, WOUND_CHANCE + (getFaction(attArmy.factionId)?.woundChanceBonus ?? 0));
-    const defWoundChance = enemyDefArmy ? Math.min(0.95, WOUND_CHANCE + (getFaction(enemyDefArmy.factionId)?.woundChanceBonus ?? 0)) : WOUND_CHANCE;
+    const attWoundChance = Math.min(0.95, WOUND_CHANCE + (getFaction(attArmy.factionId)?.woundChanceBonus ?? 0) + getHeroWoundChanceBonus(attArmy));
+    const defWoundChance = enemyDefArmy ? Math.min(0.95, WOUND_CHANCE + (getFaction(enemyDefArmy.factionId)?.woundChanceBonus ?? 0) + getHeroWoundChanceBonus(enemyDefArmy)) : WOUND_CHANCE;
     const attApply = _applyBatchDamageToArmy(attArmy, damageToAtt, attWoundChance);
     attPendingCasualties.push(...attApply.pendingCasualties);
     const defArmyApply = _applyBatchDamageToArmy(enemyDefArmy, damageToDef, defWoundChance);

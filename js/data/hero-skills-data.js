@@ -9,32 +9,45 @@
  * spellbook:  SPELL_SCHOOL_IDS value — skill only rolls if faction.spellbooks[spellbook] >= 1.
  *
  * Effect types (applied via hero-engine.js getHeroArmyBonuses / getHeroProvinceBonuses):
+ *
+ * Army effects (getHeroArmyBonuses / _applySkillEffect):
  *   army_unit_type_bonus         — { unitType, stat: 'attack'|'defense', percent }
  *   army_unit_type_multi_bonus   — { unitType, bonuses: [{stat, percent}…] }
  *   army_anti_unit_type_bonus    — { targetUnitType, stat, percent }
  *   army_all_units_multi_bonus   — { bonuses: [{stat, percent}…] }
+ *   reduce_fortification         — { percent }
+ *   army_wound_chance            — { bonus } (decimal, e.g. 0.05 = +5% wound-instead-of-kill chance)
+ *
+ * Province effects (getHeroProvinceBonuses — governor only):
  *   province_income_bonus        — { percent }
  *   province_flat_gold           — { amount }
- *   province_build_speed         — { amount }
+ *   province_build_discount      — { discountPercent, speedBonus }
+ *   province_build_speed         — { amount }  (legacy; speed-only, no discount)
+ *   province_defense_bonus       — { percent }
+ *   province_militia_bonus       — { amount }
+ *   province_research_bonus      — { percent }
+ *   unit_cost_discount           — { percent }
+ *   unit_recruit_speed           — { amount }
+ *
+ * Hero effects:
  *   hero_mana_regen              — { amount }
- *   hero_max_mana                — { percent }
+ *   hero_flat_mana               — { amount }  (flat addition to max mana)
  *   hero_channeling              — { tier } (gates spell casting by tier)
  *   hero_spell_school            — { schoolId, tier } (school-specific efficiency; future use)
- *   reduce_fortification         — { percent }
  */
 
 import { HERO_SKILL_IDS, HERO_ATTRIBUTES, UNIT_TYPES, SPELL_SCHOOL_IDS } from './enums.js';
 
 export const HERO_SKILLS = [
 
-  // ─── Combat Skills ────────────────────────────────────────
+  // ─── ATK: Leader Skills ───────────────────────────────────
 
   {
     id: HERO_SKILL_IDS.INFANTRY_LEADER,
     name: 'Infantry Leader',
     category: 'combat',
     icon: '⚔️',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.ATK,
     required: null,
     spellbook: null,
     tiers: [
@@ -61,7 +74,7 @@ export const HERO_SKILLS = [
     name: 'Cavalry Leader',
     category: 'combat',
     icon: '🐎',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.ATK,
     required: null,
     spellbook: null,
     tiers: [
@@ -88,7 +101,7 @@ export const HERO_SKILLS = [
     name: 'Archer Leader',
     category: 'combat',
     icon: '🏹',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.ATK,
     required: null,
     spellbook: null,
     tiers: [
@@ -111,11 +124,40 @@ export const HERO_SKILLS = [
   },
 
   {
+    id: HERO_SKILL_IDS.CONSTRUCT_LEADER,
+    name: 'Construct Leader',
+    category: 'combat',
+    icon: '⚙️',
+    attribute: HERO_ATTRIBUTES.ATK,
+    required: null,
+    spellbook: null,
+    tiers: [
+      {
+        tier: 'novice',
+        description: '+10% construct attack.',
+        effect: { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack', percent: 10 },
+      },
+      {
+        tier: 'expert',
+        description: '+15% construct attack, +10% construct defense.',
+        effect: { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, bonuses: [{ stat: 'attack', percent: 15 }, { stat: 'defense', percent: 10 }] },
+      },
+      {
+        tier: 'master',
+        description: '+25% construct attack, +15% construct defense.',
+        effect: { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, bonuses: [{ stat: 'attack', percent: 25 }, { stat: 'defense', percent: 15 }] },
+      },
+    ],
+  },
+
+  // ─── TACTICS: Tactical Skills ─────────────────────────────
+
+  {
     id: HERO_SKILL_IDS.SIEGE_EXPERT_SKILL,
     name: 'Siege Expert',
     category: 'combat',
     icon: '🏰',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.TACTICS,
     required: null,
     spellbook: null,
     tiers: [
@@ -138,84 +180,194 @@ export const HERO_SKILLS = [
   },
 
   {
-    id: HERO_SKILL_IDS.BATTLE_HARDENED,
-    name: 'Battle Hardened',
+    id: HERO_SKILL_IDS.LOGISTICS,
+    name: 'Logistics',
     category: 'combat',
-    icon: '🛡️',
-    attribute: null,
+    icon: '🗺️',
+    attribute: HERO_ATTRIBUTES.TACTICS,
     required: null,
     spellbook: null,
     tiers: [
       {
         tier: 'novice',
-        description: '+5% attack and defense to all units.',
-        effect: { type: 'army_all_units_multi_bonus', bonuses: [{ stat: 'attack', percent: 5 }, { stat: 'defense', percent: 5 }] },
+        description: '25% chance to gain +1 movement at the start of each turn.',
+        effect: { type: 'army_logistics', chance: 0.25 },
       },
       {
         tier: 'expert',
-        description: '+10% attack and defense to all units.',
-        effect: { type: 'army_all_units_multi_bonus', bonuses: [{ stat: 'attack', percent: 10 }, { stat: 'defense', percent: 10 }] },
+        description: '50% chance to gain +1 movement at the start of each turn.',
+        effect: { type: 'army_logistics', chance: 0.50 },
       },
       {
         tier: 'master',
-        description: '+15% attack and defense to all units.',
-        effect: { type: 'army_all_units_multi_bonus', bonuses: [{ stat: 'attack', percent: 15 }, { stat: 'defense', percent: 15 }] },
+        description: '75% chance to gain +1 movement at the start of each turn.',
+        effect: { type: 'army_logistics', chance: 0.75 },
       },
     ],
   },
 
   {
-    id: HERO_SKILL_IDS.ANTI_CAVALRY_SKILL,
-    name: 'Anti-Cavalry',
+    id: HERO_SKILL_IDS.MUSTERER,
+    name: 'Musterer',
     category: 'combat',
-    icon: '⚡',
-    attribute: null,
+    icon: '📯',
+    attribute: HERO_ATTRIBUTES.TACTICS,
     required: null,
     spellbook: null,
     tiers: [
       {
         tier: 'novice',
-        description: '+15% attack against cavalry units.',
-        effect: { type: 'army_anti_unit_type_bonus', targetUnitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 15 },
+        description: '-10% unit recruit cost in governed province.',
+        effect: { type: 'unit_cost_discount', percent: 10 },
       },
       {
         tier: 'expert',
-        description: '+30% attack against cavalry units.',
-        effect: { type: 'army_anti_unit_type_bonus', targetUnitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 30 },
+        description: '-15% unit recruit cost and -1 recruit turn in governed province.',
+        effect: { type: 'unit_cost_discount', percent: 15, recruitSpeedBonus: 1 },
       },
       {
         tier: 'master',
-        description: '+50% attack against cavalry units.',
-        effect: { type: 'army_anti_unit_type_bonus', targetUnitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 50 },
+        description: '-20% unit recruit cost and -2 recruit turns in governed province.',
+        effect: { type: 'unit_cost_discount', percent: 20, recruitSpeedBonus: 2 },
       },
     ],
   },
 
-  // ─── Governance Skills ────────────────────────────────────
+  // ─── DEF: Defensive / Militia Skills ─────────────────────
+
+  {
+    id: HERO_SKILL_IDS.STALWART,
+    name: 'Stalwart',
+    category: 'defense',
+    icon: '🛡️',
+    attribute: HERO_ATTRIBUTES.DEF,
+    required: null,
+    spellbook: null,
+    tiers: [
+      {
+        tier: 'novice',
+        description: '+10% province defense bonus when governing.',
+        effect: { type: 'province_defense_bonus', percent: 10 },
+      },
+      {
+        tier: 'expert',
+        description: '+20% province defense bonus when governing.',
+        effect: { type: 'province_defense_bonus', percent: 20 },
+      },
+      {
+        tier: 'master',
+        description: '+30% province defense bonus when governing.',
+        effect: { type: 'province_defense_bonus', percent: 30 },
+      },
+    ],
+  },
+
+  {
+    id: HERO_SKILL_IDS.CASTELLAN,
+    name: 'Castellan',
+    category: 'defense',
+    icon: '🏯',
+    attribute: HERO_ATTRIBUTES.DEF,
+    required: null,
+    spellbook: null,
+    tiers: [
+      {
+        tier: 'novice',
+        description: '+1 militia cap in governed province.',
+        effect: { type: 'province_militia_bonus', amount: 1 },
+      },
+      {
+        tier: 'expert',
+        description: '+2 militia cap in governed province.',
+        effect: { type: 'province_militia_bonus', amount: 2 },
+      },
+      {
+        tier: 'master',
+        description: '+3 militia cap in governed province.',
+        effect: { type: 'province_militia_bonus', amount: 3 },
+      },
+    ],
+  },
+
+  {
+    id: HERO_SKILL_IDS.FIRST_AID,
+    name: 'First Aid',
+    category: 'defense',
+    icon: '⚕️',
+    attribute: HERO_ATTRIBUTES.DEF,
+    required: null,
+    spellbook: null,
+    tiers: [
+      {
+        tier: 'novice',
+        description: '+5% chance for army units to be wounded instead of killed.',
+        effect: { type: 'army_wound_chance', bonus: 0.05 },
+      },
+      {
+        tier: 'expert',
+        description: '+10% chance for army units to be wounded instead of killed.',
+        effect: { type: 'army_wound_chance', bonus: 0.10 },
+      },
+      {
+        tier: 'master',
+        description: '+15% chance for army units to be wounded instead of killed.',
+        effect: { type: 'army_wound_chance', bonus: 0.15 },
+      },
+    ],
+  },
+
+  {
+    id: HERO_SKILL_IDS.RESILIENT,
+    name: 'Resilient',
+    category: 'defense',
+    icon: '💪',
+    attribute: HERO_ATTRIBUTES.DEF,
+    required: null,
+    spellbook: null,
+    tiers: [
+      {
+        tier: 'novice',
+        description: 'Reduce wound recovery time by 1 turn (min 1).',
+        effect: { type: 'hero_wound_reduction', amount: 1 },
+      },
+      {
+        tier: 'expert',
+        description: 'Reduce wound recovery time by 2 turns (min 1).',
+        effect: { type: 'hero_wound_reduction', amount: 2 },
+      },
+      {
+        tier: 'master',
+        description: 'Reduce wound recovery time by 3 turns (min 1).',
+        effect: { type: 'hero_wound_reduction', amount: 3 },
+      },
+    ],
+  },
+
+  // ─── GOVERNANCE: Building / Income Skills ─────────────────
 
   {
     id: HERO_SKILL_IDS.ADMINISTRATOR,
     name: 'Administrator',
     category: 'governance',
     icon: '📜',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.GOVERNANCE,
     required: null,
     spellbook: null,
     tiers: [
       {
         tier: 'novice',
-        description: '+6% income to governed province.',
-        effect: { type: 'province_income_bonus', percent: 6 },
+        description: '+8% income to governed province.',
+        effect: { type: 'province_income_bonus', percent: 8 },
       },
       {
         tier: 'expert',
-        description: '+12% income to governed province.',
-        effect: { type: 'province_income_bonus', percent: 12 },
+        description: '+16% income to governed province.',
+        effect: { type: 'province_income_bonus', percent: 16 },
       },
       {
         tier: 'master',
-        description: '+20% income to governed province.',
-        effect: { type: 'province_income_bonus', percent: 20 },
+        description: '+24% income to governed province.',
+        effect: { type: 'province_income_bonus', percent: 24 },
       },
     ],
   },
@@ -225,7 +377,7 @@ export const HERO_SKILLS = [
     name: 'Trader',
     category: 'governance',
     icon: '💰',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.GOVERNANCE,
     required: null,
     spellbook: null,
     tiers: [
@@ -252,36 +404,63 @@ export const HERO_SKILLS = [
     name: 'Builder',
     category: 'governance',
     icon: '🔨',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.GOVERNANCE,
     required: null,
     spellbook: null,
     tiers: [
       {
         tier: 'novice',
-        description: '-1 build turn for all constructions in governed province.',
-        effect: { type: 'province_build_speed', amount: 1 },
+        description: '-5% building cost in governed province.',
+        effect: { type: 'province_build_discount', discountPercent: 5, speedBonus: 0 },
       },
       {
         tier: 'expert',
-        description: '-2 build turns for all constructions in governed province.',
-        effect: { type: 'province_build_speed', amount: 2 },
+        description: '-10% building cost and -1 build turn in governed province.',
+        effect: { type: 'province_build_discount', discountPercent: 10, speedBonus: 1 },
       },
       {
         tier: 'master',
-        description: '-3 build turns for all constructions in governed province.',
-        effect: { type: 'province_build_speed', amount: 3 },
+        description: '-20% building cost and -2 build turns in governed province.',
+        effect: { type: 'province_build_discount', discountPercent: 20, speedBonus: 2 },
       },
     ],
   },
 
-  // ─── Mana Skills ──────────────────────────────────────────
+  // ─── KNOWLEDGE: Mana / Research / Channeling ──────────────
+
+  {
+    id: HERO_SKILL_IDS.SAGE,
+    name: 'Sage',
+    category: 'magic',
+    icon: '📚',
+    attribute: HERO_ATTRIBUTES.KNOWLEDGE,
+    required: null,
+    spellbook: null,
+    tiers: [
+      {
+        tier: 'novice',
+        description: '+8% research output in governed province.',
+        effect: { type: 'province_research_bonus', percent: 8 },
+      },
+      {
+        tier: 'expert',
+        description: '+16% research output in governed province.',
+        effect: { type: 'province_research_bonus', percent: 16 },
+      },
+      {
+        tier: 'master',
+        description: '+24% research output in governed province.',
+        effect: { type: 'province_research_bonus', percent: 24 },
+      },
+    ],
+  },
 
   {
     id: HERO_SKILL_IDS.MANA_MASTERY,
     name: 'Mana Mastery',
     category: 'magic',
     icon: '💧',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.KNOWLEDGE,
     required: null,
     spellbook: null,
     tiers: [
@@ -308,24 +487,24 @@ export const HERO_SKILLS = [
     name: 'Mana Capacity',
     category: 'magic',
     icon: '🔮',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.KNOWLEDGE,
     required: null,
     spellbook: null,
     tiers: [
       {
         tier: 'novice',
-        description: '+10% maximum mana.',
-        effect: { type: 'hero_max_mana', percent: 10 },
+        description: '+15 maximum mana.',
+        effect: { type: 'hero_flat_mana', amount: 15 },
       },
       {
         tier: 'expert',
-        description: '+20% maximum mana.',
-        effect: { type: 'hero_max_mana', percent: 20 },
+        description: '+30 maximum mana.',
+        effect: { type: 'hero_flat_mana', amount: 30 },
       },
       {
         tier: 'master',
-        description: '+30% maximum mana.',
-        effect: { type: 'hero_max_mana', percent: 30 },
+        description: '+45 maximum mana.',
+        effect: { type: 'hero_flat_mana', amount: 45 },
       },
     ],
   },
@@ -359,16 +538,15 @@ export const HERO_SKILLS = [
     ],
   },
 
-  // ─── Magic School Skills ──────────────────────────────────
+  // ─── SPELLPOWER: Magic School Skills ─────────────────────
   // Require CHANNELING. Only roll if faction has a spellbook for the school.
-  // Boost the efficiency of spells in that school (effect tiers TBD by engine).
 
   {
     id: HERO_SKILL_IDS.FIRE_MAGIC,
     name: 'Fire Magic',
     category: 'magic',
     icon: '🔥',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.SPELLPOWER,
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.FIRE,
     tiers: [
@@ -382,7 +560,7 @@ export const HERO_SKILLS = [
     name: 'Earth Magic',
     category: 'magic',
     icon: '🪨',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.SPELLPOWER,
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.EARTH,
     tiers: [
@@ -396,7 +574,7 @@ export const HERO_SKILLS = [
     name: 'Air Magic',
     category: 'magic',
     icon: '🌪️',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.SPELLPOWER,
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.AIR,
     tiers: [
@@ -410,7 +588,7 @@ export const HERO_SKILLS = [
     name: 'Arcane Magic',
     category: 'magic',
     icon: '✨',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.SPELLPOWER,
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.ARCANE,
     tiers: [
@@ -424,7 +602,7 @@ export const HERO_SKILLS = [
     name: 'Rune Magic',
     category: 'magic',
     icon: '᚛',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.SPELLPOWER,
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.RUNE,
     tiers: [
@@ -438,7 +616,7 @@ export const HERO_SKILLS = [
     name: 'Death Magic',
     category: 'magic',
     icon: '💀',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.SPELLPOWER,
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.DEATH,
     tiers: [
@@ -452,7 +630,7 @@ export const HERO_SKILLS = [
     name: 'Nature Magic',
     category: 'magic',
     icon: '🌿',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.SPELLPOWER,
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.NATURE,
     tiers: [
@@ -466,7 +644,7 @@ export const HERO_SKILLS = [
     name: 'Ancient Magic',
     category: 'magic',
     icon: '🏺',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.SPELLPOWER,
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.ANCIENT,
     tiers: [
@@ -480,7 +658,7 @@ export const HERO_SKILLS = [
     name: 'Order Magic',
     category: 'magic',
     icon: '⚖️',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.SPELLPOWER,
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.ORDER,
     tiers: [
@@ -494,7 +672,7 @@ export const HERO_SKILLS = [
     name: 'Light Magic',
     category: 'magic',
     icon: '☀️',
-    attribute: null,
+    attribute: HERO_ATTRIBUTES.SPELLPOWER,
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.LIGHT,
     tiers: [

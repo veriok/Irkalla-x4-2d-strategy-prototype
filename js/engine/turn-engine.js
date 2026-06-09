@@ -14,7 +14,7 @@
 import { state, addResources, getProvincesByFaction, getArmiesByFaction,
          checkElimination, getFaction, computeMilitiaMax,
          getArmiesInProvince, getProvince } from './game-state.js';
-import { isHeroActive, tickHeroesForFaction } from './hero-engine.js';
+import { isHeroActive, tickHeroesForFaction, getHeroProvinceBonuses, getHeroLogisticsChance } from './hero-engine.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
 import { BUILDING_MAP } from '../data/buildings-data.js';
@@ -121,6 +121,15 @@ export function computeProvinceIncomeBreakdown(province, factionId) {
     if (governor && isHeroActive(governor) && governor.stats.governance > 0) {
       const govPercent = governor.stats.governance * 3;
       allModifiers.push({ label: `Governor (${governor.name})`, percent: govPercent });
+    }
+    // ── Governor Sage research bonus (research resource only) ─
+    if (governor && isHeroActive(governor)) {
+      const bonuses = getHeroProvinceBonuses(governor);
+      if (bonuses.researchPercent > 0) {
+        const resId = faction.resources.research.id;
+        if (!resModifiers[resId]) resModifiers[resId] = [];
+        resModifiers[resId].push({ label: `Sage (${governor.name})`, percent: bonuses.researchPercent });
+      }
     }
   }
 
@@ -430,11 +439,14 @@ function tickProvinceStatuses() {
 
 function resetArmyMoves(factionId) {
   for (const army of getArmiesByFaction(factionId)) {
-    // Refresh roads_movement status: remove stale, re-apply if province has roads
-    army.statusEffects = (army.statusEffects ?? []).filter(s => s.type !== 'roads_movement');
     const prov = getProvince(army.provinceId);
     const hasRoads = prov?.locations.some(loc => getInstalledBuildingIds(loc).includes('roads'));
-    if (hasRoads) army.statusEffects.push({ type: 'roads_movement', movementBonus: 1 });
+    if (hasRoads) army.statusEffects.push({ type: 'roads_movement', movementBonus: 1, turnsRemaining: 1 });
+    // Logistics skill: random extra movement point
+    const logisticsChance = getHeroLogisticsChance(army);
+    if (logisticsChance > 0 && Math.random() < logisticsChance) {
+      army.statusEffects.push({ type: 'logistics_movement', movementBonus: 1, turnsRemaining: 1 });
+    }
     resetMoves(army);
   }
 }

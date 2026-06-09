@@ -106,7 +106,8 @@ export function woundHero(heroId, factionId) {
   if (!hero) return;
   _clearPreviousAssignmentTarget(hero);
   hero.assignment = null;
-  hero.woundedFor = 2 + Math.floor(Math.random() * 3); // 2-4 turns
+  const baseWound = 3 + Math.floor(Math.random() * 4); // 3-6 turns
+  hero.woundedFor = Math.max(1, baseWound - _getHeroWoundReduction(hero));
   emit(GAME_EVENTS.HERO_WOUNDED, { factionId, hero });
 }
 
@@ -412,6 +413,7 @@ export function getHeroArmyBonuses(hero) {
     allUnitsBonuses: [],
     movementBonus: 0,
     fortificationReduction: 0,
+    woundChanceBonus: 0,
   };
 
   // Process skills
@@ -472,6 +474,9 @@ function _applySkillEffect(effect, result) {
     case 'army_movement_bonus':
       result.movementBonus += effect.amount;
       break;
+    case 'army_wound_chance':
+      result.woundChanceBonus += effect.bonus ?? 0;
+      break;
   }
 }
 
@@ -480,20 +485,41 @@ function _applySkillEffect(effect, result) {
  * Returns a percent value (e.g. 15 = +15%).
  */
 export function getHeroProvinceBonuses(hero) {
-  if (!hero) return { incomePercent: 0, flatGold: 0, buildSpeedBonus: 0 };
+  if (!hero) return {
+    incomePercent: 0, flatGold: 0, buildSpeedBonus: 0,
+    buildDiscountPercent: 0, researchPercent: 0,
+    defensePercent: 0, militiaBonus: 0,
+    unitCostDiscountPercent: 0, unitRecruitSpeedBonus: 0,
+  };
 
-  let incomePercent = hero.attributes.governance * 3; // 3% per governance point
-  let flatGold = 0;
-  let buildSpeedBonus = 0;
+  let incomePercent       = hero.attributes.governance * 3; // 3% per governance point
+  let flatGold            = 0;
+  let buildSpeedBonus     = 0;
+  let buildDiscountPercent = 0;
+  let researchPercent     = 0;
+  let defensePercent      = 0;
+  let militiaBonus        = 0;
+  let unitCostDiscountPercent = 0;
+  let unitRecruitSpeedBonus   = 0;
 
   for (const { skillId, tier } of hero.skills) {
     const skillDef = HERO_SKILL_MAP[skillId];
     if (!skillDef) continue;
     const tierDef = skillDef.tiers.find(t => t.tier === tier);
     if (!tierDef?.effect) continue;
-    if (tierDef.effect.type === 'province_income_bonus') incomePercent += tierDef.effect.percent;
-    else if (tierDef.effect.type === 'province_flat_gold') flatGold += tierDef.effect.amount;
-    else if (tierDef.effect.type === 'province_build_speed') buildSpeedBonus += tierDef.effect.amount;
+    const eff = tierDef.effect;
+    switch (eff.type) {
+      case 'province_income_bonus':   incomePercent       += eff.percent;                                    break;
+      case 'province_flat_gold':      flatGold            += eff.amount;                                     break;
+      case 'province_build_speed':    buildSpeedBonus     += eff.amount;                                     break;
+      case 'province_build_discount': buildDiscountPercent += eff.discountPercent ?? 0;
+                                      buildSpeedBonus     += eff.speedBonus ?? 0;                            break;
+      case 'province_research_bonus': researchPercent     += eff.percent;                                    break;
+      case 'province_defense_bonus':  defensePercent      += eff.percent;                                    break;
+      case 'province_militia_bonus':  militiaBonus        += eff.amount;                                     break;
+      case 'unit_cost_discount':      unitCostDiscountPercent += eff.percent ?? 0;
+                                      unitRecruitSpeedBonus   += eff.recruitSpeedBonus ?? 0;                 break;
+    }
   }
 
   // Artifact governance bonuses
@@ -511,7 +537,11 @@ export function getHeroProvinceBonuses(hero) {
     }
   }
 
-  return { incomePercent, flatGold, buildSpeedBonus };
+  return {
+    incomePercent, flatGold, buildSpeedBonus, buildDiscountPercent,
+    researchPercent, defensePercent, militiaBonus,
+    unitCostDiscountPercent, unitRecruitSpeedBonus,
+  };
 }
 
 /**
@@ -520,6 +550,12 @@ export function getHeroProvinceBonuses(hero) {
 export function getHeroMaxMana(hero) {
   if (!hero) return 0;
   let max = hero.attributes.knowledge * 10;
+  for (const { skillId, tier } of hero.skills) {
+    const skillDef = HERO_SKILL_MAP[skillId];
+    if (!skillDef) continue;
+    const tierDef = skillDef.tiers.find(t => t.tier === tier);
+    if (tierDef?.effect?.type === 'hero_flat_mana') max += tierDef.effect.amount;
+  }
   for (const slot of ['weapon', 'armor', 'accessory1', 'accessory2']) {
     const artId = hero.artifacts[slot];
     if (!artId) continue;
@@ -718,6 +754,44 @@ export function grantStartingHero(factionId) {
   }
 
   return hero;
+}
+
+// ─── Wound reduction (Resilient skill) ───────────────────
+
+function _getHeroWoundReduction(hero) {
+  let reduction = 0;
+  for (const { skillId, tier } of hero.skills) {
+    const tierDef = HERO_SKILL_MAP[skillId]?.tiers.find(t => t.tier === tier);
+    if (tierDef?.effect?.type === 'hero_wound_reduction') reduction += tierDef.effect.amount;
+  }
+  return reduction;
+}
+
+// ─── Logistics chance (army movement at turn start) ───────
+
+/** Returns the logistics movement chance (0–1) for an army's hero, or 0 if none. */
+export function getHeroLogisticsChance(army) {
+  if (!army?.heroId) return 0;
+  const fs = getFaction(army.factionId);
+  const hero = fs?.heroes.find(h => h.id === army.heroId);
+  if (!hero || !isHeroActive(hero)) return 0;
+  let chance = 0;
+  for (const { skillId, tier } of hero.skills) {
+    const tierDef = HERO_SKILL_MAP[skillId]?.tiers.find(t => t.tier === tier);
+    if (tierDef?.effect?.type === 'army_logistics') chance += tierDef.effect.chance ?? 0;
+  }
+  return Math.min(1, chance);
+}
+
+// ─── Wound chance bonus ───────────────────────────────────
+
+/** Get the wound-instead-of-kill chance bonus (decimal) from the army's hero (First Aid skill). */
+export function getHeroWoundChanceBonus(army) {
+  if (!army?.heroId) return 0;
+  const fs = getFaction(army.factionId);
+  const hero = fs?.heroes.find(h => h.id === army.heroId);
+  if (!hero || !isHeroActive(hero)) return 0;
+  return getHeroArmyBonuses(hero)?.woundChanceBonus ?? 0;
 }
 
 // ─── Fortification reduction ──────────────────────────────

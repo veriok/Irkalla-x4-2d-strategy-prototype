@@ -134,20 +134,30 @@ export const HERO_CLASS_IDS = Object.freeze({
 });
 
 export const HERO_SKILL_IDS = Object.freeze({
-  // Combat skills
+  // ATK — leader skills
   INFANTRY_LEADER:   'infantry_leader',
   CAVALRY_LEADER:    'cavalry_leader',
   ARCHER_LEADER:     'archer_leader',
+  CONSTRUCT_LEADER:  'construct_leader',
+  // TACTICS — tactical skills
   SIEGE_EXPERT_SKILL:'siege_expert_skill',
-  BATTLE_HARDENED:   'battle_hardened',
-  ANTI_CAVALRY_SKILL:'anti_cavalry_skill',
-  // Governance skills
+  MUSTERER:          'musterer',
+  LOGISTICS:         'logistics',
+  // DEF — defensive / militia skills
+  STALWART:          'stalwart',
+  CASTELLAN:         'castellan',
+  FIRST_AID:         'first_aid',
+  RESILIENT:         'resilient',
+  // GOVERNANCE — building / income skills
   ADMINISTRATOR:     'administrator',
   TRADER:            'trader',
   BUILDER:           'builder',
-  // Channeling — universal magic prerequisite
+  // KNOWLEDGE — mana / research skills + channeling prerequisite
+  SAGE:              'sage',
+  MANA_MASTERY:      'mana_mastery',
+  MANA_CAPACITY:     'mana_capacity',
   CHANNELING:        'channeling',
-  // Magic school skills (boost spell efficiency; require CHANNELING)
+  // SPELLPOWER — magic school skills (require CHANNELING)
   FIRE_MAGIC:        'fire_magic',
   EARTH_MAGIC:       'earth_magic',
   AIR_MAGIC:         'air_magic',
@@ -158,9 +168,6 @@ export const HERO_SKILL_IDS = Object.freeze({
   ANCIENT_MAGIC:     'ancient_magic',
   ORDER_MAGIC:       'order_magic',
   LIGHT_MAGIC:       'light_magic',
-  // Mana skills
-  MANA_MASTERY:      'mana_mastery',
-  MANA_CAPACITY:     'mana_capacity',
 });
 
 export const SPELL_SCHOOL_IDS = Object.freeze({

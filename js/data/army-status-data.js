@@ -48,6 +48,16 @@ const ARMY_STATUSES = [
     onApply: null,
     onRemove: null,
   },
+  {
+    id: 'logistics_movement',
+    label: 'Logistics',
+    icon: '🗺️',
+    description: '+1 movement this turn from the hero\'s Logistics skill.',
+    effects: [],
+    movementBonus: 1,
+    onApply: null,
+    onRemove: null,
+  },
 ];
 
 export const ARMY_STATUS_MAP = Object.fromEntries(ARMY_STATUSES.map(s => [s.id, s]));
