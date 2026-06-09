@@ -35,7 +35,7 @@ import {
 } from '../models/location.js';
 import { enqueueProduction, dequeueProduction } from '../models/province.js';
 import { BUILDING_MAP, getBuildingsForLocation, getBuildingsForFaction, LOCATION_MAIN_CHAIN } from '../data/buildings-data.js';
-import { getRecruitableUnits, UNIT_MAP } from '../data/units-data.js';
+import { getRecruitableUnits, getUnitsForFaction, UNIT_MAP } from '../data/units-data.js';
 import { MONSTER_UNITS } from '../data/monsters-data.js';
 import { createCard } from './card-renderer.js';
 import { renderResourceBar } from './resource-bar.js';
@@ -835,13 +835,20 @@ function _renderEmptySlotBuildMenu(prov, loc) {
 
   // Tier-1 buildings blocked only by mainBuildingTier (all other prerequisites met)
   const blocked = getBuildingsForFaction(state.playerFactionId)
-    .filter(b =>
-      b.allowedLocTypes.includes(loc.type) &&
-      b.upgradeFromId === null &&
-      !installedIds.includes(b.id) &&
-      !availableIds.has(b.id) &&
-      _mainBuildingBlocker(b, loc.type, installedIds) !== null
-    );
+    .filter(b => {
+      if (!b.allowedLocTypes.includes(loc.type)) return false;
+      if (b.upgradeFromId !== null) return false;
+      if (installedIds.includes(b.id)) return false;
+      if (availableIds.has(b.id)) return false;
+      // hide — not grey — if tech missing, biome wrong, or coastal requirement unmet
+      if (b.techRequired && !unlockedTechs.includes(b.techRequired)) return false;
+      if (b.requiresCoastalProvince && !prov.isCoastal) return false;
+      if (b.requiresBiome) {
+        const allowed = Array.isArray(b.requiresBiome) ? b.requiresBiome : [b.requiresBiome];
+        if (!allowed.includes(prov.biomeId)) return false;
+      }
+      return _mainBuildingBlocker(b, loc.type, installedIds) !== null;
+    });
 
   const queueFull    = (prov.productionQueue?.length ?? 0) >= 5;
   const faction      = FACTION_MAP[state.playerFactionId];
@@ -1133,7 +1140,18 @@ function _renderRecruit(prov) {
     }
   }
 
-  if (units.length === 0) {
+  // Units that have tech unlocked but are missing their required building — show greyed
+  const allProvInstalledIds = prov.locations
+    .filter(l => l.isControllable)
+    .flatMap(l => getInstalledBuildingIds(l));
+  const blockedUnits = getUnitsForFaction(state.playerFactionId).filter(u => {
+    if (seen.has(u.id)) return false;
+    if (obsoletedUnits.has(u.id)) return false;
+    if (u.techRequired && !unlockedTechs.includes(u.techRequired)) return false;
+    return u.requiredBuilding != null;
+  });
+
+  if (units.length === 0 && blockedUnits.length === 0) {
     const hint = document.createElement('div');
     hint.className   = 'pmod-empty-hint';
     hint.textContent = 'No units available to recruit.';
@@ -1198,6 +1216,67 @@ function _renderRecruit(prov) {
 
     sidebarActEl.appendChild(row);
   }
+
+  for (const uDef of blockedUnits) {
+    const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(uDef.id, state.playerFactionId, UNIT_MAP);
+    const stackSize   = uDef.stackSize ?? 1;
+    const displayName = stackSize > 1 ? `${stackSize}× ${uDef.name}` : uDef.name;
+    const costStr     = _costStr(uDef.cost, allRes);
+    const needsHint   = _missingBuildingHint(uDef.requiredBuilding, allProvInstalledIds);
+
+    const row = document.createElement('div');
+    row.className = 'pmod-recruit-row pmod-recruit-row--blocked';
+
+    const card = createCard({
+      variant: 'unit',
+      backgroundSrc: faction?.unitCardBgImg ?? null,
+      foregroundSrc: uDef.cardSpriteImg ?? null,
+      fallbackIcon: uDef.emoji ?? '⚔',
+      fallbackName: uDef.name,
+      fallbackSub: `⚔${effAtk} 🛡${effDef}`,
+    });
+    card.addEventListener('mouseenter', () => showUnitTooltip(uDef, faction, card, null, null, effAtk, effDef));
+    card.addEventListener('mouseleave', hideUnitTooltip);
+    row.appendChild(card);
+
+    const info = document.createElement('div');
+    info.className = 'pmod-recruit-info';
+    info.innerHTML = `
+      <span class="pmod-recruit-name">${displayName}</span>
+      <span class="pmod-recruit-stats">⚔${uDef.attack} 🛡${uDef.defense} ❤${uDef.maxHp ?? 10}</span>
+      <span style="font-size:10px;color:var(--text-muted)">${costStr} · ${uDef.buildTurns}t</span>
+    `;
+    row.appendChild(info);
+
+    const btn = document.createElement('button');
+    btn.className   = 'card-action-btn';
+    btn.textContent = 'Recruit';
+    btn.disabled    = true;
+    btn.title       = needsHint ? `Needs: ${needsHint}` : 'Missing required building';
+    row.appendChild(btn);
+
+    sidebarActEl.appendChild(row);
+  }
+}
+
+function _missingBuildingHint(req, installedIds) {
+  if (!req) return null;
+  if (typeof req === 'string') return BUILDING_MAP[req]?.name ?? req;
+  if (Array.isArray(req)) {
+    // Find the group that's closest to being satisfied (fewest missing buildings)
+    let best = null;
+    let bestMissing = Infinity;
+    for (const group of req) {
+      const ids = Array.isArray(group) ? group : [group];
+      const missing = ids.filter(id => !installedIds.includes(id));
+      if (missing.length < bestMissing) {
+        bestMissing = missing.length;
+        best = missing.map(id => BUILDING_MAP[id]?.name ?? id).join(' + ');
+      }
+    }
+    return best;
+  }
+  return null;
 }
 
 // ─── Queue row (bottom) ───────────────────────────────────
