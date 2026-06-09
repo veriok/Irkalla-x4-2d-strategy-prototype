@@ -85,7 +85,7 @@ const UNIT_DEFS = [
     cost: { gold: 40, runes: 6 },
     buildTurns: 2,
     stackSize: 1,
-    requiredBuilding: 'necropolis_1',
+    requiredBuilding: 'dwarf_forge_1',
     traitIds: ['leaderless_construct'],
   },
   {
@@ -103,7 +103,7 @@ const UNIT_DEFS = [
     cost: { gold: 35, souls: 4 },
     buildTurns: 2,
     stackSize: 2,
-    requiredBuilding: 'ossuary_1',
+    requiredBuilding: 'kur_temple_1',
   },
   {
     id: 'bone_thrower',
@@ -120,7 +120,7 @@ const UNIT_DEFS = [
     cost: { gold: 35, souls: 3 },
     buildTurns: 2,
     stackSize: 2,
-    requiredBuilding: 'ossuary_1',
+    requiredBuilding: 'kur_temple_1',
   },
   {
     id: 'bronze_golem',
@@ -137,7 +137,7 @@ const UNIT_DEFS = [
     cost: { gold: 60, runes: 12 },
     buildTurns: 4,
     stackSize: 1,
-    requiredBuilding: 'necropolis_2',
+    requiredBuilding: 'dwarf_forge_2',
     techRequired: 'bronze_working',
     traitIds: ['leaderless_construct'],
   },
@@ -150,13 +150,13 @@ const UNIT_DEFS = [
     cardSpriteImg: 'assets/cards/units/default_unit.png',
     description: 'The personal guard of the Sorcerer-King. Elite undead warriors of unyielding resolve.',
     attack: 6, defense: 5, maxHp: 12,
-    tier: 2,
+    tier: 3,
     movement: 1, upkeepGold: 2,
     unitType: UNIT_TYPES.INFANTRY,
     cost: { gold: 55, souls: 8 },
     buildTurns: 4,
     stackSize: 1,
-    requiredBuilding: 'ossuary_3',
+    requiredBuilding: 'kur_temple_3',
   },
 
   // ═══════════════════════════════════════════════════════════
@@ -225,7 +225,7 @@ const UNIT_DEFS = [
     cost: { gold: 50, runes: 6 },
     buildTurns: 3,
     stackSize: 1,
-    requiredBuilding: 'workshop_2',
+    requiredBuilding: 'dwarf_forge_1',
   },
   {
     id: 'sky_raider',
@@ -242,6 +242,7 @@ const UNIT_DEFS = [
     cost: { gold: 55, runes: 8 },
     buildTurns: 3,
     stackSize: 1,
+    requiredBuilding: [['workshop_2', 'dwarf_forge_2']],
     techRequired: 'airship_fleet',
   },
   {
@@ -417,7 +418,7 @@ const UNIT_DEFS = [
     cost: { gold: 45, contracts: 4 },
     buildTurns: 2,
     stackSize: 1,
-    requiredBuilding: 'warrior_lodge',
+    requiredBuilding: [['warrior_lodge', 'forge_1']],
   },
   {
     id: 'golden_lancer',
@@ -451,7 +452,7 @@ const UNIT_DEFS = [
     cost: { gold: 60, prestige: 8 },
     buildTurns: 3,
     stackSize: 1,
-    requiredBuilding: 'barracks',
+    requiredBuilding: [['barracks', 'forge_2']],
   },
   {
     id: 'mercenary_swords',
@@ -646,7 +647,7 @@ const UNIT_DEFS = [
     buildTurns: 2,
     stackSize: 1,
     traitIds: ['anti_cavalry'],
-    requiredBuilding: 'warrior_lodge',
+    requiredBuilding: [['warrior_lodge', 'forge_1']],
     techRequired: 'iron_discipline',
   },
   {
@@ -665,7 +666,7 @@ const UNIT_DEFS = [
     buildTurns: 3,
     stackSize: 1,
     traitIds: ['anti_cavalry'],
-    requiredBuilding: 'barracks',
+    requiredBuilding: [['barracks', 'forge_2']],
     techRequired: 'eternal_phalanx',
   },
   {
@@ -959,10 +960,21 @@ export function getRecruitableUnits(factionId, existingBuildingIds, locationType
     if (u.techRequired && !unlockedTechs.includes(u.techRequired)) return false;
 
     // Building requirement
+    // Supported shapes:
+    //   null                         → no building needed
+    //   'building_id'                → single building required
+    //   [['a', 'b'], ['c']]          → (a AND b) OR (c) — outer=OR, inner=AND
     const req = u.requiredBuilding;
-    if (req === null) return true;   // recruitable anywhere
+    if (req === null) return true;
 
-    if (Array.isArray(req)) return req.some(id => existingBuildingIds.includes(id));
+    if (Array.isArray(req)) {
+      return req.some(group => {
+        if (Array.isArray(group)) {
+          return group.every(id => existingBuildingIds.includes(id));
+        }
+        return existingBuildingIds.includes(group);
+      });
+    }
     return existingBuildingIds.includes(req);
   });
 }

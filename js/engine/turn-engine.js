@@ -156,7 +156,7 @@ export function computeIncome(factionId) {
   for (const prov of provinces) {
     const pbd = computeProvinceIncomeBreakdown(prov, factionId);
     for (const [res, data] of Object.entries(pbd)) {
-      income[res] = (income[res] ?? 0) + Math.round(data.total);
+      income[res] = (income[res] ?? 0) + parseFloat(data.total.toFixed(1));
     }
   }
 

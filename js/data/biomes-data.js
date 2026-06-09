@@ -39,6 +39,16 @@ export const BIOMES = {
     allowedLocTypes: ['main_settlement', 'village', 'fort', 'monster_den', 'ruins'],
     description: 'Rugged peaks — formidable defenses, rich in ore.',
   },
+  hills: {
+    id: 'hills',
+    name: 'Hills',
+    emoji: '⛰',
+    color: '#8a7a5a',
+    terrainDefBonus: 0.10,
+    resourceMod: 0.95,
+    allowedLocTypes: ['main_settlement', 'village', 'fort', 'ruins', 'shrine'],
+    description: 'Rolling highlands — moderate defenses, suitable for herding and light mining.',
+  },
   desert: {
     id: 'desert',
     name: 'Desert',

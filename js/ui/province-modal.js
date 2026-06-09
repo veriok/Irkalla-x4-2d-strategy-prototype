@@ -584,7 +584,7 @@ function _renderLocationRows(prov) {
           if (isPlayerProvince && bDef) {
             const unlockedTechs    = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
             const provInstalledIds = prov.locations.flatMap(l => getInstalledBuildingIds(l));
-            const avail = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal, provInstalledIds)
+            const avail = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal, provInstalledIds, prov.biomeId)
               .filter(b => !b.techRequired || unlockedTechs.includes(b.techRequired));
             if (avail.some(b => b.upgradeFromId === buildingId)) {
               const badge = document.createElement('span');
@@ -710,7 +710,7 @@ function _renderSlotActions(prov, loc, buildingId) {
   const installedIds      = getInstalledBuildingIds(loc);
   const provInstalledIds  = prov.locations.flatMap(l => getInstalledBuildingIds(l));
   const unlockedTechs     = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
-  const allAvail   = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal, provInstalledIds)
+  const allAvail   = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal, provInstalledIds, prov.biomeId)
     .filter(b => !b.techRequired || unlockedTechs.includes(b.techRequired));
   const upgradeDef = allAvail.find(b => b.upgradeFromId === buildingId) ?? null;
 
@@ -829,7 +829,7 @@ function _renderEmptySlotBuildMenu(prov, loc) {
   const installedIds      = getInstalledBuildingIds(loc);
   const provInstalledIds  = prov.locations.flatMap(l => getInstalledBuildingIds(l));
   const unlockedTechs     = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
-  const available     = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal, provInstalledIds)
+  const available     = getBuildingsForLocation(state.playerFactionId, loc.type, installedIds, prov.isCoastal, provInstalledIds, prov.biomeId)
     .filter(b => b.upgradeFromId === null && (!b.techRequired || unlockedTechs.includes(b.techRequired)));
   const availableIds = new Set(available.map(b => b.id));
 

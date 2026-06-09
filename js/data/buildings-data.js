@@ -60,7 +60,7 @@ const GENERIC_CHAINS = [
     tier: 2, upgradeFromId: 'town_hall_1',
     category: BUILDING_CATEGORIES.ADMINISTRATION,
     techRequired: 'pottery',
-    cost: { gold: 120 }, buildTurns: 5,
+    cost: { gold: 120, faction_primary_adv: 5 }, buildTurns: 5,
     bonuses: { gold: 10, faction_primary_adv: 2, growthSlots: 2, research: 2 },
     prerequisites: ['town_hall_1'],
     unlocksBuildings: ['town_hall_3'],
@@ -77,7 +77,7 @@ const GENERIC_CHAINS = [
     tier: 3, upgradeFromId: 'town_hall_2',
     category: BUILDING_CATEGORIES.ADMINISTRATION,
     techRequired: 'monarchy',
-    cost: { gold: 240 }, buildTurns: 8,
+    cost: { gold: 240, faction_primary_adv: 15 }, buildTurns: 8,
     bonuses: { gold: 20, faction_primary_adv: 2, growthSlots: 3, research: 2 },
     prerequisites: ['town_hall_2'],
     unlocksBuildings: [],
@@ -154,6 +154,7 @@ const GENERIC_CHAINS = [
     id: 'religious_2', name: 'Temple', emoji: '⛪',
     cardImg: 'assets/cards/buildings/religious_2.png',
     factionId: null,
+    disabledFactions: [FACTION_IDS.KUR_MARGAL, FACTION_IDS.DRAIG_GOCH, FACTION_IDS.SUTEKH_RA],
     allowedLocTypes: ['shrine'],
     tier: 2, upgradeFromId: 'religious_1',
     category: BUILDING_CATEGORIES.WORSHIPPING,
@@ -169,6 +170,7 @@ const GENERIC_CHAINS = [
     id: 'religious_3', name: 'Cathedral', emoji: '🕌',
     cardImg: 'assets/cards/buildings/religious_3.png',
     factionId: null,
+    disabledFactions: [FACTION_IDS.KUR_MARGAL, FACTION_IDS.DRAIG_GOCH, FACTION_IDS.SUTEKH_RA],
     allowedLocTypes: ['shrine'],
     tier: 3, upgradeFromId: 'religious_2',
     category: BUILDING_CATEGORIES.WORSHIPPING,
@@ -205,7 +207,7 @@ const GENERIC_CHAINS = [
     tier: 2, upgradeFromId: 'mustering_field',
     category: BUILDING_CATEGORIES.TRAINING,
     techRequired: 'clan_warfare',
-    cost: { gold: 100 }, buildTurns: 4,
+    cost: { gold: 100, faction_primary_adv: 5 }, buildTurns: 4,
     bonuses: { recruitSpeed: 1 },
     militiaBonus: 1,
     prerequisites: [],
@@ -220,7 +222,7 @@ const GENERIC_CHAINS = [
     tier: 3, upgradeFromId: 'warrior_lodge',
     category: BUILDING_CATEGORIES.TRAINING,
     techRequired: 'battle_formations',
-    cost: { gold: 180 }, buildTurns: 5,
+    cost: { gold: 180, faction_primary_adv: 10 }, buildTurns: 5,
     bonuses: { recruitSpeed: 1 },
     militiaBonus: 2,
     prerequisites: [],
@@ -238,7 +240,7 @@ const GENERIC_CHAINS = [
     category: BUILDING_CATEGORIES.TRADE,
     techRequired: null,
     cost: { gold: 50 }, buildTurns: 2,
-    bonuses: { gold: 5 },
+    bonuses: { gold: 3 },
     prerequisites: [],
     unlocksBuildings: ['market_2'],
     description: 'A bustling trade post. Increases gold income.',
@@ -252,7 +254,7 @@ const GENERIC_CHAINS = [
     category: BUILDING_CATEGORIES.TRADE,
     techRequired: null,
     cost: { gold: 110 }, buildTurns: 4,
-    bonuses: { gold: 12 },
+    bonuses: { gold: 10 },
     prerequisites: ['market_1'],
     mainBuildingTier: 2,
     unlocksBuildings: ['market_3'],
@@ -267,7 +269,7 @@ const GENERIC_CHAINS = [
     category: BUILDING_CATEGORIES.TRADE,
     techRequired: null,
     cost: { gold: 220 }, buildTurns: 6,
-    bonuses: { gold: 24 },
+    bonuses: { gold: 20 },
     prerequisites: ['market_2'],
     mainBuildingTier: 3,
     unlocksBuildings: [],
@@ -279,6 +281,7 @@ const GENERIC_CHAINS = [
     id: 'reliquary', name: 'Reliquary', emoji: '✨',
     cardImg: 'assets/cards/buildings/reliquary.png',
     factionId: null,
+    disabledFactions: [FACTION_IDS.KUR_MARGAL, FACTION_IDS.DRAIG_GOCH, FACTION_IDS.SUTEKH_RA],
     allowedLocTypes: ['shrine'],
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.WORSHIPPING,
@@ -316,7 +319,7 @@ const GENERIC_CHAINS = [
     tier: 2, upgradeFromId: 'palisade',
     category: BUILDING_CATEGORIES.DEFENSIVE,
     techRequired: 'masonry',
-    cost: { gold: 90 }, buildTurns: 4,
+    cost: { gold: 90, faction_primary_adv: 5 }, buildTurns: 4,
     bonuses: { defense: 0.15 },
     prerequisites: ['palisade'],
     unlocksBuildings: ['fortress_2'],
@@ -332,7 +335,7 @@ const GENERIC_CHAINS = [
     tier: 3, upgradeFromId: 'fortress_1',
     category: BUILDING_CATEGORIES.DEFENSIVE,
     techRequired: 'castle_construction',
-    cost: { gold: 180 }, buildTurns: 6,
+    cost: { gold: 180, faction_primary_adv: 15 }, buildTurns: 6,
     bonuses: { defense: 0.20, growthSlots: 1 },
     prerequisites: ['fortress_1'],
     unlocksBuildings: [],
@@ -397,6 +400,7 @@ const GENERIC_CHAINS = [
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.TRADE,
     techRequired: 'fishing',
+    requiresCoastalProvince: true,
     cost: { gold: 30 }, buildTurns: 1,
     bonuses: { gold: 3 },
     prerequisites: [], unlocksBuildings: [], demolishable: true,
@@ -412,6 +416,7 @@ const GENERIC_CHAINS = [
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.TRADE,
     techRequired: 'mining',
+    requiresBiome: ['mountains', 'hills'],
     cost: { gold: 60 }, buildTurns: 2,
     bonuses: { gold: 5 },
     prerequisites: [], unlocksBuildings: [], demolishable: true,
@@ -427,6 +432,7 @@ const GENERIC_CHAINS = [
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.TRADE,
     techRequired: 'animal_husbandry',
+    requiresBiome: ['hills', 'plains', 'forest'],
     cost: { gold: 60 }, buildTurns: 2,
     bonuses: { gold: 2, faction_primary_adv: 1 },
     prerequisites: [], unlocksBuildings: [], demolishable: true,
@@ -448,6 +454,53 @@ const GENERIC_CHAINS = [
     unlocksBuildings: [],
     demolishable: true,
     description: 'Monks preserve ancient texts, slowly generating research each turn.',
+  },
+
+  // ── Generic Forge Chain (main_settlement / fort — disabled for dwarf factions) ──
+  {
+    id: 'forge_1', name: 'Smithy', emoji: '🔨',
+    cardImg: 'assets/cards/buildings/forge_1.png',
+    factionId: null,
+    disabledFactions: [FACTION_IDS.KUR_MARGAL, FACTION_IDS.IRON_FREEHOLDS],
+    allowedLocTypes: ['main_settlement', 'fort'],
+    tier: 1, upgradeFromId: null,
+    category: BUILDING_CATEGORIES.INDUSTRIAL,
+    techRequired: 'bronze_working',
+    cost: { gold: 60 }, buildTurns: 3,
+    bonuses: { gold: 2 },
+    prerequisites: [],
+    unlocksBuildings: ['forge_2'],
+    description: 'A basic smithy producing arms and armour. Required for heavier military units.',
+  },
+  {
+    id: 'forge_2', name: 'Foundry', emoji: '⚒️',
+    cardImg: 'assets/cards/buildings/forge_2.png',
+    factionId: null,
+    disabledFactions: [FACTION_IDS.KUR_MARGAL, FACTION_IDS.IRON_FREEHOLDS],
+    allowedLocTypes: ['main_settlement', 'fort'],
+    tier: 2, upgradeFromId: 'forge_1',
+    category: BUILDING_CATEGORIES.INDUSTRIAL,
+    techRequired: 'steel',
+    cost: { gold: 130 }, buildTurns: 5,
+    bonuses: { gold: 4 },
+    prerequisites: ['forge_1'],
+    unlocksBuildings: ['forge_3'],
+    description: 'A proper foundry smelting steel at scale. Required for elite armoured units.',
+  },
+  {
+    id: 'forge_3', name: 'Grand Arsenal', emoji: '🏭',
+    cardImg: 'assets/cards/buildings/forge_3.png',
+    factionId: null,
+    disabledFactions: [FACTION_IDS.KUR_MARGAL, FACTION_IDS.IRON_FREEHOLDS],
+    allowedLocTypes: ['main_settlement', 'fort'],
+    tier: 3, upgradeFromId: 'forge_2',
+    category: BUILDING_CATEGORIES.INDUSTRIAL,
+    techRequired: 'iron_working',
+    cost: { gold: 240 }, buildTurns: 7,
+    bonuses: { gold: 6 },
+    prerequisites: ['forge_2'],
+    unlocksBuildings: [],
+    description: 'A grand industrial arsenal equipping entire armies with iron-forged weaponry.',
   },
 
   // ── Infrastructure ──────────────────────────────────────
@@ -474,98 +527,49 @@ const GENERIC_CHAINS = [
 
 const KUR_MARGAL_CHAINS = [
 
-  // ── Necropolis Chain (main_settlement) ──────────────────
+  // ── Soul Temple Chain (main_settlement / shrine) ─────────
   {
-    id: 'necropolis_1', name: 'Crypt Workshop', emoji: '⚙️',
-    cardImg: 'assets/cards/buildings/necropolis_1.png',
-    factionId: FACTION_IDS.KUR_MARGAL,
-    allowedLocTypes: ['main_settlement'],
-    tier: 1, upgradeFromId: null,
-    category: BUILDING_CATEGORIES.SCIENTIFIC,
-    techRequired: null,
-    cost: { gold: 80, souls: 10, runes: 8 }, buildTurns: 4,
-    bonuses: { runes: 1, souls: 1 },
-    prerequisites: [],
-    mainBuildingTier: 1,
-    unlocksBuildings: ['necropolis_2'],
-    description: 'A workshop where bodies are reanimated and bound to iron frames. The heart of undead production.',
-  },
-  {
-    id: 'necropolis_2', name: 'Ziggurat Forge', emoji: '🔩',
-    cardImg: 'assets/cards/buildings/necropolis_2.png',
-    factionId: FACTION_IDS.KUR_MARGAL,
-    allowedLocTypes: ['main_settlement'],
-    tier: 2, upgradeFromId: 'necropolis_1',
-    category: BUILDING_CATEGORIES.SCIENTIFIC,
-    techRequired: null,
-    cost: { gold: 160, souls: 25, runes: 20 }, buildTurns: 6,
-    bonuses: { runes: 2, souls: 2 },
-    prerequisites: ['necropolis_1'],
-    mainBuildingTier: 2,
-    unlocksBuildings: ['necropolis_3'],
-    description: 'A towering dark forge upon a stepped ziggurat. Produces powerful war-golems.',
-  },
-  {
-    id: 'necropolis_3', name: 'Black Ziggurat', emoji: '🗿',
-    cardImg: 'assets/cards/buildings/necropolis_3.png',
-    factionId: FACTION_IDS.KUR_MARGAL,
-    allowedLocTypes: ['main_settlement'],
-    tier: 3, upgradeFromId: 'necropolis_2',
-    category: BUILDING_CATEGORIES.SCIENTIFIC,
-    techRequired: null,
-    cost: { gold: 300, souls: 50, runes: 40 }, buildTurns: 9,
-    bonuses: { runes: 3, souls: 3, defense: 0.15 },
-    prerequisites: ['necropolis_2'],
-    mainBuildingTier: 3,
-    unlocksBuildings: [],
-    description: 'The pinnacle of undead dwarven craft. An eternal monument to the Dark God.',
-  },
-
-  // ── Ossuary Chain (shrine) ───────────────────────────────
-  // Tier 1: no souls, but required to unlock undead unit recruitment
-  // Tier 2+: generates souls, unlocks levy/thrower/deathguard
-  {
-    id: 'ossuary_1', name: 'Bone Shrine', emoji: '🦴',
-    cardImg: 'assets/cards/buildings/ossuary_1.png',
+    id: 'kur_temple_1', name: 'Bone Shrine', emoji: '🦴',
+    cardImg: 'assets/cards/buildings/kur_temple_1.png',
     factionId: FACTION_IDS.KUR_MARGAL,
     allowedLocTypes: ['main_settlement', 'shrine'],
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.WORSHIPPING,
     techRequired: null,
-    cost: { gold: 60, souls: 8 }, buildTurns: 3,
-    bonuses: {},
+    cost: { gold: 60, souls: 5 }, buildTurns: 3,
+    bonuses: { souls: 0.5 },
     prerequisites: [],
-    unlocksBuildings: ['ossuary_2'],
+    unlocksBuildings: ['kur_temple_2'],
     demolishable: false,
     description: 'A shrine of ancestral bones. Focuses the spiritual energies needed to raise undead dwarves.',
   },
   {
-    id: 'ossuary_2', name: 'Ossuary', emoji: '💀',
-    cardImg: 'assets/cards/buildings/ossuary_2.png',
+    id: 'kur_temple_2', name: 'Soul Temple', emoji: '💀',
+    cardImg: 'assets/cards/buildings/kur_temple_2.png',
     factionId: FACTION_IDS.KUR_MARGAL,
     allowedLocTypes: ['main_settlement', 'shrine'],
-    tier: 2, upgradeFromId: 'ossuary_1',
+    tier: 2, upgradeFromId: 'kur_temple_1',
     category: BUILDING_CATEGORIES.WORSHIPPING,
-    techRequired: 'worship',
-    cost: { gold: 130, souls: 20 }, buildTurns: 5,
+    techRequired: 'runeforging',
+    cost: { gold: 130, souls: 15 }, buildTurns: 5,
     bonuses: { souls: 1 },
-    prerequisites: ['ossuary_1'],
+    prerequisites: ['kur_temple_1'],
     mainBuildingTier: 2,
-    unlocksBuildings: ['ossuary_3'],
+    unlocksBuildings: ['kur_temple_3'],
     demolishable: false,
-    description: 'An expanded ossuary complex. Generates Soul income and enables undead levy and bone thrower recruitment.',
+    description: 'An expanded soul temple. Generates Soul income and enables undead levy and bone thrower recruitment.',
   },
   {
-    id: 'ossuary_3', name: 'Grand Ossuary', emoji: '🏚️',
-    cardImg: 'assets/cards/buildings/ossuary_3.png',
+    id: 'kur_temple_3', name: 'Grand Ossuary', emoji: '🏚️',
+    cardImg: 'assets/cards/buildings/kur_temple_3.png',
     factionId: FACTION_IDS.KUR_MARGAL,
     allowedLocTypes: ['main_settlement', 'shrine'],
-    tier: 3, upgradeFromId: 'ossuary_2',
+    tier: 3, upgradeFromId: 'kur_temple_2',
     category: BUILDING_CATEGORIES.WORSHIPPING,
     techRequired: null,
-    cost: { gold: 260, souls: 40 }, buildTurns: 7,
-    bonuses: { souls: 2, growthSlots: 1 },
-    prerequisites: ['ossuary_2'],
+    cost: { gold: 260, souls: 35 }, buildTurns: 7,
+    bonuses: { souls: 1.5 },
+    prerequisites: ['kur_temple_2'],
     mainBuildingTier: 3,
     unlocksBuildings: [],
     demolishable: false,
@@ -589,10 +593,10 @@ const IRON_FREEHOLDS_CHAINS = [
     category: BUILDING_CATEGORIES.INDUSTRIAL,
     techRequired: null,
     cost: { gold: 55 }, buildTurns: 2,
-    bonuses: { schematics: 1, runes: 1 },
+    bonuses: { schematics: 1 },
     prerequisites: [],
     unlocksBuildings: ['workshop_2'],
-    description: 'A cluttered workshop full of invention. Generates Schematics and Runes.',
+    description: 'A cluttered workshop full of invention. Generates Schematics.',
   },
   {
     id: 'workshop_2', name: 'Engineering Works', emoji: '⚙️',
@@ -603,7 +607,7 @@ const IRON_FREEHOLDS_CHAINS = [
     category: BUILDING_CATEGORIES.INDUSTRIAL,
     techRequired: null,
     cost: { gold: 120, schematics: 12 }, buildTurns: 4,
-    bonuses: { schematics: 2, runes: 1 },
+    bonuses: { schematics: 2 },
     prerequisites: ['workshop_1'],
     mainBuildingTier: 2,
     unlocksBuildings: ['workshop_3'],
@@ -618,11 +622,11 @@ const IRON_FREEHOLDS_CHAINS = [
     category: BUILDING_CATEGORIES.INDUSTRIAL,
     techRequired: null,
     cost: { gold: 240, schematics: 30, runes: 20 }, buildTurns: 7,
-    bonuses: { schematics: 3, runes: 2 },
+    bonuses: { schematics: 3 },
     prerequisites: ['workshop_2'],
     mainBuildingTier: 3,
     unlocksBuildings: [],
-    description: 'The greatest foundry in the Freeholds. Mass-produces both Runes and Schematics.',
+    description: 'The greatest foundry in the Freeholds. Mass-produces Schematics.',
   },
 
   // ── Trading Post Chain (village / main_settlement) ───────
@@ -673,7 +677,7 @@ const DRAIG_GOCH_CHAINS = [
     category: BUILDING_CATEGORIES.WORSHIPPING,
     techRequired: null,
     cost: { gold: 55, prestige: 5 }, buildTurns: 3,
-    bonuses: { dragon_essence: 1, prestige: 1 },
+    bonuses: { dragon_essence: 1 },
     prerequisites: [],
     unlocksBuildings: ['dragon_shrine_2'],
     description: 'A sacred altar where warriors offer tribute to the Red Dragon.',
@@ -687,7 +691,7 @@ const DRAIG_GOCH_CHAINS = [
     category: BUILDING_CATEGORIES.WORSHIPPING,
     techRequired: null,
     cost: { gold: 120, prestige: 15, dragon_essence: 10 }, buildTurns: 5,
-    bonuses: { dragon_essence: 2, prestige: 1 },
+    bonuses: { dragon_essence: 2 },
     prerequisites: ['dragon_shrine_1'],
     mainBuildingTier: 2,
     unlocksBuildings: ['dragon_shrine_3'],
@@ -702,7 +706,7 @@ const DRAIG_GOCH_CHAINS = [
     category: BUILDING_CATEGORIES.WORSHIPPING,
     techRequired: null,
     cost: { gold: 240, prestige: 35, dragon_essence: 25 }, buildTurns: 8,
-    bonuses: { dragon_essence: 3, prestige: 2, defense: 0.12 },
+    bonuses: { dragon_essence: 3 },
     prerequisites: ['dragon_shrine_2'],
     mainBuildingTier: 3,
     unlocksBuildings: [],
@@ -719,10 +723,10 @@ const DRAIG_GOCH_CHAINS = [
     category: BUILDING_CATEGORIES.TRAINING,
     techRequired: null,
     cost: { gold: 50, prestige: 5 }, buildTurns: 2,
-    bonuses: { prestige: 1 },
+    bonuses: { defense: 0.05 },
     prerequisites: [],
     unlocksBuildings: ['dojo_2'],
-    description: 'Warriors train relentlessly here. Prestige flows from discipline.',
+    description: 'Warriors train relentlessly here. Discipline hardens the province\'s defenders.',
   },
   {
     id: 'dojo_2', name: 'Dojo', emoji: '🥋',
@@ -732,12 +736,12 @@ const DRAIG_GOCH_CHAINS = [
     tier: 2, upgradeFromId: 'dojo_1',
     category: BUILDING_CATEGORIES.TRAINING,
     techRequired: null,
-    cost: { gold: 110, prestige: 20 }, buildTurns: 4,
-    bonuses: { prestige: 2 },
+    cost: { gold: 110, prestige: 15 }, buildTurns: 4,
+    bonuses: { defense: 0.10 },
     prerequisites: ['dojo_1'],
     mainBuildingTier: 2,
     unlocksBuildings: [],
-    description: 'A respected dojo. Produces elite warrior-monks bound by the dragon code.',
+    description: 'A respected dojo. Elite warrior-monks defend the province with iron discipline.',
   },
 ];
 
@@ -1020,10 +1024,10 @@ const SUTEKH_RA_CHAINS = [
     techRequired: 'dual_temples',
     exclusiveWith: ['sun_temple_1', 'sun_temple_2', 'sun_temple_3'],
     cost: { gold: 50, ancient_lore: 5 }, buildTurns: 2,
-    bonuses: { faith: 1, ancient_lore: 1 },
+    bonuses: { ancient_lore: 1, gold: 1 },
     prerequisites: [],
     unlocksBuildings: ['moon_temple_2'],
-    description: 'A shrine of the Lunar God. Generates Faith and Ancient Lore. Mutually exclusive with the Sun Temple.',
+    description: 'A shrine of the Lunar God. Generates Ancient Lore and gold. Mutually exclusive with the Sun Temple.',
   },
   {
     id: 'moon_temple_2', name: 'Moon Temple', emoji: '🌕',
@@ -1035,11 +1039,11 @@ const SUTEKH_RA_CHAINS = [
     techRequired: null,
     exclusiveWith: ['sun_temple_1', 'sun_temple_2', 'sun_temple_3'],
     cost: { gold: 110, ancient_lore: 15, faith: 5 }, buildTurns: 4,
-    bonuses: { faith: 2, ancient_lore: 2, gold: 2 },
+    bonuses: { ancient_lore: 2, gold: 2 },
     prerequisites: ['moon_temple_1'],
     mainBuildingTier: 2,
     unlocksBuildings: ['moon_temple_3'],
-    description: 'A great temple of the Moon God. Ancient Lore and Faith flow freely. Enables Moon Zealot recruitment.',
+    description: 'A great temple of the Moon God. Ancient Lore flows freely. Enables Moon Zealot recruitment.',
   },
   {
     id: 'moon_temple_3', name: 'Grand Moon Temple', emoji: '🌑',
@@ -1051,7 +1055,7 @@ const SUTEKH_RA_CHAINS = [
     techRequired: null,
     exclusiveWith: ['sun_temple_1', 'sun_temple_2', 'sun_temple_3'],
     cost: { gold: 220, ancient_lore: 35, faith: 15 }, buildTurns: 7,
-    bonuses: { faith: 3, ancient_lore: 3, gold: 4, defense: 0.10 },
+    bonuses: { ancient_lore: 3, gold: 4 },
     prerequisites: ['moon_temple_2'],
     mainBuildingTier: 3,
     unlocksBuildings: [],
@@ -1106,7 +1110,7 @@ const CLANS_FIRST_SCALE_CHAINS = [
     category: BUILDING_CATEGORIES.TRAINING,
     techRequired: 'beast_taming',
     cost: { gold: 60, ancient_lore: 5 }, buildTurns: 2,
-    bonuses: { beasts: 1 },
+    bonuses: { beasts: 0.5 },
     prerequisites: [],
     unlocksBuildings: ['beast_pen_2'],
     description: 'Clan hunting grounds where wild beasts are captured and trained.',
@@ -1120,7 +1124,7 @@ const CLANS_FIRST_SCALE_CHAINS = [
     category: BUILDING_CATEGORIES.TRAINING,
     techRequired: null,
     cost: { gold: 130, beasts: 12, ancient_lore: 10 }, buildTurns: 4,
-    bonuses: { beasts: 2 },
+    bonuses: { beasts: 1 },
     prerequisites: ['beast_pen_1'],
     mainBuildingTier: 2,
     unlocksBuildings: ['beast_pen_3'],
@@ -1135,7 +1139,7 @@ const CLANS_FIRST_SCALE_CHAINS = [
     category: BUILDING_CATEGORIES.TRAINING,
     techRequired: null,
     cost: { gold: 260, beasts: 30, ancient_lore: 20 }, buildTurns: 7,
-    bonuses: { beasts: 3, ancient_lore: 1 },
+    bonuses: { beasts: 1.5 },
     prerequisites: ['beast_pen_2'],
     mainBuildingTier: 3,
     unlocksBuildings: [],
@@ -1152,11 +1156,11 @@ const CLANS_FIRST_SCALE_CHAINS = [
     category: BUILDING_CATEGORIES.WORSHIPPING,
     techRequired: null,
     cost: { gold: 55, ancient_lore: 5 }, buildTurns: 2,
-    bonuses: { ancient_lore: 1, beasts: 1 },
+    bonuses: { ancient_lore: 1 },
     prerequisites: [],
     mainBuildingTier: 1,
     unlocksBuildings: ['clan_hall_2'],
-    description: 'Totem poles marking clan territory. Generates Ancient Lore and attracts wild beasts.',
+    description: 'Totem poles marking clan territory. Generates Ancient Lore.',
   },
   {
     id: 'clan_hall_2', name: 'Clan Longhouse', emoji: '🏕️',
@@ -1167,11 +1171,62 @@ const CLANS_FIRST_SCALE_CHAINS = [
     category: BUILDING_CATEGORIES.WORSHIPPING,
     techRequired: null,
     cost: { gold: 120, ancient_lore: 15, beasts: 10 }, buildTurns: 4,
-    bonuses: { ancient_lore: 2, beasts: 2 },
+    bonuses: { ancient_lore: 2 },
     prerequisites: ['clan_hall_1'],
     mainBuildingTier: 2,
     unlocksBuildings: [],
     description: 'A great longhouse where clan elders commune with the spirits of ancient beasts.',
+  },
+];
+
+// ─────────────────────────────────────────────────────────
+// DWARF FORGE — Shared by both dwarf factions (gated by dwarf-only techs)
+// ─────────────────────────────────────────────────────────
+
+const DWARF_CHAINS = [
+
+  // ── Dwarf Forge Chain (main_settlement / fort) ───────────
+  {
+    id: 'dwarf_forge_1', name: 'Runic Smithy', emoji: '🔨',
+    cardImg: 'assets/cards/buildings/dwarf_forge_1.png',
+    factionId: null,
+    allowedLocTypes: ['main_settlement', 'fort'],
+    tier: 1, upgradeFromId: null,
+    category: BUILDING_CATEGORIES.INDUSTRIAL,
+    techRequired: 'runeforging',
+    cost: { gold: 70 }, buildTurns: 3,
+    bonuses: { gold: 3, runes: 0.5 },
+    prerequisites: [],
+    unlocksBuildings: ['dwarf_forge_2'],
+    description: 'A smithy where runes are etched into arms and armour. Required for heavy dwarven units.',
+  },
+  {
+    id: 'dwarf_forge_2', name: 'Rune Foundry', emoji: '⚙️',
+    cardImg: 'assets/cards/buildings/dwarf_forge_2.png',
+    factionId: null,
+    allowedLocTypes: ['main_settlement', 'fort'],
+    tier: 2, upgradeFromId: 'dwarf_forge_1',
+    category: BUILDING_CATEGORIES.INDUSTRIAL,
+    techRequired: 'runescript',
+    cost: { gold: 150, runes: 10 }, buildTurns: 5,
+    bonuses: { gold: 6, runes: 1 },
+    prerequisites: ['dwarf_forge_1'],
+    unlocksBuildings: ['dwarf_forge_3'],
+    description: 'A full rune foundry channelling ancient scripts into war-forged metal.',
+  },
+  {
+    id: 'dwarf_forge_3', name: 'Grand Rune Forge', emoji: '🔩',
+    cardImg: 'assets/cards/buildings/dwarf_forge_3.png',
+    factionId: null,
+    allowedLocTypes: ['main_settlement', 'fort'],
+    tier: 3, upgradeFromId: 'dwarf_forge_2',
+    category: BUILDING_CATEGORIES.INDUSTRIAL,
+    techRequired: 'iron_working',
+    cost: { gold: 280, runes: 20 }, buildTurns: 7,
+    bonuses: { gold: 9, runes: 1.5 },
+    prerequisites: ['dwarf_forge_2'],
+    unlocksBuildings: [],
+    description: 'The pinnacle of dwarven runic craftsmanship. Arms entire armies with runic iron.',
   },
 ];
 
@@ -1181,6 +1236,7 @@ const CLANS_FIRST_SCALE_CHAINS = [
 
 export const BUILDINGS = [
   ...GENERIC_CHAINS,
+  ...DWARF_CHAINS,
   ...KUR_MARGAL_CHAINS,
   ...IRON_FREEHOLDS_CHAINS,
   ...DRAIG_GOCH_CHAINS,
@@ -1206,7 +1262,10 @@ export const LOCATION_MAIN_CHAIN = {
 
 /** Get all buildings available to a faction (generic + faction-specific) */
 export function getBuildingsForFaction(factionId) {
-  return BUILDINGS.filter(b => b.factionId === null || b.factionId === factionId);
+  return BUILDINGS.filter(b =>
+    (b.factionId === null || b.factionId === factionId) &&
+    !b.disabledFactions?.includes(factionId)
+  );
 }
 
 /**
@@ -1259,12 +1318,18 @@ export function accumulateBuildCostModifiers(factionEffects = [], appliedTechEff
  * @param {string[]} existingBuildingIds    — buildings already installed at THIS location
  * @param {boolean}  isCoastal
  * @param {string[]} provinceInstalledIds   — all buildings installed anywhere in the province (for maxPerProvince checks)
+ * @param {string|null} provinceBiome       — biome id of the province (null = skip biome check)
  */
-export function getBuildingsForLocation(factionId, locationType, existingBuildingIds = [], isCoastal = false, provinceInstalledIds = []) {
-  const available = getBuildingsForFaction(factionId).filter(b =>
-    b.allowedLocTypes.includes(locationType) &&
-    (!b.requiresCoastalProvince || isCoastal)
-  );
+export function getBuildingsForLocation(factionId, locationType, existingBuildingIds = [], isCoastal = false, provinceInstalledIds = [], provinceBiome = null) {
+  const available = getBuildingsForFaction(factionId).filter(b => {
+    if (!b.allowedLocTypes.includes(locationType)) return false;
+    if (b.requiresCoastalProvince && !isCoastal) return false;
+    if (b.requiresBiome && provinceBiome) {
+      const allowed = Array.isArray(b.requiresBiome) ? b.requiresBiome : [b.requiresBiome];
+      if (!allowed.includes(provinceBiome)) return false;
+    }
+    return true;
+  });
   return available.filter(b => {
     if (existingBuildingIds.includes(b.id)) return false;
     // Province-level cap (e.g. roads: max 1 per province)

@@ -412,7 +412,7 @@ export async function runAI(factionId) {
       const installedIds      = getInstalledBuildingIds(loc);
       const provInstalledIds  = prov.locations.flatMap(l => getInstalledBuildingIds(l));
       const unlockedTechs     = getFaction(factionId)?.unlockedTechs ?? [];
-      const available         = getBuildingsForLocation(factionId, loc.type, installedIds, prov.isCoastal, provInstalledIds)
+      const available         = getBuildingsForLocation(factionId, loc.type, installedIds, prov.isCoastal, provInstalledIds, prov.biomeId)
         .filter(b => !b.techRequired || unlockedTechs.includes(b.techRequired));
 
       const affordable = available.filter(b => {

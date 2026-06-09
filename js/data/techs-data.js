@@ -390,12 +390,11 @@ const DWARF_RACE_TECHS = [
     era: TECH_ERAS.STONE,
     raceId: RACE_IDS.DWARF, replacesId: 'worship',
     quote: '"A rune is not written — it is remembered, from before the world was young."',
-    description: 'Ancient dwarven script is mastered. Unlocks the Rune Assignment panel in armies. Forge chain buildings generate +1 Rune/turn.',
-    buildingBonuses: [
-      { buildingId: 'necropolis_1', bonusKey: RESOURCE_IDS.RUNES, amount: 1 },
-      { buildingId: 'workshop_1',   bonusKey: RESOURCE_IDS.RUNES, amount: 1 },
-      { buildingId: 'workshop_2',   bonusKey: RESOURCE_IDS.RUNES, amount: 1 },
-      { buildingId: 'workshop_3',   bonusKey: RESOURCE_IDS.RUNES, amount: 1 },
+    description: 'Ancient dwarven script is mastered. Unlocks the Rune Assignment panel in armies. All industrial buildings generate +0.5 Rune/turn.',
+    unlockBuildings: ['dwarf_forge_1'],
+    buildingBonuses: [],
+    buildingCategoryBonuses: [
+      { category: BUILDING_CATEGORIES.INDUSTRIAL, bonusKey: RESOURCE_IDS.RUNES, amount: 0.5 },
     ],
   },
   {
@@ -415,6 +414,7 @@ const DWARF_RACE_TECHS = [
     raceId: RACE_IDS.DWARF, replacesId: 'steel',
     quote: '"A lighter hand on the chisel, yet the same power flows."',
     description: 'Refined runic technique reduces upkeep by 1 Rune per runed unit (minimum 0). Rune assignments become cheaper to maintain.',
+    unlockBuildings: ['dwarf_forge_2'],
     effects: [{ scope: 'faction', type: 'rune_upkeep_reduction', amount: 1 }],
   },
 ];
@@ -628,10 +628,10 @@ const AURIC_EMPIRE_TECHS = [
     era: TECH_ERAS.IRON,
     factionId: FACTION_IDS.AURIC_EMPIRE, replacesId: 'scholarship',
     quote: '"A golden sail on the horizon means coin is coming."',
-    description: 'Unlocks the Golden Lancer unit. Coastal provinces generate +1 Contracts/turn.',
+    description: 'Unlocks the Golden Lancer unit. Coastal provinces generate +0.25 Contracts/turn.',
     unlockUnits: ['golden_lancer'],
     buildingCategoryBonuses: [],
-    effects: [{ scope: 'faction', type: 'coastal_resource_bonus', resourceId: RESOURCE_IDS.CONTRACTS, amount: 1 }],
+    effects: [{ scope: 'faction', type: 'coastal_resource_bonus', resourceId: RESOURCE_IDS.CONTRACTS, amount: 0.25 }],
   },
   {
     id: 'mercenary_contracts', name: 'Mercenary Contracts', emoji: '📜',
@@ -666,9 +666,9 @@ const POLEIS_AETHERA_TECHS = [
     era: TECH_ERAS.IRON,
     factionId: FACTION_IDS.POLEIS_AETHERA, replacesId: 'guilds',
     quote: '"The sea gives as much as it takes — if you know how to ask."',
-    description: 'Unlocks the Azure Sea Raider. Coastal provinces generate +1 Aether/turn.',
+    description: 'Unlocks the Azure Sea Raider. Coastal provinces generate +0.25 Aether/turn.',
     unlockUnits: ['azure_sea_raider'],
-    effects: [{ scope: 'faction', type: 'coastal_resource_bonus', resourceId: RESOURCE_IDS.AETHER, amount: 1 }],
+    effects: [{ scope: 'faction', type: 'coastal_resource_bonus', resourceId: RESOURCE_IDS.AETHER, amount: 0.25 }],
   },
 ];
 
@@ -729,8 +729,8 @@ const SUTEKH_RA_TECHS = [
     era: TECH_ERAS.IRON,
     factionId: FACTION_IDS.SUTEKH_RA, replacesId: 'scholarship',
     quote: '"The desert is not a wasteland — it is a treasury, waiting for the worthy."',
-    description: 'Desert provinces generate +1 gold and +1 Faith per turn.',
-    effects: [{ scope: 'faction', type: 'biome_income_bonus', biome: 'desert', bonuses: { gold: 1, faith: 1 } }],
+    description: 'Desert provinces generate +1 gold and +0.125 Faith per turn.',
+    effects: [{ scope: 'faction', type: 'biome_income_bonus', biome: 'desert', bonuses: { gold: 1, faith: 0.125 } }],
   },
   {
     id: 'necromantic_arts', name: 'Necromantic Arts', emoji: '🌙',
