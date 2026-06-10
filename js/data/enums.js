@@ -184,46 +184,57 @@ export const SPELL_SCHOOL_IDS = Object.freeze({
 });
 
 export const SPELL_IDS = Object.freeze({
-  // Fire spells
-  EMBER_SHOT:       'ember_shot',
-  FIREBALL:         'fireball',
-  INFERNO:          'inferno',
-  // Earth spells
-  STONE_SKIN:       'stone_skin',
-  TREMOR:           'tremor',
-  EARTHQUAKE:       'earthquake',
-  // Air spells
-  GUST:             'gust',
-  LIGHTNING_BOLT:   'lightning_bolt',
-  CHAIN_LIGHTNING:  'chain_lightning',
-  // Arcane spells
-  ARCANE_BOLT:      'arcane_bolt',
-  BLINK:            'blink',
-  ARCANE_STORM:     'arcane_storm',
-  // Rune spells
-  RUNE_SHIELD:      'rune_shield',
-  RUNE_FORGE:       'rune_forge',
-  RUNE_STORM:       'rune_storm',
-  // Death spells
-  CORPSE_RISE:      'corpse_rise',
-  DEATH_WAIL:       'death_wail',
-  PLAGUE:           'plague',
-  // Nature spells
-  ENTANGLE:         'entangle',
-  REGROWTH:         'regrowth',
-  CALL_OF_THE_WILD: 'call_of_the_wild',
-  // Ancient spells
-  ANCIENT_CURSE:    'ancient_curse',
-  SANDSTORM:        'sandstorm',
-  ANCESTORS_MIGHT:  'ancestors_might',
-  // Order spells
-  RALLY:            'rally',
-  DIVINE_SHIELD:    'divine_shield',
-  HOLY_WRATH:       'holy_wrath',
-  // Light spells
-  HEALING_LIGHT:    'healing_light',
-  SMITE:            'smite',
-  RADIANCE:         'radiance',
+  // ── Fire ─────────────────────────────────────────────────
+  SPARK:              'spark',              // T0
+  EMBER_SHOT:         'ember_shot',         // T1
+  SCORCHED_EARTH:     'scorched_earth',     // T2 province army_damage
+  INFERNO:            'inferno',            // T3
+  // ── Earth ────────────────────────────────────────────────
+  EARTH_MISSILE:      'earth_missile',      // T0
+  STONE_SKIN:         'stone_skin',         // T1
+  EARTHEN_WALL:       'earthen_wall',       // T2 province defense buff
+  EARTHQUAKE:         'earthquake',         // T3 province army_damage + building
+  // ── Air ──────────────────────────────────────────────────
+  WIND_STRIKE:        'wind_strike',        // T0
+  GUST:               'gust',               // T1
+  TAILWIND:           'tailwind',           // T2 army_buff movement
+  CHAIN_LIGHTNING:    'chain_lightning',    // T3
+  // ── Arcane ───────────────────────────────────────────────
+  ARCANE_BOLT:        'arcane_bolt',        // T0
+  WISDOM:             'wisdom',             // T1 province research buff
+  CONJURE_FAMILIAR:   'conjure_familiar',   // T2 summon
+  TELEPORT:           'teleport',           // T3 province teleport
+  // ── Rune ─────────────────────────────────────────────────
+  RUNIC_STRIKE:       'runic_strike',       // T0
+  RUNE_SHIELD:        'rune_shield',        // T1
+  RUNIC_MIGHT:        'runic_might',        // T2 combat chains (generic)
+  RUNE_FORGE:         'rune_forge',         // T2 artifact (IRON_FREEHOLDS only)
+  ELDRITCH_WEAPONS:   'eldritch_weapons',   // T3 combat buff all_allies
+  // ── Death ────────────────────────────────────────────────
+  BONE_CHILL:         'bone_chill',         // T0
+  DEATH_WAIL:         'death_wail',         // T1
+  CORPSE_RAISE:       'corpse_raise',       // T2 summon
+  PLAGUE:             'plague',             // T3 province multi-effect
+  // ── Nature ───────────────────────────────────────────────
+  ENTANGLE:           'entangle',           // T0 (weaker)
+  SUMMON_ANIMAL:      'summon_animal',      // T1 province summon biome animal
+  REGROWTH:           'regrowth',           // T2
+  CALL_OF_THE_WILD:   'call_of_the_wild',  // T3 army_buff
+  // ── Ancient ──────────────────────────────────────────────
+  HUNTERS_MARK:       'hunters_mark',       // T0
+  BLOODRITE:          'bloodrite',          // T1 multi-effect
+  SANDSTORM:          'sandstorm',          // T2 province defense debuff
+  ANCESTORS_MIGHT:    'ancestors_might',    // T3 army_buff
+  // ── Order ────────────────────────────────────────────────
+  WAR_SHOUT:          'war_shout',          // T0
+  SMITE:              'smite',              // T1
+  PROTECTION:         'protection',         // T2 combat buff all_allies
+  HOLY_WRATH:         'holy_wrath',         // T3
+  // ── Light ────────────────────────────────────────────────
+  HEALING_LIGHT:      'healing_light',      // T0 heal+revive
+  BLESS:              'bless',              // T1 multi-stat buff
+  MEND:               'mend',              // T2 province army_heal
+  GRACE:              'grace',             // T3 army_buff wound chance
 });
 
 export const ARTIFACT_SLOTS = Object.freeze({

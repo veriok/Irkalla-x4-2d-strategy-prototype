@@ -100,16 +100,17 @@ export function computeProvinceIncomeBreakdown(province, factionId) {
 
   for (const se of (province.statusEffects ?? [])) {
     const def = PROVINCE_STATUS_MAP[se.type];
-    if (!def) continue;
+    const effectsList = def?.effects ?? se.effects ?? [];
+    const label = def?.label ?? se.label ?? se.type;
     const stacks = se.stacks ?? 1;
-    for (const eff of (def.effects ?? [])) {
+    for (const eff of effectsList) {
       if (eff.type !== 'income_percent') continue;
       const percent = (eff.percent ?? 0) * stacks;
       if (eff.resourceId === 'all') {
-        allModifiers.push({ label: def.label, percent });
+        allModifiers.push({ label, percent });
       } else {
         if (!resModifiers[eff.resourceId]) resModifiers[eff.resourceId] = [];
-        resModifiers[eff.resourceId].push({ label: def.label, percent });
+        resModifiers[eff.resourceId].push({ label, percent });
       }
     }
   }

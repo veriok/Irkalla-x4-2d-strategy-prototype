@@ -769,7 +769,7 @@ function _renderSlotActions(prov, loc, buildingId) {
       hint: alreadyQueued ? 'Already queued' : queueFull ? 'Queue full' : !affordable ? "Can't afford" : '',
       disabled: alreadyQueued || queueFull || !affordable,
       affordable,
-      onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(upgradeDef, el, { locationType: loc.type })); el.addEventListener('mouseleave', hideBuildingTooltip); },
+      onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(upgradeDef, el, { locationType: loc.type, effectiveCost: effCost, effectiveTurns: effTurns })); el.addEventListener('mouseleave', hideBuildingTooltip); },
       onClick: () => {
         if (!spendResources(state.playerFactionId, effCost)) return;
         enqueueProduction(prov, { type: 'building', id: upgradeDef.id, locationId: loc.id, turnsRemaining: Math.max(1, effTurns - _getGovernorBuildSpeedBonus(prov)) });
@@ -896,7 +896,7 @@ function _renderEmptySlotBuildMenu(prov, loc) {
         : alreadyQ ? 'Already queued' : queueFull ? 'Queue full' : !affordable ? "Can't afford" : '',
       disabled: isBlocked || alreadyQ || queueFull || !affordable,
       affordable: !isBlocked && affordable,
-      onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(bDef, el, { locationType: loc.type })); el.addEventListener('mouseleave', hideBuildingTooltip); },
+      onTooltip: (el) => { el.addEventListener('mouseenter', () => showBuildingTooltip(bDef, el, { locationType: loc.type, effectiveCost: effCost, effectiveTurns: effTurns })); el.addEventListener('mouseleave', hideBuildingTooltip); },
       onClick: !isBlocked ? () => {
         if (!spendResources(state.playerFactionId, effCost)) return;
         enqueueProduction(prov, { type: 'building', id: bDef.id, locationId: loc.id, turnsRemaining: Math.max(1, effTurns - _getGovernorBuildSpeedBonus(prov)) });

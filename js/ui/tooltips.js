@@ -580,10 +580,26 @@ const CATEGORY_COLORS = {
   industrial:     '#8b5c2a',
 };
 
+function _resolveCostKey(key) {
+  if (key === 'faction_primary_adv') {
+    const faction = FACTION_MAP[state?.playerFactionId];
+    return faction?.resources?.advanced?.[0] ?? null;
+  }
+  if (key === 'faction_secondary_adv') {
+    const faction = FACTION_MAP[state?.playerFactionId];
+    return faction?.resources?.advanced?.[1] ?? null;
+  }
+  return ALL_RES[key] ?? null;
+}
+
 function _buildHtml(bDef, opts = {}) {
+  // Use effective cost/turns when provided (accounts for faction multiplier + governor discount)
+  const displayCost  = opts.effectiveCost  ?? bDef.cost ?? {};
+  const displayTurns = opts.effectiveTurns ?? bDef.buildTurns;
+
   // Cost line(s)
-  const costParts = Object.entries(bDef.cost ?? {}).map(([res, amt]) => {
-    const r = ALL_RES[res];
+  const costParts = Object.entries(displayCost).map(([res, amt]) => {
+    const r = _resolveCostKey(res);
     return `${r?.emoji ?? ''} ${amt} ${r?.name ?? res}`;
   });
 
@@ -686,7 +702,7 @@ function _buildHtml(bDef, opts = {}) {
     <hr class="btt-hr">
     ${!opts.installed ? `
     <div class="btt-section">
-      <div class="btt-row">⏱ ${bDef.buildTurns} turn${bDef.buildTurns !== 1 ? 's' : ''} to build</div>
+      <div class="btt-row">⏱ ${displayTurns} turn${displayTurns !== 1 ? 's' : ''} to build</div>
       ${costParts.map(c => `<div class="btt-row btt-cost">💸 ${c}</div>`).join('')}
     </div>` : ''}
     ${bonusParts.length > 0 ? `

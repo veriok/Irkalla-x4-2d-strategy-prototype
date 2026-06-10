@@ -78,6 +78,19 @@ const PROVINCE_STATUSES = [
     onRemove: null,
     _defaults: { stacks: 1, turnsRemaining: 5 },
   },
+
+  {
+    id:          'plague_recruit_strain',
+    icon:        '🧟',
+    label:       'Plague',
+    description: 'A deadly plague ravages the province. Recruitment is slowed.',
+    effects: [
+      { type: 'recruit_time_penalty', amount: 1 },
+    ],
+    maxStacks: 1,
+    onApply:  null,
+    onRemove: null,
+  },
 ];
 
 export const PROVINCE_STATUS_MAP = Object.fromEntries(

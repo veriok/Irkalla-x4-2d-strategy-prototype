@@ -20,7 +20,7 @@ import { showUnitTooltip, hideUnitTooltip, showActionTooltip, hideActionTooltip,
 import { FACTION_ACTIONS } from '../data/faction-actions-data.js';
 import { getActionUnlockSource } from '../engine/faction-actions.js';
 import { ARMY_STATUS_MAP } from '../data/army-status-data.js';
-import { isHeroActive, getHeroMaxMana, getHeroCastableSpells } from '../engine/hero-engine.js';
+import { isHeroActive, getHeroMaxMana, getHeroCastableSpells, unassignHero } from '../engine/hero-engine.js';
 import { HERO_CLASS_MAP } from '../data/hero-classes-data.js';
 import { heroGenderEmoji } from '../models/hero.js';
 import { openHeroAssignModal } from './hero-assign-modal.js';
@@ -387,6 +387,18 @@ function _makeHeroSlot(army) {
     ${manaBar}
   `;
 
+  // Small unassign button in top-right corner
+  const unassignBtn = document.createElement('button');
+  unassignBtn.className = 'hero-slot-unassign-btn';
+  unassignBtn.title = 'Unassign hero';
+  unassignBtn.textContent = '×';
+  unassignBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    unassignHero(hero.id, army.factionId);
+    renderArmyPanel();
+  });
+  slot.appendChild(unassignBtn);
+
   slot.addEventListener('mouseenter', () => {
     const fDef = FACTION_MAP[army.factionId] ?? null;
     showHeroTooltip(hero, fDef, slot);
@@ -394,7 +406,7 @@ function _makeHeroSlot(army) {
   slot.addEventListener('mouseleave', hideHeroTooltip);
   slot.addEventListener('click', e => {
     e.stopPropagation();
-    openHeroAssignModal({ targetType: 'army', targetId: army.id });
+    openHeroPanel();
   });
 
   return slot;

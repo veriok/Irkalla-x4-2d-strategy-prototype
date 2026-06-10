@@ -412,8 +412,9 @@ export async function runAI(factionId) {
       const installedIds      = getInstalledBuildingIds(loc);
       const provInstalledIds  = prov.locations.flatMap(l => getInstalledBuildingIds(l));
       const unlockedTechs     = getFaction(factionId)?.unlockedTechs ?? [];
+      const queuedIds = new Set((prov.productionQueue ?? []).map(q => q.id));
       const available         = getBuildingsForLocation(factionId, loc.type, installedIds, prov.isCoastal, provInstalledIds, prov.biomeId)
-        .filter(b => !b.techRequired || unlockedTechs.includes(b.techRequired));
+        .filter(b => (!b.techRequired || unlockedTechs.includes(b.techRequired)) && !queuedIds.has(b.id));
 
       const affordable = available.filter(b => {
         return Object.entries(b.cost).every(([res, amt]) => (fs2.resources[res] ?? 0) >= amt);

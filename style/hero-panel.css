@@ -744,6 +744,38 @@
 .sb-spell-row--queued { background: #d4c880; border-color: #8a6020; }
 .sb-spell-row--queued:hover { background: #c8bc60; }
 
+.sb-spell-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+.sb-spell-row-top .sb-spell-name { font-weight: 600; font-size: 12px; }
+.sb-spell-row-top .sb-spell-meta { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+
+.sb-queue-count {
+  display: inline-block;
+  background: #8a6020;
+  color: #f0e8c0;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 6px;
+  margin-left: 3px;
+  vertical-align: middle;
+}
+
+.sb-tier-divider {
+  font-size: 10px;
+  font-family: var(--font-title);
+  color: #8a6820;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 0 2px;
+  border-bottom: 1px solid #c8a84060;
+  margin-top: 4px;
+}
+
 .sb-spell-name { font-size: 13px; font-weight: 700; color: #2a1e08; }
 .sb-spell-meta { display: flex; gap: 8px; align-items: center; }
 .sb-mana-cost { font-size: 11px; color: #3060a0; }
@@ -762,34 +794,34 @@
 
 /* Footer / page turn */
 #sb-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 16px;
   border-top: 2px solid #6a5020;
   background: #241e0e;
   flex-shrink: 0;
 }
 
-#sb-page-indicator {
+#sb-book-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  min-height: 36px;
+}
+
+.sb-page-label {
   font-size: 12px;
   color: #c0a040;
   font-family: var(--font-title);
+  flex: 1;
+  text-align: center;
 }
 
-.sb-page-edge {
-  width: 40px;
-  height: 20px;
-  border-radius: 2px;
+.sb-page-turn {
+  font-size: 12px;
+  padding: 3px 10px;
 }
-.sb-edge--filled {
-  background: repeating-linear-gradient(
-    -5deg,
-    #b09060 0px, #b09060 2px, #ede5cc 2px, #ede5cc 4px
-  );
-  opacity: 0.8;
-}
-.sb-edge--empty { opacity: 0.2; background: #6a5020; }
+
+.sb-page-turn--prev { margin-right: auto; }
+.sb-page-turn--next { margin-left:  auto; }
 
 /* ═══════════════════════════════════════════════════
    RESEARCH MODAL — magic tab additions
@@ -849,6 +881,9 @@
   background: var(--bg-dark);
 }
 .rmod-spell-row--unlocked { border-color: #4a5a40; background: #171c13; }
+.rmod-spell-row--faction { border-color: #b8860b; }
+.rmod-spell-row--faction.rmod-spell-row--unlocked { border-color: #6aaa40; }
+.rmod-spell-row--faction .rmod-spell-name { color: #d4a017; }
 
 .rmod-spell-info {
   flex: 1;
@@ -941,6 +976,27 @@
 }
 
 .hero-slot-icon { font-size: 16px; line-height: 1; }
+
+.hero-slot-unassign-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  font-size: 11px;
+  line-height: 14px;
+  text-align: center;
+  background: rgba(80, 30, 10, 0.85);
+  color: #c8a060;
+  border: 1px solid #6a4010;
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+.hero-card-slot:hover .hero-slot-unassign-btn { opacity: 1; }
 .hero-slot-name {
   font-size: 9px;
   font-weight: 700;

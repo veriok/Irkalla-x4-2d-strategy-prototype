@@ -71,8 +71,9 @@ export function openHeroAssignModal({ targetType, targetId, onAssigned }) {
         statusClass = 'ham-status--available';
       }
 
+      const isDisabled = isWounded || isSameTarget;
       const row = document.createElement('div');
-      row.className = `ham-hero-row${isWounded ? ' ham-hero-row--disabled' : ''}`;
+      row.className = `ham-hero-row${isDisabled ? ' ham-hero-row--disabled' : ''}`;
       row.innerHTML = `
         <div class="ham-hero-info">
           <span class="ham-hero-name">${hero.name} ${genderEmoji}</span>
@@ -83,7 +84,7 @@ export function openHeroAssignModal({ targetType, targetId, onAssigned }) {
         ${isSameTarget ? '<div class="ham-current-badge">Current</div>' : ''}
       `;
 
-      if (!isWounded) {
+      if (!isDisabled) {
         row.addEventListener('click', () => {
           if (targetType === 'army') {
             assignHeroToArmy(hero.id, targetId, factionId);

@@ -36,7 +36,7 @@ import { flashCombat, flashConquest } from '../ui/map-view.js';
 import { logCapture, logMessage } from '../ui/event-log.js';
 import { emit } from './game-events.js';
 import { GAME_EVENTS, UNIT_TYPES } from '../data/enums.js';
-import { isHeroActive, addHeroExperience, woundHero, getHeroArmyBonuses, getHeroWoundChanceBonus, getHeroProvinceBonuses } from './hero-engine.js';
+import { isHeroActive, addHeroExperience, woundHero, getHeroArmyBonuses, getHeroWoundChanceBonus, getHeroProvinceBonuses, getHeroSpellpower, getHeroSchoolTier } from './hero-engine.js';
 import { ARTIFACT_MAP, rollRandomArtifact } from '../data/artifacts-data.js';
 import { SPELL_MAP } from '../data/hero-spells-data.js';
 import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense, getSiegeExpertReduction } from './tech-effects.js';
@@ -158,11 +158,26 @@ function _militiaPoolForProvince(province) {
     effectiveAtk,
     effectiveDef,
     hp: Array.from({ length: count }, () => hp),
+    combatEffects: [],
   };
 }
 
 function _militiaCount(pool) {
   return pool?.hp?.length ?? 0;
+}
+
+function _makeMilitiaArmy(pool, province) {
+  return {
+    id: `_militia_${province.id}`,
+    factionId: province.ownerId ?? 'neutral',
+    heroId: province.governorId ?? null,
+    provinceId: province.id,
+    units: [{ typeId: pool.unitId, count: pool.hp.length }],
+    hp: { active: { [pool.unitId]: pool.hp.slice() }, wounded: {} },
+    combatEffects: [],
+    statusEffects: [],
+    _isMilitia: true,
+  };
 }
 
 function _militiaDefense(pool) {
@@ -268,14 +283,15 @@ function _collectArmyUnits(army, factionId = null) {
       if (arr[i] <= 0) continue;
       // combatEffects: applied by spell resolution, stripped after battle
       const effects = (army.combatEffects ?? []).filter(e => e.unitKey === `a:${typeId}:${i}`);
-      const effAtkBonus  = effects.reduce((s, e) => e.stat === 'attack'  ? s + e.amount : s, 0);
-      const effDefBonus  = effects.reduce((s, e) => e.stat === 'defense' ? s + e.amount : s, 0);
+      const effAtkBonus   = effects.reduce((s, e) => e.stat === 'attack'  ? s + e.amount : s, 0);
+      const effDefBonus   = effects.reduce((s, e) => e.stat === 'defense' ? s + e.amount : s, 0);
+      const effMaxHpBonus = effects.reduce((s, e) => e.stat === 'maxHp'   ? s + e.amount : s, 0);
       out.push({
         key: `a:${typeId}:${i}`,
         pool: 'army',
         typeId,
         hp: arr[i],
-        maxHp: Math.max(1, def.maxHp ?? 10),
+        maxHp: Math.max(1, (def.maxHp ?? 10) + effMaxHpBonus),
         attack:  attack  + effAtkBonus,
         defense: defense + effDefBonus,
         unitType: def.unitType ?? null,
@@ -289,6 +305,14 @@ function _collectArmyUnits(army, factionId = null) {
 function _collectMilitiaUnits(pool) {
   const out = [];
   if (!pool || !pool.unitDef) return out;
+
+  // Accumulate per-round stat modifiers from spell effects
+  let atkBonus = 0, defBonus = 0;
+  for (const eff of (pool.combatEffects ?? [])) {
+    if (eff.stat === 'attack')  atkBonus += eff.amount;
+    if (eff.stat === 'defense') defBonus += eff.amount;
+  }
+
   for (let i = 0; i < (pool.hp?.length ?? 0); i++) {
     const hp = pool.hp[i];
     if (hp <= 0) continue;
@@ -298,8 +322,8 @@ function _collectMilitiaUnits(pool) {
       typeId: pool.unitId,
       hp,
       maxHp: Math.max(1, pool.unitDef.maxHp ?? 5),
-      attack: pool.effectiveAtk ?? pool.unitDef.attack ?? 0,
-      defense: pool.effectiveDef ?? pool.unitDef.defense ?? 0,
+      attack:  (pool.effectiveAtk ?? pool.unitDef.attack  ?? 0) + atkBonus,
+      defense: (pool.effectiveDef ?? pool.unitDef.defense ?? 0) + defBonus,
       unitType: pool.unitDef.unitType ?? null,
       traitIds: [],
     });
@@ -461,6 +485,19 @@ function _resolveHeroSpells(attackers, defenders, attArmy, defArmy, militiaPool,
   };
 }
 
+/** Returns true if the target army or militia pool already has a combatEffect from the given spell on the given unit. */
+function _hasSpellEffect(targetArmy, spellId, unitKey, militiaPool = null) {
+  const inArmy    = (targetArmy?.combatEffects    ?? []).some(e => e.sourceId === spellId && e.unitKey === unitKey);
+  const inMilitia = (militiaPool?.combatEffects ?? []).some(e => e.sourceId === spellId && e.unitKey === unitKey);
+  return inArmy || inMilitia;
+}
+
+/** Picks up to n unique items randomly from pool. */
+function _pickNRandom(pool, n) {
+  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(n, shuffled.length));
+}
+
 function _castHeroCombatSpells(army, enemyArmy, enemyMilitia, ownUnits, enemyUnits, roundNum) {
   const empty = { lines: [], casualties: [] };
   if (!army?.heroId) return empty;
@@ -480,90 +517,177 @@ function _castHeroCombatSpells(army, enemyArmy, enemyMilitia, ownUnits, enemyUni
   if (hero.mana < spell.manaCost) return empty;
 
   hero.mana = Math.max(0, hero.mana - spell.manaCost);
-  const spellpower = hero.attributes.spellpower ?? 0;
-  const baseDmg = (spell.baseDamage ?? 0) + spellpower;
+
+  const spellpower = getHeroSpellpower(hero);
+  const schoolTier = getHeroSchoolTier(hero, spell.schoolId);
+  const rawEff     = spell.effects[schoolTier];
+  const subEffects = Array.isArray(rawEff) ? rawEff : [rawEff];
+  const scaled     = (v) => Math.floor(v * (1 + spellpower * 0.05));
+
   const lines = [];
   const casualties = [];
 
-  if (spell.effectType === 'damage_all' || spell.damageType === 'damage_all') {
-    const isAlly      = spell.targetType?.includes('ally');
-    const targets     = isAlly ? ownUnits   : enemyUnits;
-    const targetArmy  = isAlly ? army       : enemyArmy;
-    const targetMilia = isAlly ? null       : enemyMilitia;
+  for (const subEff of subEffects) {
+    const effectType = subEff.effectType ?? 'damage';
+    const targetType = subEff.targetType ?? spell.targetType;
+    const isEnemy    = targetType.includes('enemy');
+    const chains     = subEff.chains ?? 1;
+    const pool       = isEnemy ? enemyUnits : ownUnits;
 
-    const armyDmgMap    = new Map();
-    const militiaDmgMap = new Map();
-    const dmg = Math.max(1, baseDmg);
-    for (const t of targets) {
-      if (t.pool === 'army')    armyDmgMap.set(t.key, dmg);
-      else if (t.pool === 'militia') militiaDmgMap.set(t.key, dmg);
-    }
+    // ── Resolve targets ────────────────────────────────────
+    let targets = [];
 
-    let destroyed = 0, hpLost = 0;
-    if (targetArmy && armyDmgMap.size > 0) {
-      const r = _applyBatchDamageToArmy(targetArmy, armyDmgMap, WOUND_CHANCE);
-      destroyed += r.destroyed; hpLost += r.hpLost;
-      casualties.push(...r.pendingCasualties);
-    }
-    if (targetMilia && militiaDmgMap.size > 0) {
-      const r = _applyBatchDamageToMilitia(targetMilia, militiaDmgMap);
-      destroyed += r.destroyed; hpLost += r.hpLost;
-    }
+    if (targetType === 'all_enemies' || targetType === 'all_allies') {
+      targets = pool.filter(u => u.hp > 0);
 
-    const targetLabel = isAlly ? 'allied forces' : 'enemy forces';
-    const killStr = destroyed > 0 ? ` ${destroyed} unit${destroyed > 1 ? 's' : ''} destroyed!` : '';
-    lines.push(`${hero.name} casts '${spell.name}', dealing ${hpLost} damage to ${targetLabel}!${killStr}`);
-
-  } else if (spell.effectType === 'damage_random' || spell.damageType === 'damage_random') {
-    const isAlly      = spell.targetType?.includes('ally');
-    const targetArmy  = isAlly ? army      : enemyArmy;
-    const targetMilia = isAlly ? null      : enemyMilitia;
-
-    // Re-read from real pools so prior spells' kills are already excluded
-    const alive = [];
-    if (targetArmy) {
-      for (const [typeId, arr] of Object.entries(targetArmy.hp?.active ?? {})) {
-        for (let i = 0; i < arr.length; i++) {
-          if (arr[i] > 0) alive.push({ pool: 'army', typeId, key: `a:${typeId}:${i}` });
+    } else if (targetType === 'lowest_hp_ally') {
+      const targetArmy = army;
+      let candidates = ownUnits.filter(u => u.hp > 0);
+      if (subEff.canRevive && targetArmy.hp?.wounded) {
+        for (const [typeId, wArr] of Object.entries(targetArmy.hp.wounded)) {
+          for (let i = 0; i < (wArr?.length ?? 0); i++) {
+            if ((wArr[i] ?? 0) > 0) {
+              candidates.push({ key: `w:${typeId}:${i}`, pool: 'wounded', typeId, hp: wArr[i] });
+            }
+          }
         }
       }
-    }
-    if (targetMilia) {
-      for (let i = 0; i < (targetMilia.hp?.length ?? 0); i++) {
-        if (targetMilia.hp[i] > 0) alive.push({ pool: 'militia', typeId: targetMilia.unitId, key: `m:${i}` });
+      candidates = candidates.filter(u => !_hasSpellEffect(targetArmy, spell.id, u.key));
+      candidates.sort((a, b) => a.hp - b.hp);
+      targets = candidates.slice(0, chains);
+
+    } else {
+      // random_enemy or random_ally
+      const targetArmyRef = isEnemy ? enemyArmy : army;
+      const eligible = pool.filter(u => {
+        if (u.hp <= 0) return false;
+        if (effectType === 'buff' || effectType === 'debuff') {
+          return !_hasSpellEffect(targetArmyRef, spell.id, u.key);
+        }
+        return true;
+      });
+      // Re-read from real HP pools for more accurate live pool
+      const liveAlive = [];
+      if (targetArmyRef) {
+        for (const [typeId, arr] of Object.entries(targetArmyRef.hp?.active ?? {})) {
+          for (let i = 0; i < arr.length; i++) {
+            if (arr[i] <= 0) continue;
+            if (effectType === 'buff' || effectType === 'debuff') {
+              if (_hasSpellEffect(targetArmyRef, spell.id, `a:${typeId}:${i}`)) continue;
+            }
+            liveAlive.push({ key: `a:${typeId}:${i}`, pool: 'army', typeId, hp: arr[i] });
+          }
+        }
       }
+      if (isEnemy && enemyMilitia && !enemyArmy?._isMilitia) {
+        for (let i = 0; i < (enemyMilitia.hp?.length ?? 0); i++) {
+          if (enemyMilitia.hp[i] > 0) liveAlive.push({ key: `m:${i}`, pool: 'militia', typeId: enemyMilitia.unitId, hp: enemyMilitia.hp[i] });
+        }
+      }
+      targets = _pickNRandom(liveAlive, chains);
     }
 
-    if (alive.length > 0) {
-      const target = alive[Math.floor(Math.random() * alive.length)];
-      const dmg    = Math.max(1, Math.round(baseDmg * 1.5));
-      const dmgMap = new Map([[target.key, dmg]]);
+    if (targets.length === 0) continue;
+
+    // ── Apply effect ───────────────────────────────────────
+    if (effectType === 'damage') {
+      const scaledBase  = scaled(subEff.baseDamage ?? 0);
+      const targetArmy  = isEnemy ? enemyArmy : army;
+      const targetMilia = isEnemy ? enemyMilitia : null;
+      const armyDmgMap    = new Map();
+      const militiaDmgMap = new Map();
+
+      for (const t of targets) {
+        const variance = 0.8 + Math.random() * 0.4;
+        const unitDef  = UNIT_MAP[t.typeId]?.defense ?? 0;
+        const finalDmg = Math.max(1, Math.floor(scaledBase * variance) - unitDef);
+        if (t.pool === 'army')    armyDmgMap.set(t.key, finalDmg);
+        else if (t.pool === 'militia') militiaDmgMap.set(t.key, finalDmg);
+      }
+
       let hpLost = 0, destroyed = 0;
-      if (target.pool === 'army' && targetArmy) {
-        const r = _applyBatchDamageToArmy(targetArmy, dmgMap, WOUND_CHANCE);
-        hpLost = r.hpLost; destroyed = r.destroyed;
+      if (targetArmy && armyDmgMap.size > 0) {
+        const r = _applyBatchDamageToArmy(targetArmy, armyDmgMap, WOUND_CHANCE);
+        hpLost += r.hpLost; destroyed += r.destroyed;
         casualties.push(...r.pendingCasualties);
-      } else if (target.pool === 'militia' && targetMilia) {
-        const r = _applyBatchDamageToMilitia(targetMilia, dmgMap);
-        hpLost = r.hpLost; destroyed = r.destroyed;
       }
-      const unitName = UNIT_MAP[target.typeId]?.name ?? target.typeId;
-      const killStr  = destroyed > 0 ? ' Unit Destroyed!' : '';
-      lines.push(`${hero.name} casts '${spell.name}', dealing ${hpLost} damage to ${unitName}!${killStr}`);
-    }
+      if (targetMilia && militiaDmgMap.size > 0) {
+        const r = _applyBatchDamageToMilitia(targetMilia, militiaDmgMap);
+        hpLost += r.hpLost; destroyed += r.destroyed;
+      }
 
-  } else if ((spell.effectType === 'buff' || spell.effectType === 'debuff') && spell.buffEffect) {
-    // Buffs modify the local snapshot — stats apply to this round's combat calculations
-    const targets = spell.targetType?.includes('enemy') ? enemyUnits : ownUnits;
-    const { stat, amount = 0 } = spell.buffEffect;
-    for (const t of targets) {
-      if (stat === 'attack') t.attack += amount;
-      else if (stat === 'defense') t.defense += amount;
-      else if (stat === 'maxHp') t.maxHp = Math.max(1, (t.maxHp ?? 1) + amount);
+      const tLabel  = targets.length === 1 ? (UNIT_MAP[targets[0].typeId]?.name ?? 'enemy unit') : (isEnemy ? 'enemy forces' : 'allied forces');
+      const killStr = destroyed > 0 ? ` ${destroyed} unit${destroyed > 1 ? 's' : ''} destroyed!` : '';
+      lines.push(`${hero.name} casts '${spell.name}', dealing ${hpLost} damage to ${tLabel}!${killStr}`);
+
+    } else if (effectType === 'buff' || effectType === 'debuff') {
+      const targetArmyRef = isEnemy ? enemyArmy : army;
+
+      if (subEff.stats) {
+        for (const { stat, amount } of subEff.stats) {
+          const scaledAmt = scaled(amount);
+          for (const t of targets) {
+            if (t.pool === 'army' && targetArmyRef) {
+              targetArmyRef.combatEffects = targetArmyRef.combatEffects ?? [];
+              targetArmyRef.combatEffects.push({ unitKey: t.key, stat, amount: scaledAmt, sourceId: spell.id });
+            } else if (t.pool === 'militia' && enemyMilitia) {
+              enemyMilitia.combatEffects.push({ unitKey: t.key, stat, amount: scaledAmt, sourceId: spell.id });
+            }
+          }
+        }
+        const statList = subEff.stats.map(s => `${scaled(s.amount) >= 0 ? '+' : ''}${scaled(s.amount)} ${s.stat}`).join(', ');
+        lines.push(`${hero.name} casts '${spell.name}' on ${targets.length} unit(s) (${statList}).`);
+      } else {
+        const stat = subEff.stat;
+        const amt  = scaled(subEff.amount ?? 0);
+        for (const t of targets) {
+          if (t.pool === 'army' && targetArmyRef) {
+            targetArmyRef.combatEffects = targetArmyRef.combatEffects ?? [];
+            if (stat === 'maxHp') {
+              const parts = t.key.split(':');
+              const tId = parts[1], tIdx = Number(parts[2]);
+              if (targetArmyRef.hp?.active?.[tId]?.[tIdx] != null) {
+                targetArmyRef.hp.active[tId][tIdx] += amt;
+              }
+            }
+            targetArmyRef.combatEffects.push({ unitKey: t.key, stat, amount: amt, sourceId: spell.id });
+          } else if (t.pool === 'militia' && enemyMilitia) {
+            // maxHp buff has no meaning on militia (fixed-HP pool), only atk/def apply
+            if (stat !== 'maxHp') {
+              enemyMilitia.combatEffects.push({ unitKey: t.key, stat, amount: amt, sourceId: spell.id });
+            }
+          }
+        }
+        const sign = (subEff.amount ?? 0) >= 0 ? '+' : '';
+        lines.push(`${hero.name} casts '${spell.name}' on ${targets.length} unit(s) (${sign}${amt} ${stat}).`);
+      }
+
+    } else if (effectType === 'heal') {
+      const healAmt = scaled(subEff.amount ?? 0);
+      let revived = 0;
+      for (const t of targets) {
+        if (t.pool === 'wounded') {
+          // Revive unit from wounded pool back to active
+          const parts = t.key.split(':'); // w:typeId:idx
+          const tId = parts[1], tIdx = Number(parts[2]);
+          const maxHp = UNIT_MAP[tId]?.maxHp ?? 10;
+          const newHp = Math.min(maxHp, (army.hp.wounded[tId]?.[tIdx] ?? 0) + healAmt);
+          army.hp.active[tId] = army.hp.active[tId] ?? [];
+          army.hp.active[tId].push(newHp);
+          if (army.hp.wounded[tId]) army.hp.wounded[tId][tIdx] = 0;
+          revived++;
+        } else if (t.pool === 'army') {
+          const parts = t.key.split(':');
+          const tId = parts[1], tIdx = Number(parts[2]);
+          const maxHp = UNIT_MAP[tId]?.maxHp ?? 10;
+          if (army.hp.active[tId]?.[tIdx] != null) {
+            army.hp.active[tId][tIdx] = Math.min(maxHp, army.hp.active[tId][tIdx] + healAmt);
+          }
+        }
+      }
+      const revStr = revived > 0 ? ` ${revived} unit(s) revived!` : '';
+      lines.push(`${hero.name} casts '${spell.name}', restoring ${healAmt} HP to ${targets.length} unit(s).${revStr}`);
     }
-    const targetLabel = spell.targetType?.includes('enemy') ? 'enemy forces' : 'allied forces';
-    const sign = amount >= 0 ? '+' : '';
-    lines.push(`${hero.name} casts '${spell.name}' on ${targetLabel} (${sign}${amount} ${stat}).`);
   }
 
   return { lines, casualties };
@@ -626,7 +750,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   const isEnemyProvince = targetP.ownerId !== attArmy.factionId && targetP.ownerId !== 'neutral';
   const enemyArmies = getArmiesInProvince(targetProvinceId)
     .filter(a => a.id !== attackerArmyId && a.factionId !== attArmy.factionId);
-  const enemyDefArmy = _pickBestDefenderArmy(enemyArmies);
+  let enemyDefArmy = _pickBestDefenderArmy(enemyArmies);
 
   let borrowedPlan = [];
   if (enemyDefArmy && enemyArmies.length > 1) {
@@ -638,12 +762,20 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     );
     _applyBorrowedUnits(enemyDefArmy, borrowedPlan);
   }
-  // Snapshot AFTER borrow merge so borrowed units appear in the report as participants
-  const defSnapActive  = enemyDefArmy ? _snapshotCounts(enemyDefArmy.hp.active)       : {};
-  const defSnapWounded = enemyDefArmy ? _snapshotCounts(enemyDefArmy.hp.wounded ?? {}) : {};
 
   const militiaPool = _militiaPoolForProvince(targetP);
   const hasMilitia = _militiaCount(militiaPool) > 0;
+
+  // When there's no real defending army, synthesise one from militia so spell effects work normally.
+  if (!enemyDefArmy && hasMilitia) {
+    enemyDefArmy = _makeMilitiaArmy(militiaPool, targetP);
+    // Keep militiaPool.hp pointing at the same array so casualty write-back still works.
+    militiaPool.hp = enemyDefArmy.hp.active[militiaPool.unitId];
+  }
+
+  // Snapshot AFTER borrow merge (and militia army creation) so all participants are captured.
+  const defSnapActive  = enemyDefArmy ? _snapshotCounts(enemyDefArmy.hp.active)       : {};
+  const defSnapWounded = enemyDefArmy ? _snapshotCounts(enemyDefArmy.hp.wounded ?? {}) : {};
 
   if (!isEnemyProvince && !enemyDefArmy && !hasMilitia) {
     moveArmy(attackerArmyId, targetProvinceId);
@@ -668,7 +800,8 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   let statusDefensePercent = 0;
   for (const se of (targetP.statusEffects ?? [])) {
     const def = PROVINCE_STATUS_MAP[se.type];
-    for (const eff of (def?.effects ?? [])) {
+    const effectsList = def?.effects ?? se.effects ?? [];
+    for (const eff of effectsList) {
       if (eff.type === 'defense_percent') statusDefensePercent += (eff.amount ?? 0) * (se.stacks ?? 1);
     }
   }
@@ -692,7 +825,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
 
   const attackerStrengthPre = Math.round(getEffectiveArmyAttack(attArmy, attArmy.factionId, UNIT_MAP) * seaPenalty);
   const defenderArmyDefensePre = enemyDefArmy ? getEffectiveArmyDefense(enemyDefArmy, enemyDefArmy.factionId, UNIT_MAP) : 0;
-  const defenderMilitiaDefensePre = _militiaDefense(militiaPool);
+  const defenderMilitiaDefensePre = enemyDefArmy?._isMilitia ? 0 : _militiaDefense(militiaPool);
   const defenderStrengthPre = Math.round((defenderArmyDefensePre + defenderMilitiaDefensePre) * terrainMod + fortBonus * 10);
 
   // Init combat effect buffers
@@ -706,7 +839,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   const defFaction = targetP.ownerId !== 'neutral' ? FACTION_MAP[targetP.ownerId] : null;
 
   const attSizeBefore = armySize(attArmy);
-  const defSizeBefore = (enemyDefArmy ? armySize(enemyDefArmy) : 0) + _militiaCount(militiaPool);
+  const defSizeBefore = (enemyDefArmy ? armySize(enemyDefArmy) : 0) + (enemyDefArmy?._isMilitia ? 0 : _militiaCount(militiaPool));
 
   const attSnapActive   = _snapshotCounts(attArmy.hp.active);
   const attSnapWounded  = _snapshotCounts(attArmy.hp.wounded ?? {});
@@ -724,7 +857,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     const attackers = _collectArmyUnits(attArmy, attArmy.factionId);
     const defenders = [
       ..._collectArmyUnits(enemyDefArmy, enemyDefArmy?.factionId ?? null),
-      ..._collectMilitiaUnits(militiaPool),
+      ...(enemyDefArmy?._isMilitia ? [] : _collectMilitiaUnits(militiaPool)),
     ];
 
     // Spell resolution fires before unit attacks; narrative lines prepend the round
@@ -770,13 +903,15 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     const attDamage = _sumDamage(damageToDef);
     const defDamage = _sumDamage(damageToAtt);
 
-    const attWoundChance = Math.min(0.95, WOUND_CHANCE + (getFaction(attArmy.factionId)?.woundChanceBonus ?? 0) + getHeroWoundChanceBonus(attArmy));
-    const defWoundChance = enemyDefArmy ? Math.min(0.95, WOUND_CHANCE + (getFaction(enemyDefArmy.factionId)?.woundChanceBonus ?? 0) + getHeroWoundChanceBonus(enemyDefArmy)) : WOUND_CHANCE;
+    const attStatusWound = (attArmy.statusEffects ?? []).reduce((s, e) => s + (e.woundChanceBonus ?? 0), 0);
+    const defStatusWound = enemyDefArmy ? (enemyDefArmy.statusEffects ?? []).reduce((s, e) => s + (e.woundChanceBonus ?? 0), 0) : 0;
+    const attWoundChance = Math.min(0.95, WOUND_CHANCE + (getFaction(attArmy.factionId)?.woundChanceBonus ?? 0) + getHeroWoundChanceBonus(attArmy) + attStatusWound);
+    const defWoundChance = enemyDefArmy ? Math.min(0.95, WOUND_CHANCE + (getFaction(enemyDefArmy.factionId)?.woundChanceBonus ?? 0) + getHeroWoundChanceBonus(enemyDefArmy) + defStatusWound) : WOUND_CHANCE;
     const attApply = _applyBatchDamageToArmy(attArmy, damageToAtt, attWoundChance);
     attPendingCasualties.push(...attApply.pendingCasualties);
     const defArmyApply = _applyBatchDamageToArmy(enemyDefArmy, damageToDef, defWoundChance);
     defPendingCasualties.push(...(defArmyApply.pendingCasualties ?? []));
-    const defMilitiaApply = _applyBatchDamageToMilitia(militiaPool, damageToDef);
+    const defMilitiaApply = enemyDefArmy?._isMilitia ? { destroyed: 0 } : _applyBatchDamageToMilitia(militiaPool, damageToDef);
 
     const attDestroyed = attApply.destroyed;
     const defDestroyed = defArmyApply.destroyed + defMilitiaApply.destroyed;
@@ -792,7 +927,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     ));
 
     const attAlive = armySize(attArmy);
-    const defAlive = (enemyDefArmy ? armySize(enemyDefArmy) : 0) + _militiaCount(militiaPool);
+    const defAlive = (enemyDefArmy ? armySize(enemyDefArmy) : 0) + (enemyDefArmy?._isMilitia ? 0 : _militiaCount(militiaPool));
 
     if (attAlive <= 0) {
       outcome = 'defender';
@@ -809,15 +944,21 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   if (outcome === 'inconclusive') {
     const attNow = getEffectiveArmyAttack(attArmy, attArmy.factionId, UNIT_MAP) + getEffectiveArmyDefense(attArmy, attArmy.factionId, UNIT_MAP);
     const defNow = (enemyDefArmy ? getEffectiveArmyAttack(enemyDefArmy, enemyDefArmy.factionId, UNIT_MAP) + getEffectiveArmyDefense(enemyDefArmy, enemyDefArmy.factionId, UNIT_MAP) : 0)
-      + _militiaDefense(militiaPool);
+      + (enemyDefArmy?._isMilitia ? 0 : _militiaDefense(militiaPool));
     const ratio = defNow > 0 ? attNow / defNow : (attNow > 0 ? 2 : 0.5);
     if (ratio >= 1.1) outcome = 'attacker';
     else if (ratio <= 0.9) outcome = 'defender';
   }
 
-  // Strip combat effects from armies
-  attArmy.combatEffects = [];
-  if (enemyDefArmy) enemyDefArmy.combatEffects = [];
+  // Strip combat effects: cap HP to base maxHp first (maxHp buffs may have let units absorb extra damage)
+  for (const army of [attArmy, enemyDefArmy]) {
+    if (!army) continue;
+    for (const [typeId, arr] of Object.entries(army.hp?.active ?? {})) {
+      const baseMax = UNIT_MAP[typeId]?.maxHp ?? 10;
+      for (let i = 0; i < arr.length; i++) arr[i] = Math.min(arr[i], baseMax);
+    }
+    army.combatEffects = [];
+  }
 
   // Emit post-combat casualties and apply any faction resurrections.
   // Attacker always gets the chance. Defender only if they're not about to be captured
@@ -834,7 +975,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     ? _buildUnitCardList(defSnapActive, defSnapWounded, enemyDefArmy.hp.active, enemyDefArmy.hp.wounded ?? {})
     : [];
   const militiaCards = [];
-  if (militiaUnitId && militiaSnapCount > 0) {
+  if (!enemyDefArmy?._isMilitia && militiaUnitId && militiaSnapCount > 0) {
     const survivingMilitia = _militiaCount(militiaPool);
     const killedMilitia    = Math.max(0, militiaSnapCount - survivingMilitia);
     for (let i = 0; i < survivingMilitia; i++) militiaCards.push({ typeId: militiaUnitId, status: 'alive'  });
@@ -853,11 +994,11 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   }
 
   const attSizeAfter = armySize(attArmy);
-  const defSizeAfter = (enemyDefArmy ? armySize(enemyDefArmy) : 0) + _militiaCount(militiaPool);
+  const defSizeAfter = (enemyDefArmy ? armySize(enemyDefArmy) : 0) + (enemyDefArmy?._isMilitia ? 0 : _militiaCount(militiaPool));
   const attLostTotal = Math.max(0, attSizeBefore - attSizeAfter);
   const defLostTotal = Math.max(0, defSizeBefore - defSizeAfter);
 
-  if (enemyDefArmy && armySize(enemyDefArmy) <= 0) removeArmy(enemyDefArmy.id);
+  if (enemyDefArmy && !enemyDefArmy._isMilitia && armySize(enemyDefArmy) <= 0) removeArmy(enemyDefArmy.id);
   if (armySize(attArmy) <= 0) removeArmy(attArmy.id);
 
   let summary = '';
@@ -911,7 +1052,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
 
     let attHeroXp = 0, defHeroXp = 0;
     if (outcome === 'attacker') {
-      const pow = _power(enemyDefArmy) + _milPow(militiaPool);
+      const pow = _power(enemyDefArmy) + (enemyDefArmy?._isMilitia ? 0 : _milPow(militiaPool));
       attHeroXp = attHero && isHeroActive(attHero) ? _randXp(25 + Math.floor(pow / 8)) : 0;
       defHeroXp = defHero && isHeroActive(defHero) ? _randXp(8) : 0;
     } else if (outcome === 'defender') {
@@ -974,6 +1115,27 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   }
 
   return result;
+}
+
+/**
+ * Apply spell damage to all active units in an army outside of combat (province spells).
+ * Applies spellpower scaling, ±20% variance, and defence reduction per unit.
+ */
+export function applyArmyDamageOutOfCombat(army, baseDamage, spellpower) {
+  if (!army) return { destroyed: 0, wounded: 0 };
+  _ensureHpPools(army);
+  const scaledBase = Math.floor(baseDamage * (1 + spellpower * 0.05));
+  const dmgMap = new Map();
+  for (const [typeId, arr] of Object.entries(army.hp?.active ?? {})) {
+    const unitDef = UNIT_MAP[typeId]?.defense ?? 0;
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] <= 0) continue;
+      const variance = 0.8 + Math.random() * 0.4;
+      const finalDmg = Math.max(1, Math.floor(scaledBase * variance) - unitDef);
+      dmgMap.set(`a:${typeId}:${i}`, finalDmg);
+    }
+  }
+  return _applyBatchDamageToArmy(army, dmgMap, WOUND_CHANCE);
 }
 
 /**

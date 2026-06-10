@@ -635,6 +635,8 @@ export function getHeroCastableSpells(hero, factionId, SPELL_MAP) {
   return Object.values(SPELL_MAP).filter(spell => {
     if (!fs.unlockedSpells.includes(spell.id)) return false;
     if (spell.factionOnly && !spell.factionOnly.includes(factionId)) return false;
+    // Tier 0 cantrips bypass channeling requirement entirely
+    if (spell.tier === 0) return true;
     if (channelingTier < spell.tier) return false;
     if ((spellbooks[spell.schoolId] ?? 0) < spell.tier) return false;
     return true;

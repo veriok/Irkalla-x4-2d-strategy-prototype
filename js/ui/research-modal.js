@@ -11,7 +11,7 @@ import { TECH_MAP, buildFactionTechTree, resolveTechBaseCost } from '../data/tec
 import { createCard, getTechCardImage } from './card-renderer.js';
 import { TECH_ERAS } from '../data/enums.js';
 import { showTechTooltip, hideTechTooltip } from './tooltips.js';
-import { SPELL_SCHOOLS, SPELL_SCHOOL_MAP, getSpellsBySchool } from '../data/hero-spells-data.js';
+import { SPELL_SCHOOLS, SPELL_SCHOOL_MAP, SPELL_MAP, getSpellsBySchool } from '../data/hero-spells-data.js';
 
 const overlayEl    = document.getElementById('research-modal-overlay');
 const closeBtn     = document.getElementById('rmod-close');
@@ -235,7 +235,7 @@ function _makeTechItem(techDef, fs, techTree) {
 
 // ── Magic Tab (Spell Research) ───────────────────────────
 
-const SPELL_TIER_COST = { 1: 25, 2: 50, 3: 75 };
+const SPELL_TIER_COST = { 0: 20, 1: 40, 2: 60, 3: 80 };
 
 /** Returns school defs for schools where the faction has at least 1 spellbook, in canonical order. */
 function _getFactionSpellSchools(fs) {
@@ -363,14 +363,29 @@ function _renderSchoolCol(school, bookCount, unlockedSpells, researchBalance, fs
   col.appendChild(header);
 
   const schoolSpells = getSpellsBySchool(school.id) ?? [];
-  const spellsByTier = { 1: [], 2: [], 3: [] };
+
+  // Build faction replacement map: replacedSpellId → replacement spell
+  const replacementMap = new Map(
+    (fs.spellReplacements ?? [])
+      .map(r => [r.replaces, SPELL_MAP[r.with]])
+      .filter(([, s]) => s),
+  );
+
+  // Pass 1: slots are defined by base spells (those that don't replace anything).
+  // Pass 2: swap in the faction's replacement spell where one exists.
+  const spellsByTier = { 0: [], 1: [], 2: [], 3: [] };
+  const factionSpellIds = new Set();
   for (const spell of schoolSpells) {
-    if (spellsByTier[spell.tier]) spellsByTier[spell.tier].push(spell);
+    if (spell.replacesSpell) continue; // replacement spells are not base slots
+    const resolved = replacementMap.get(spell.id) ?? spell;
+    if (resolved !== spell) factionSpellIds.add(resolved.id);
+    if (spellsByTier[spell.tier] !== undefined) spellsByTier[spell.tier].push(resolved);
   }
 
-  for (const tier of [1, 2, 3]) {
-    const locked = bookCount < tier;
-    const tierLabel = ['Novice', 'Expert', 'Master'][tier - 1];
+  for (const tier of [0, 1, 2, 3]) {
+    // Tier 0 cantrips always researchable; higher tiers need matching spellbook count
+    const locked = tier > 0 && bookCount < tier;
+    const tierLabel = ['Cantrip', 'Novice', 'Expert', 'Master'][tier];
     const cost = SPELL_TIER_COST[tier];
 
     const tierGroup = document.createElement('div');
@@ -390,13 +405,14 @@ function _renderSchoolCol(school, bookCount, unlockedSpells, researchBalance, fs
       const isUnlocked = unlockedSpells.has(spell.id);
       const canAffordSpell = !locked && researchBalance >= cost;
 
+      const isFaction = factionSpellIds.has(spell.id);
       const row = document.createElement('div');
-      row.className = `rmod-spell-row${isUnlocked ? ' rmod-spell-row--unlocked' : ''}${locked ? ' rmod-spell-row--locked' : ''}`;
+      row.className = `rmod-spell-row${isUnlocked ? ' rmod-spell-row--unlocked' : ''}${locked ? ' rmod-spell-row--locked' : ''}${isFaction ? ' rmod-spell-row--faction' : ''}`;
 
       const infoEl = document.createElement('div');
       infoEl.className = 'rmod-spell-info';
       infoEl.innerHTML = `
-        <span class="rmod-spell-name">${spell.name}</span>
+        <span class="rmod-spell-name">${spell.name}${isFaction ? ' <span class="rmod-spell-racial-badge">✦</span>' : ''}</span>
         <span class="rmod-spell-type">${spell.type === 'combat' ? '⚔ Combat' : '🏛 Province'}</span>
         <span class="rmod-spell-desc">${spell.description ?? ''}</span>
       `;

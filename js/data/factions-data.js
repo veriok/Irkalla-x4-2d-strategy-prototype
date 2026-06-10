@@ -10,7 +10,7 @@
  * Implementations live in js/engine/faction-reactions.js.
  */
 
-import { RACE_IDS, FACTION_IDS, FACTION_REACTION_IDS, GOLD_RESOURCE, RESEARCH_RESOURCE, SPELL_SCHOOL_IDS } from './enums.js';
+import { RACE_IDS, FACTION_IDS, FACTION_REACTION_IDS, GOLD_RESOURCE, RESEARCH_RESOURCE, SPELL_SCHOOL_IDS, SPELL_IDS } from './enums.js';
 
 export const FACTIONS = [
 
@@ -48,6 +48,7 @@ export const FACTIONS = [
     biomePrefs: { primary: 'mountains', secondary: 'tundra' },
     startingUnits: [{ unitId: 'clay_golem', count: 2 }, { unitId: 'undead_levy', count: 1 }],
     startingSpellbooks: { [SPELL_SCHOOL_IDS.DEATH]: 3, [SPELL_SCHOOL_IDS.RUNE]: 3 },
+    spellReplacements: [{ replaces: SPELL_IDS.RUNIC_MIGHT, with: SPELL_IDS.RUNE_FORGE }],
     onProvinceCapture: [FACTION_REACTION_IDS.KUR_MARGAL_SOUL_HARVEST],
     onArmyCasualties: [FACTION_REACTION_IDS.KUR_MARGAL_SOUL_RESURRECTION],
   },
@@ -82,6 +83,7 @@ export const FACTIONS = [
     startingUnits: [{ unitId: 'clan_fighter', count: 2 }, { unitId: 'clan_crossbowman', count: 1 }],
     startingSpellbooks: { [SPELL_SCHOOL_IDS.EARTH]: 3, [SPELL_SCHOOL_IDS.RUNE]: 3 },
     startingActions: ['fortify_province'],
+    spellReplacements: [{ replaces: SPELL_IDS.RUNIC_MIGHT, with: SPELL_IDS.RUNE_FORGE }],
   },
 
   // ═══════════════════════════════════════════════════════

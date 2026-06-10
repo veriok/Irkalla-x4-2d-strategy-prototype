@@ -254,6 +254,8 @@
   overflow: auto;
   padding: 20px 24px 32px;
 }
+#rmod-magic-panel[hidden] { display: none !important; }
+#rmod-tree-scroll[hidden]  { display: none !important; }
 
 .rmod-magic-empty {
   color: var(--text-dim, #888);
@@ -391,6 +393,17 @@
 }
 .rmod-spell-row--locked {
   opacity: 0.45;
+}
+.rmod-spell-row--faction {
+  border: 1px solid #b8860b;
+}
+.rmod-spell-row--faction.rmod-spell-row--unlocked {
+  border: 1px solid #6aaa40;
+}
+.rmod-spell-row--faction .rmod-spell-name { color: #d4a017; }
+.rmod-spell-racial-badge {
+  color: #d4a017;
+  font-size: 0.8em;
 }
 .rmod-spell-info {
   display: flex;
