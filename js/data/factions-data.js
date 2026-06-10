@@ -186,6 +186,7 @@ export const FACTIONS = [
     biomePrefs: { primary: 'coastal', secondary: 'forest' },
     startingUnits: [{ unitId: 'aethera_hoplite', count: 2 }, { unitId: 'aethera_ranger', count: 1 }],
     startingSpellbooks: { [SPELL_SCHOOL_IDS.AIR]: 3, [SPELL_SCHOOL_IDS.ARCANE]: 3 },
+    spellReplacements: [{ replaces: SPELL_IDS.TAILWIND, with: SPELL_IDS.GUIDED_PROJECTILES }],
   },
 
   {

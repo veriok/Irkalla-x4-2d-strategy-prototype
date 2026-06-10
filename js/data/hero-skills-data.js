@@ -107,18 +107,27 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        description: '+10% archer attack.',
-        effect: { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'attack', percent: 10 },
+        description: '+10% archer attack. Archers gain +5% first strike chance.',
+        effects: [
+          { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'attack', percent: 10 },
+          { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'firstStrikeChance', flat: 5 },
+        ],
       },
       {
         tier: 'expert',
-        description: '+15% archer attack, +10% archer defense.',
-        effect: { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, bonuses: [{ stat: 'attack', percent: 15 }, { stat: 'defense', percent: 10 }] },
+        description: '+15% archer attack, +10% archer defense. Archers gain +10% first strike chance.',
+        effects: [
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, bonuses: [{ stat: 'attack', percent: 15 }, { stat: 'defense', percent: 10 }] },
+          { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'firstStrikeChance', flat: 10 },
+        ],
       },
       {
         tier: 'master',
-        description: '+25% archer attack, +15% archer defense.',
-        effect: { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, bonuses: [{ stat: 'attack', percent: 25 }, { stat: 'defense', percent: 15 }] },
+        description: '+25% archer attack, +15% archer defense. Archers gain +15% first strike chance.',
+        effects: [
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, bonuses: [{ stat: 'attack', percent: 25 }, { stat: 'defense', percent: 15 }] },
+          { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'firstStrikeChance', flat: 15 },
+        ],
       },
     ],
   },

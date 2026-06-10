@@ -416,13 +416,14 @@ export function getHeroArmyBonuses(hero) {
     woundChanceBonus: 0,
   };
 
-  // Process skills
+  // Process skills — supports both effects:[] (array) and legacy effect:{} (single)
   for (const { skillId, tier } of hero.skills) {
     const skillDef = HERO_SKILL_MAP[skillId];
     if (!skillDef) continue;
     const tierDef = skillDef.tiers.find(t => t.tier === tier);
-    if (!tierDef?.effect) continue;
-    _applySkillEffect(tierDef.effect, result);
+    if (!tierDef) continue;
+    const effs = tierDef.effects ?? (tierDef.effect ? [tierDef.effect] : []);
+    for (const eff of effs) _applySkillEffect(eff, result);
   }
 
   // Process artifacts
@@ -502,23 +503,26 @@ export function getHeroProvinceBonuses(hero) {
   let unitCostDiscountPercent = 0;
   let unitRecruitSpeedBonus   = 0;
 
+  // Supports both effects:[] (array) and legacy effect:{} (single)
   for (const { skillId, tier } of hero.skills) {
     const skillDef = HERO_SKILL_MAP[skillId];
     if (!skillDef) continue;
     const tierDef = skillDef.tiers.find(t => t.tier === tier);
-    if (!tierDef?.effect) continue;
-    const eff = tierDef.effect;
-    switch (eff.type) {
-      case 'province_income_bonus':   incomePercent       += eff.percent;                                    break;
-      case 'province_flat_gold':      flatGold            += eff.amount;                                     break;
-      case 'province_build_speed':    buildSpeedBonus     += eff.amount;                                     break;
-      case 'province_build_discount': buildDiscountPercent += eff.discountPercent ?? 0;
-                                      buildSpeedBonus     += eff.speedBonus ?? 0;                            break;
-      case 'province_research_bonus': researchPercent     += eff.percent;                                    break;
-      case 'province_defense_bonus':  defensePercent      += eff.percent;                                    break;
-      case 'province_militia_bonus':  militiaBonus        += eff.amount;                                     break;
-      case 'unit_cost_discount':      unitCostDiscountPercent += eff.percent ?? 0;
-                                      unitRecruitSpeedBonus   += eff.recruitSpeedBonus ?? 0;                 break;
+    if (!tierDef) continue;
+    const effs = tierDef.effects ?? (tierDef.effect ? [tierDef.effect] : []);
+    for (const eff of effs) {
+      switch (eff.type) {
+        case 'province_income_bonus':   incomePercent       += eff.percent;                                    break;
+        case 'province_flat_gold':      flatGold            += eff.amount;                                     break;
+        case 'province_build_speed':    buildSpeedBonus     += eff.amount;                                     break;
+        case 'province_build_discount': buildDiscountPercent += eff.discountPercent ?? 0;
+                                        buildSpeedBonus     += eff.speedBonus ?? 0;                            break;
+        case 'province_research_bonus': researchPercent     += eff.percent;                                    break;
+        case 'province_defense_bonus':  defensePercent      += eff.percent;                                    break;
+        case 'province_militia_bonus':  militiaBonus        += eff.amount;                                     break;
+        case 'unit_cost_discount':      unitCostDiscountPercent += eff.percent ?? 0;
+                                        unitRecruitSpeedBonus   += eff.recruitSpeedBonus ?? 0;                 break;
+      }
     }
   }
 

@@ -77,6 +77,17 @@ export const BUILDING_CATEGORIES = Object.freeze({
   INFRASTRUCTURE: 'infrastructure',
 });
 
+export const TRAIT_IDS = Object.freeze({
+  SUN_PRIEST_AURA:      'sun_priest_aura',
+  BEAST_BOND_AURA:      'beast_bond_aura',
+  LEVY_BOOST_AURA:      'levy_boost_aura',
+  LEADERLESS_CONSTRUCT: 'leaderless_construct',
+  SIEGE_EXPERT:         'siege_expert',
+  NO_HEAL:              'no_heal',
+  ANTI_CAVALRY:         'anti_cavalry',
+  FIRST_STRIKE:         'first_strike',
+});
+
 export const TECH_ERAS = Object.freeze({
   STONE:  'stone',
   BRONZE: 'bronze',
@@ -197,8 +208,9 @@ export const SPELL_IDS = Object.freeze({
   // ── Air ──────────────────────────────────────────────────
   WIND_STRIKE:        'wind_strike',        // T0
   GUST:               'gust',               // T1
-  TAILWIND:           'tailwind',           // T2 army_buff movement
-  CHAIN_LIGHTNING:    'chain_lightning',    // T3
+  TAILWIND:             'tailwind',             // T2 army_buff movement
+  GUIDED_PROJECTILES:   'guided_projectiles',   // T2 army_buff first_strike (Aethera replacement)
+  CHAIN_LIGHTNING:      'chain_lightning',      // T3
   // ── Arcane ───────────────────────────────────────────────
   ARCANE_BOLT:        'arcane_bolt',        // T0
   WISDOM:             'wisdom',             // T1 province research buff

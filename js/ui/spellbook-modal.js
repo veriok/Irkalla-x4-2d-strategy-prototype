@@ -171,6 +171,9 @@ function _effectSummaryHtml(spell, hero, factionId, army = null) {
       } else if (se.woundChanceBonus != null) {
         const pct = Math.round(se.woundChanceBonus * 100);
         parts.push(`+${pct}% wound chance for ${hi(turns, baseTurns)} turns`);
+      } else if (se.firstStrikeChanceBonus) {
+        const pct = Math.round(se.firstStrikeChanceBonus * 100);
+        parts.push(`+${pct}% first strike chance for ${hi(turns, baseTurns)} turns`);
       }
 
     } else if (se.effectType === 'recruit_penalty') {
@@ -342,9 +345,10 @@ function _renderCombatPage(hero, allSpells, factionId) {
 
       const summaryHtml = _effectSummaryHtml(spell, hero, factionId);
       const queueBadge = queueCount > 0 ? `<span class="sb-queue-count">×${queueCount}</span>` : '';
+      const reachBadge = spell.reach ? `<span class="sb-reach-badge" title="Reach — can be cast during the First Strike pre-round">🏹</span>` : '';
       row.innerHTML = `
         <div class="sb-spell-row-top">
-          <span class="sb-spell-name">${spell.icon ?? ''} ${spell.name}${queueBadge}</span>
+          <span class="sb-spell-name">${spell.icon ?? ''} ${spell.name}${reachBadge}${queueBadge}</span>
           <span class="sb-spell-meta"><span class="sb-mana-cost">💧${spell.manaCost}</span> <span class="sb-target">${_targetLabel(spell.targetType)}</span></span>
         </div>
         ${summaryHtml ? `<div class="sb-spell-effect">${summaryHtml}</div>` : ''}
@@ -643,13 +647,14 @@ function _applyProvinceSubEffect(hero, spell, eff, factionId, fs, targetProvince
     // No-stack: don't re-apply if already active
     if (army.statusEffects.some(s => s.type === tag)) return;
     army.statusEffects.push({
-      type:             tag,
-      label:            spell.name,
-      icon:             spell.icon ?? '',
-      turnsRemaining:   scaledTurns(eff.turnsRemaining ?? 2),
-      effects:          eff.effects ?? [],
-      movementBonus:    eff.movementBonus ?? 0,
-      woundChanceBonus: eff.woundChanceBonus ?? 0,
+      type:                  tag,
+      label:                 spell.name,
+      icon:                  spell.icon ?? '',
+      turnsRemaining:        scaledTurns(eff.turnsRemaining ?? 2),
+      effects:               eff.effects ?? [],
+      movementBonus:         eff.movementBonus ?? 0,
+      woundChanceBonus:      eff.woundChanceBonus ?? 0,
+      firstStrikeChanceBonus: eff.firstStrikeChanceBonus ?? 0,
     });
     recalcArmyMoves(army, UNIT_MAP);
     return;

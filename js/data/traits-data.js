@@ -13,27 +13,29 @@
  *   no_heal                   — wounded unit is destroyed instead of recovering
  */
 
+import { TRAIT_IDS } from './enums.js';
+
 export const TRAITS = [
   {
-    id: 'sun_priest_aura',
+    id: TRAIT_IDS.SUN_PRIEST_AURA,
     name: 'Sun Priest Aura',
     description: 'Grants +1 attack to all other units in the same army.',
     effect: { scope: 'army', type: 'army_attack_bonus', amount: 1 },
   },
   {
-    id: 'beast_bond_aura',
+    id: TRAIT_IDS.BEAST_BOND_AURA,
     name: 'Beast Bond',
     description: 'The beast\'s primal ferocity inspires nearby warriors: +1 attack to all non-monster units in this army.',
     effect: { scope: 'army', type: 'army_attack_bonus', amount: 1 },
   },
   {
-    id: 'levy_boost_aura',
+    id: TRAIT_IDS.LEVY_BOOST_AURA,
     name: 'Drill Master',
     description: 'Drills levy troops: levy units in this army gain +1 attack and +1 defense.',
     effect: { scope: 'army', type: 'army_levy_stat_bonus', attack: 1, defense: 1 },
   },
   {
-    id: 'leaderless_construct',
+    id: TRAIT_IDS.LEADERLESS_CONSTRUCT,
     name: 'Leaderless Construct',
     description: 'Without a commander\'s direction, the construct operates at reduced effectiveness: -2 attack and -2 defense.',
     effect: {
@@ -46,22 +48,28 @@ export const TRAITS = [
     },
   },
   {
-    id: 'siege_expert',
+    id: TRAIT_IDS.SIEGE_EXPERT,
     name: 'Siege Expert',
-    description: 'Specialised in dismantling fortifications. Each Siege Engineer reduces the defender\'s fortification bonus by 10% (min 0%).',
+    description: 'Reduces the defender\'s fortification bonus by 10% (min 0%).',
     effect: { scope: 'army', type: 'reduce_defender_fortification', percentPerUnit: 10 },
   },
   {
-    id: 'no_heal',
+    id: TRAIT_IDS.NO_HEAL,
     name: 'No Retreat',
-    description: 'This mercenary unit does not recover from wounds — when wounded, it is destroyed instead.',
+    description: 'When wounded, it is destroyed instead.',
     effect: { scope: 'army', type: 'no_heal' },
   },
   {
-    id: 'anti_cavalry',
+    id: TRAIT_IDS.ANTI_CAVALRY,
     name: 'Anti-Cavalry',
-    description: 'Trained to counter mounted units. Gains +3 attack when fighting cavalry in combat.',
+    description: 'Gains +3 attack when fighting cavalry in combat.',
     effect: { scope: 'army', type: 'anti_cavalry_bonus', attackBonus: 3 },
+  },
+  {
+    id: TRAIT_IDS.FIRST_STRIKE,
+    name: 'First Strike',
+    description: 'May fire a volley before combat begins.',
+    effect: { scope: 'army', type: 'first_strike' },
   },
 ];
 

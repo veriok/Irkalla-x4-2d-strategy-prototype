@@ -215,6 +215,7 @@ export const SPELLS = [
     id: SPELL_IDS.WIND_STRIKE, schoolId: SPELL_SCHOOL_IDS.AIR, tier: 0,
     name: 'Wind Strike', icon: '💨', manaCost: 2,
     type: 'combat', targetType: 'random_enemy',
+    reach: true,
     description: 'A cutting blast of wind strikes a random enemy.',
     effects: [
       { effectType: 'damage', baseDamage: 4 },
@@ -251,9 +252,24 @@ export const SPELLS = [
   },
 
   {
+    id: SPELL_IDS.GUIDED_PROJECTILES, schoolId: SPELL_SCHOOL_IDS.AIR, tier: 2,
+    name: 'Guided Projectiles', icon: '🎯', manaCost: 9,
+    type: 'province', targetType: 'self',
+    replacesSpell: SPELL_IDS.TAILWIND,
+    description: 'Enchants the army\'s ranged attacks. Archers gain increased first strike chance for 2 turns.',
+    effects: [
+      { effectType: 'army_buff', firstStrikeChanceBonus: 0.10, turnsRemaining: 2 },
+      { effectType: 'army_buff', firstStrikeChanceBonus: 0.12, turnsRemaining: 2 },
+      { effectType: 'army_buff', firstStrikeChanceBonus: 0.15, turnsRemaining: 2 },
+      { effectType: 'army_buff', firstStrikeChanceBonus: 0.20, turnsRemaining: 3 },
+    ],
+  },
+
+  {
     id: SPELL_IDS.CHAIN_LIGHTNING, schoolId: SPELL_SCHOOL_IDS.AIR, tier: 3,
     name: 'Chain Lightning', icon: '⚡', manaCost: 16,
     type: 'combat', targetType: 'random_enemy',
+    reach: true,
     description: 'Lightning arcs between multiple random enemies.',
     effects: [
       { effectType: 'damage', baseDamage: 13, chains: 2 },

@@ -21,7 +21,7 @@
  * techRequired:       tech id that must be unlocked to recruit this unit
  */
 
-import { UNIT_TYPES, RACE_IDS, FACTION_IDS } from './enums.js';
+import { UNIT_TYPES, RACE_IDS, FACTION_IDS, TRAIT_IDS } from './enums.js';
 
 const UNIT_DEFAULTS = {
   movement: 1,
@@ -68,7 +68,7 @@ const UNIT_DEFS = [
     tier: 1,
     unitType: UNIT_TYPES.CONSTRUCT,
     isMilitia: true,
-    traitIds: ['leaderless_construct'],
+    traitIds: [TRAIT_IDS.LEADERLESS_CONSTRUCT],
   },
   {
     id: 'clay_golem',
@@ -86,7 +86,7 @@ const UNIT_DEFS = [
     buildTurns: 2,
     stackSize: 1,
     requiredBuilding: 'dwarf_forge_1',
-    traitIds: ['leaderless_construct'],
+    traitIds: [TRAIT_IDS.LEADERLESS_CONSTRUCT],
   },
   {
     id: 'undead_levy',
@@ -120,6 +120,7 @@ const UNIT_DEFS = [
     cost: { gold: 35, souls: 3 },
     buildTurns: 2,
     stackSize: 2,
+    traitIds: [TRAIT_IDS.FIRST_STRIKE],
     requiredBuilding: 'kur_temple_1',
   },
   {
@@ -139,7 +140,7 @@ const UNIT_DEFS = [
     stackSize: 1,
     requiredBuilding: 'dwarf_forge_2',
     techRequired: 'bronze_working',
-    traitIds: ['leaderless_construct'],
+    traitIds: [TRAIT_IDS.LEADERLESS_CONSTRUCT],
   },
   {
     id: 'deathguard',
@@ -175,6 +176,7 @@ const UNIT_DEFS = [
     tier: 1,
     unitType: UNIT_TYPES.ARCHER,
     isMilitia: true,
+    traitIds: [TRAIT_IDS.FIRST_STRIKE],
   },
   {
     id: 'clan_fighter',
@@ -207,6 +209,7 @@ const UNIT_DEFS = [
     cost: { gold: 35 },
     buildTurns: 2,
     stackSize: 1,
+    traitIds: [TRAIT_IDS.FIRST_STRIKE],
     requiredBuilding: 'mustering_field',
     techRequired: 'hunting',
   },
@@ -260,7 +263,7 @@ const UNIT_DEFS = [
     cost: { gold: 60, schematics: 8 },
     buildTurns: 3,
     stackSize: 1,
-    traitIds: ['siege_expert'],
+    traitIds: [TRAIT_IDS.SIEGE_EXPERT],
     requiredBuilding: 'workshop_3',
     techRequired: 'engineering_mastery',
   },
@@ -313,6 +316,7 @@ const UNIT_DEFS = [
     cost: { gold: 30, prestige: 2 },
     buildTurns: 1,
     stackSize: 2,
+    traitIds: [TRAIT_IDS.FIRST_STRIKE],
     requiredBuilding: 'mustering_field',
     techRequired: 'hunting',
   },
@@ -400,6 +404,7 @@ const UNIT_DEFS = [
     cost: { gold: 30 },
     buildTurns: 1,
     stackSize: 2,
+    traitIds: [TRAIT_IDS.FIRST_STRIKE],
     requiredBuilding: 'mustering_field',
     techRequired: 'hunting',
   },
@@ -469,7 +474,7 @@ const UNIT_DEFS = [
     cost: { gold: 50, contracts: 8 },
     buildTurns: 0,
     stackSize: 1,
-    traitIds: ['no_heal'],
+    traitIds: [TRAIT_IDS.NO_HEAL],
     techRequired: 'mercenary_contracts',
   },
   {
@@ -487,7 +492,7 @@ const UNIT_DEFS = [
     cost: { gold: 45, contracts: 7 },
     buildTurns: 0,
     stackSize: 1,
-    traitIds: ['no_heal'],
+    traitIds: [TRAIT_IDS.NO_HEAL, TRAIT_IDS.FIRST_STRIKE],
     techRequired: 'mercenary_contracts',
   },
 
@@ -508,6 +513,7 @@ const UNIT_DEFS = [
     tier: 1,
     unitType: UNIT_TYPES.ARCHER,
     isMilitia: true,
+    traitIds: [TRAIT_IDS.FIRST_STRIKE],
   },
   {
     id: 'aethera_hoplite',
@@ -524,7 +530,7 @@ const UNIT_DEFS = [
     cost: { gold: 30, aether: 3 },
     buildTurns: 1,
     stackSize: 1,
-    traitIds: ['anti_cavalry'],
+    traitIds: [TRAIT_IDS.ANTI_CAVALRY],
   },
   {
     id: 'aethera_ranger',
@@ -541,6 +547,7 @@ const UNIT_DEFS = [
     cost: { gold: 30, aether: 3 },
     buildTurns: 1,
     stackSize: 2,
+    traitIds: [TRAIT_IDS.FIRST_STRIKE],
     requiredBuilding: 'mustering_field',
     techRequired: 'hunting',
   },
@@ -629,7 +636,7 @@ const UNIT_DEFS = [
     buildTurns: 1,
     stackSize: 1,
     requiredBuilding: 'mustering_field',
-    traitIds: ['levy_boost_aura'],
+    traitIds: [TRAIT_IDS.LEVY_BOOST_AURA],
   },
   {
     id: 'phalanx_soldier',
@@ -646,7 +653,7 @@ const UNIT_DEFS = [
     cost: { gold: 45, tribute: 5 },
     buildTurns: 2,
     stackSize: 1,
-    traitIds: ['anti_cavalry'],
+    traitIds: [TRAIT_IDS.ANTI_CAVALRY],
     requiredBuilding: [['warrior_lodge', 'forge_1']],
     techRequired: 'iron_discipline',
   },
@@ -665,7 +672,7 @@ const UNIT_DEFS = [
     cost: { gold: 60, tribute: 10 },
     buildTurns: 3,
     stackSize: 1,
-    traitIds: ['anti_cavalry'],
+    traitIds: [TRAIT_IDS.ANTI_CAVALRY],
     requiredBuilding: [['barracks', 'forge_2']],
     techRequired: 'eternal_phalanx',
   },
@@ -736,6 +743,7 @@ const UNIT_DEFS = [
     cost: { gold: 30, ancient_lore: 3 },
     buildTurns: 1,
     stackSize: 1,
+    traitIds: [TRAIT_IDS.FIRST_STRIKE],
     requiredBuilding: 'mustering_field',
     techRequired: 'hunting',
   },
@@ -789,7 +797,7 @@ const UNIT_DEFS = [
     cost: { gold: 55, faith: 12 },
     buildTurns: 3,
     stackSize: 1,
-    traitIds: ['sun_priest_aura'],
+    traitIds: [TRAIT_IDS.SUN_PRIEST_AURA],
     requiredBuilding: 'sun_temple_2',
     techRequired: 'sun_blessing',
   },
@@ -875,7 +883,7 @@ const UNIT_DEFS = [
     cost: { gold: 40, beasts: 4 },
     buildTurns: 2,
     stackSize: 1,
-    traitIds: ['beast_bond_aura'],
+    traitIds: [TRAIT_IDS.BEAST_BOND_AURA],
     requiredBuilding: 'beast_pen_1',
     techRequired: 'beast_taming',
   },
@@ -894,7 +902,7 @@ const UNIT_DEFS = [
     cost: { gold: 55, beasts: 8 },
     buildTurns: 3,
     stackSize: 1,
-    traitIds: ['beast_bond_aura'],
+    traitIds: [TRAIT_IDS.BEAST_BOND_AURA],
     requiredBuilding: 'beast_pen_1',
     techRequired: 'beast_taming',
   },
@@ -913,7 +921,7 @@ const UNIT_DEFS = [
     cost: { gold: 70, beasts: 14, ancient_lore: 8 },
     buildTurns: 4,
     stackSize: 1,
-    traitIds: ['beast_bond_aura'],
+    traitIds: [TRAIT_IDS.BEAST_BOND_AURA],
     requiredBuilding: 'beast_pen_2',
     techRequired: 'apex_predator',
   },

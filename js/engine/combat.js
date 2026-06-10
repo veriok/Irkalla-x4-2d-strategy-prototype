@@ -35,8 +35,9 @@ import { getLocationDefenseBonus } from '../models/location.js';
 import { flashCombat, flashConquest } from '../ui/map-view.js';
 import { logCapture, logMessage } from '../ui/event-log.js';
 import { emit } from './game-events.js';
-import { GAME_EVENTS, UNIT_TYPES } from '../data/enums.js';
+import { GAME_EVENTS, UNIT_TYPES, TRAIT_IDS } from '../data/enums.js';
 import { isHeroActive, addHeroExperience, woundHero, getHeroArmyBonuses, getHeroWoundChanceBonus, getHeroProvinceBonuses, getHeroSpellpower, getHeroSchoolTier } from './hero-engine.js';
+import { HERO_SKILL_MAP } from '../data/hero-skills-data.js';
 import { ARTIFACT_MAP, rollRandomArtifact } from '../data/artifacts-data.js';
 import { SPELL_MAP } from '../data/hero-spells-data.js';
 import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense, getSiegeExpertReduction } from './tech-effects.js';
@@ -98,6 +99,49 @@ function _getHeroTacticsBonus(army) {
   return Math.floor((hero.attributes.tactics ?? 0) / 2);
 }
 function _clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+// ─── First Strike helpers ──────────────────────────────────
+
+// Sum flat first strike chance bonuses from hero skills that target this unit's type.
+function _getHeroFirstStrikeBonusForUnit(hero, unit) {
+  if (!hero?.skills) return 0;
+  let bonus = 0;
+  for (const { skillId, tier } of hero.skills) {
+    const skillDef = HERO_SKILL_MAP[skillId];
+    if (!skillDef) continue;
+    const tierDef = skillDef.tiers.find(t => t.tier === tier);
+    if (!tierDef) continue;
+    const effs = tierDef.effects ?? (tierDef.effect ? [tierDef.effect] : []);
+    for (const eff of effs) {
+      if (eff.type === 'army_unit_type_bonus' && eff.stat === 'firstStrikeChance') {
+        if (eff.unitType === unit.unitType || eff.unitType === UNIT_TYPES.ALL) {
+          bonus += eff.flat ?? 0;
+        }
+      }
+    }
+  }
+  return bonus / 100;
+}
+
+// Sum firstStrikeChance from fort-slot buildings on the province.
+function _getDefenderFortFirstStrikeBonus(province) {
+  return (province?.locations ?? []).reduce((sum, loc) => {
+    const b = BUILDING_MAP[loc.buildingId];
+    return sum + (b?.bonuses?.firstStrikeChance ?? 0);
+  }, 0);
+}
+
+// Per-unit first strike chance: base 25% ± tactics advantage ± hero skill ± fort ± spell status.
+// tacticsAdvantage = attTac - defTac (positive = attacker has edge, negative = defender has edge).
+function _calcFirstStrikeChance(army, province, isDefender, tacticsAdvantage, unit) {
+  const fs   = getFaction(army.factionId);
+  const hero = army.heroId ? fs?.heroes?.find(h => h.id === army.heroId) : null;
+  const heroBonus  = (hero && isHeroActive(hero)) ? _getHeroFirstStrikeBonusForUnit(hero, unit) : 0;
+  const fortBonus  = isDefender ? _getDefenderFortFirstStrikeBonus(province) : 0;
+  const spellBonus = (army.statusEffects ?? []).reduce((s, e) => s + (e.firstStrikeChanceBonus ?? 0), 0);
+  const tacBonus   = (isDefender ? -tacticsAdvantage : tacticsAdvantage) * 0.02;
+  return _clamp(0.25 + tacBonus + heroBonus + fortBonus + spellBonus, 0, 1);
+}
 
 function _snapshotCounts(hpMap) {
   const out = {};
@@ -475,6 +519,84 @@ function _buildCombatNarrative(rounds) {
   return rounds.map((text, idx) => ({ round: idx + 1, text }));
 }
 
+// Hero spells during the first strike pre-round. Uses round-1 spell slot but filters by reach.
+function _resolveHeroSpellsFirstStrike(attArmy, defArmy, militiaPool, attUnits, defUnits) {
+  const attResult = _castHeroCombatSpells(attArmy, defArmy, militiaPool, attUnits, defUnits, 1, true);
+  const defResult = _castHeroCombatSpells(defArmy, attArmy, null,        defUnits, attUnits, 1, true);
+  return {
+    lines:         [...attResult.lines, ...defResult.lines],
+    attCasualties: attResult.casualties,
+    defCasualties: defResult.casualties,
+  };
+}
+
+// Pre-combat first strike round.
+// Returns null when skipped (no eligible units, or none pass the roll).
+function _resolveFirstStrikeRound(attArmy, defArmy, militiaPool, province, defenderFlatBonus, seaPenalty) {
+  const attUnits = _collectArmyUnits(attArmy, attArmy.factionId);
+  const defUnits = [
+    ..._collectArmyUnits(defArmy, defArmy?.factionId ?? null),
+    ...(defArmy?._isMilitia ? [] : _collectMilitiaUnits(militiaPool)),
+  ];
+
+  const attEligible = attUnits.filter(u => (u.traitIds ?? []).includes(TRAIT_IDS.FIRST_STRIKE));
+  const defEligible = defUnits.filter(u => (u.traitIds ?? []).includes(TRAIT_IDS.FIRST_STRIKE));
+  if (attEligible.length === 0 && defEligible.length === 0) return null;
+
+  const attTac = _d6() + _getHeroTacticsBonus(attArmy);
+  const defTac = _d6() + _getHeroTacticsBonus(defArmy);
+  const tacAdv = attTac - defTac;
+
+  const attStrikers = attEligible.filter(unit => Math.random() < _calcFirstStrikeChance(attArmy, province, false, tacAdv, unit));
+  const defStrikers = defEligible.filter(unit => Math.random() < _calcFirstStrikeChance(defArmy, province, true,  tacAdv, unit));
+
+  // Silently skip if nobody passed their roll.
+  if (attStrikers.length === 0 && defStrikers.length === 0) return null;
+
+  const attStatusWound = (attArmy.statusEffects ?? []).reduce((s, e) => s + (e.woundChanceBonus ?? 0), 0);
+  const defStatusWound = defArmy ? (defArmy.statusEffects ?? []).reduce((s, e) => s + (e.woundChanceBonus ?? 0), 0) : 0;
+  const attWoundChance = Math.min(0.95, WOUND_CHANCE + (getFaction(attArmy.factionId)?.woundChanceBonus ?? 0) + getHeroWoundChanceBonus(attArmy) + attStatusWound);
+  const defWoundChance = defArmy ? Math.min(0.95, WOUND_CHANCE + (getFaction(defArmy.factionId)?.woundChanceBonus ?? 0) + getHeroWoundChanceBonus(defArmy) + defStatusWound) : WOUND_CHANCE;
+
+  const spellResult = _resolveHeroSpellsFirstStrike(attArmy, defArmy, militiaPool, attUnits, defUnits);
+
+  const damageToDef = new Map();
+  const damageToAtt = new Map();
+
+  for (const unit of attStrikers) {
+    const target = _pickTarget(unit, defUnits, 0.5, true, defenderFlatBonus);
+    if (!target) continue;
+    const dmg = Math.round(_damageAgainst(unit, target, true, defenderFlatBonus, true) * seaPenalty);
+    damageToDef.set(target.key, (damageToDef.get(target.key) ?? 0) + dmg);
+  }
+  for (const unit of defStrikers) {
+    const target = _pickTarget(unit, attUnits, 0.5, false, 0);
+    if (!target) continue;
+    const dmg = _damageAgainst(unit, target, false, 0, true);
+    damageToAtt.set(target.key, (damageToAtt.get(target.key) ?? 0) + dmg);
+  }
+
+  const attApply      = _applyBatchDamageToArmy(attArmy, damageToAtt, attWoundChance);
+  const defArmyApply  = _applyBatchDamageToArmy(defArmy, damageToDef, defWoundChance);
+  const defMilApply   = defArmy?._isMilitia ? { destroyed: 0 } : _applyBatchDamageToMilitia(militiaPool, damageToDef);
+  const defDestroyed  = defArmyApply.destroyed + defMilApply.destroyed;
+
+  const lines = [
+    ...spellResult.lines,
+    `First Strike: Tactics ${attTac} vs ${defTac}. ` +
+    `${attStrikers.length} archer(s) in attacking force and ${defStrikers.length} in defending force opened fire early.` +
+    (defDestroyed > 0 || attApply.destroyed > 0
+      ? ` ${attApply.destroyed} attacker(s) and ${defDestroyed} defender(s) felled.`
+      : ''),
+  ];
+
+  return {
+    lines,
+    attPendingCasualties: [...spellResult.attCasualties, ...(attApply.pendingCasualties ?? [])],
+    defPendingCasualties: [...spellResult.defCasualties, ...(defArmyApply.pendingCasualties ?? [])],
+  };
+}
+
 function _resolveHeroSpells(attackers, defenders, attArmy, defArmy, militiaPool, roundNum) {
   const attResult = _castHeroCombatSpells(attArmy, defArmy, militiaPool, attackers, defenders, roundNum);
   const defResult = _castHeroCombatSpells(defArmy, attArmy, null,        defenders, attackers, roundNum);
@@ -498,7 +620,9 @@ function _pickNRandom(pool, n) {
   return shuffled.slice(0, Math.min(n, shuffled.length));
 }
 
-function _castHeroCombatSpells(army, enemyArmy, enemyMilitia, ownUnits, enemyUnits, roundNum) {
+// isFirstStrikeRound: when true, only buffs/heals and reach:true spells may fire.
+// If a spell fires in the first strike round, entry._usedEarly is set so it doesn't repeat in round 1.
+function _castHeroCombatSpells(army, enemyArmy, enemyMilitia, ownUnits, enemyUnits, roundNum, isFirstStrikeRound = false) {
   const empty = { lines: [], casualties: [] };
   if (!army?.heroId) return empty;
   const fs = getFaction(army.factionId);
@@ -507,6 +631,7 @@ function _castHeroCombatSpells(army, enemyArmy, enemyMilitia, ownUnits, enemyUni
 
   const entry = hero.combatSpellQueue?.[roundNum - 1];
   if (!entry) return empty;
+  if (entry._usedEarly) return empty;
 
   const ownPower   = ownUnits.reduce((s, u)  => s + u.attack + u.defense, 0);
   const enemyPower = enemyUnits.reduce((s, u) => s + u.attack + u.defense, 0);
@@ -516,12 +641,21 @@ function _castHeroCombatSpells(army, enemyArmy, enemyMilitia, ownUnits, enemyUni
   if (!spell || spell.type !== 'combat') return empty;
   if (hero.mana < spell.manaCost) return empty;
 
-  hero.mana = Math.max(0, hero.mana - spell.manaCost);
-
   const spellpower = getHeroSpellpower(hero);
   const schoolTier = getHeroSchoolTier(hero, spell.schoolId);
   const rawEff     = spell.effects[schoolTier];
   const subEffects = Array.isArray(rawEff) ? rawEff : [rawEff];
+
+  // First strike range restriction: only buffs/heals or spells with reach:true may fire.
+  if (isFirstStrikeRound) {
+    const firstSub = subEffects[0];
+    const validForFirstStrike = firstSub?.effectType === 'buff' || firstSub?.effectType === 'heal'
+                              || spell.reach === true;
+    if (!validForFirstStrike) return empty;
+    entry._usedEarly = true;
+  }
+
+  hero.mana = Math.max(0, hero.mana - spell.manaCost);
   const scaled     = (v) => Math.floor(v * (1 + spellpower * 0.05));
 
   const lines = [];
@@ -851,9 +985,21 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
   const attPendingCasualties = [];
   const defPendingCasualties = [];
 
+  // First Strike pre-round (silently skipped when no archers or all rolls fail)
+  const fsResult = _resolveFirstStrikeRound(attArmy, enemyDefArmy, militiaPool, targetP, defenderFlatBonus, seaPenalty);
+  if (fsResult) {
+    for (const line of fsResult.lines) rounds.push(line);
+    attPendingCasualties.push(...fsResult.attPendingCasualties);
+    defPendingCasualties.push(...fsResult.defPendingCasualties);
+    const attAliveAfterFS = armySize(attArmy);
+    const defAliveAfterFS = (enemyDefArmy ? armySize(enemyDefArmy) : 0) + (enemyDefArmy?._isMilitia ? 0 : _militiaCount(militiaPool));
+    if (attAliveAfterFS <= 0) outcome = 'defender';
+    else if (defAliveAfterFS <= 0) outcome = 'attacker';
+  }
+
   const totalRounds = 2 + ((attArmy.maxMoves ?? 1) === 2 ? 1 : 0);
 
-  for (let roundNum = 1; roundNum <= totalRounds; roundNum++) {
+  for (let roundNum = 1; roundNum <= totalRounds && outcome === 'inconclusive'; roundNum++) {
     const attackers = _collectArmyUnits(attArmy, attArmy.factionId);
     const defenders = [
       ..._collectArmyUnits(enemyDefArmy, enemyDefArmy?.factionId ?? null),
