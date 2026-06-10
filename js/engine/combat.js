@@ -111,8 +111,7 @@ function _getHeroFirstStrikeBonusForUnit(hero, unit) {
     if (!skillDef) continue;
     const tierDef = skillDef.tiers.find(t => t.tier === tier);
     if (!tierDef) continue;
-    const effs = tierDef.effects ?? (tierDef.effect ? [tierDef.effect] : []);
-    for (const eff of effs) {
+    for (const eff of (tierDef.effects ?? [])) {
       if (eff.type === 'army_unit_type_bonus' && eff.stat === 'firstStrikeChance') {
         if (eff.unitType === unit.unitType || eff.unitType === UNIT_TYPES.ALL) {
           bonus += eff.flat ?? 0;

@@ -9,24 +9,25 @@
  * spellbook:  SPELL_SCHOOL_IDS value — skill only rolls if faction.spellbooks[spellbook] >= 1.
  *
  * Effect types (applied via hero-engine.js getHeroArmyBonuses / getHeroProvinceBonuses):
+ * Naming: _multi = percent multiplier; no _multi = flat additive value.
  *
  * Army effects (getHeroArmyBonuses / _applySkillEffect):
- *   army_unit_type_bonus         — { unitType, stat: 'attack'|'defense', percent }
- *   army_unit_type_multi_bonus   — { unitType, bonuses: [{stat, percent}…] }
- *   army_anti_unit_type_bonus    — { targetUnitType, stat, percent }
- *   army_all_units_multi_bonus   — { bonuses: [{stat, percent}…] }
- *   reduce_fortification         — { percent }
+ *   army_unit_type_multi_bonus   — { unitType, stat: 'attack'|'defense', percent }
+ *   army_unit_type_bonus         — { unitType, stat: 'firstStrikeChance', flat }
+ *   army_anti_unit_type_multi_bonus — { targetUnitType, stat, percent }
+ *   army_all_units_multi_bonus   — { stat, percent }
+ *   reduce_fortification_multi   — { percent }
  *   army_wound_chance            — { bonus } (decimal, e.g. 0.05 = +5% wound-instead-of-kill chance)
  *
  * Province effects (getHeroProvinceBonuses — governor only):
- *   province_income_bonus        — { percent }
+ *   province_income_multi        — { percent }
  *   province_flat_gold           — { amount }
- *   province_build_discount      — { discountPercent, speedBonus }
- *   province_build_speed         — { amount }  (legacy; speed-only, no discount)
- *   province_defense_bonus       — { percent }
+ *   province_build_multi         — { percent }
+ *   province_build_speed         — { amount }
+ *   province_defense_multi       — { percent }
  *   province_militia_bonus       — { amount }
- *   province_research_bonus      — { percent }
- *   unit_cost_discount           — { percent }
+ *   province_research_multi      — { percent }
+ *   unit_cost_multi              — { percent }
  *   unit_recruit_speed           — { amount }
  *
  * Hero effects:
@@ -53,18 +54,21 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        description: '+10% infantry attack.',
-        effect: { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 10 },
+        effects: [{ type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 10 }],
       },
       {
         tier: 'expert',
-        description: '+15% infantry attack, +10% infantry defense.',
-        effect: { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, bonuses: [{ stat: 'attack', percent: 15 }, { stat: 'defense', percent: 10 }] },
+        effects: [
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 15 },
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'defense', percent: 10 },
+        ],
       },
       {
         tier: 'master',
-        description: '+25% infantry attack, +15% infantry defense.',
-        effect: { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, bonuses: [{ stat: 'attack', percent: 25 }, { stat: 'defense', percent: 15 }] },
+        effects: [
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 25 },
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'defense', percent: 15 },
+        ],
       },
     ],
   },
@@ -80,18 +84,21 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        description: '+10% cavalry attack.',
-        effect: { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 10 },
+        effects: [{ type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 10 }],
       },
       {
         tier: 'expert',
-        description: '+15% cavalry attack, +10% cavalry defense.',
-        effect: { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, bonuses: [{ stat: 'attack', percent: 15 }, { stat: 'defense', percent: 10 }] },
+        effects: [
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 15 },
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'defense', percent: 10 },
+        ],
       },
       {
         tier: 'master',
-        description: '+25% cavalry attack, +15% cavalry defense.',
-        effect: { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, bonuses: [{ stat: 'attack', percent: 35 }, { stat: 'defense', percent: 20 }] },
+        effects: [
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 35 },
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'defense', percent: 20 },
+        ],
       },
     ],
   },
@@ -107,25 +114,24 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        description: '+10% archer attack. Archers gain +5% first strike chance.',
         effects: [
-          { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'attack', percent: 10 },
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'attack', percent: 10 },
           { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'firstStrikeChance', flat: 5 },
         ],
       },
       {
         tier: 'expert',
-        description: '+15% archer attack, +10% archer defense. Archers gain +10% first strike chance.',
         effects: [
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, bonuses: [{ stat: 'attack', percent: 15 }, { stat: 'defense', percent: 10 }] },
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'attack', percent: 15 },
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'defense', percent: 10 },
           { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'firstStrikeChance', flat: 10 },
         ],
       },
       {
         tier: 'master',
-        description: '+25% archer attack, +15% archer defense. Archers gain +15% first strike chance.',
         effects: [
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, bonuses: [{ stat: 'attack', percent: 25 }, { stat: 'defense', percent: 15 }] },
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'attack', percent: 25 },
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'defense', percent: 15 },
           { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'firstStrikeChance', flat: 15 },
         ],
       },
@@ -143,18 +149,21 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        description: '+10% construct attack.',
-        effect: { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack', percent: 10 },
+        effects: [{ type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack', percent: 10 }],
       },
       {
         tier: 'expert',
-        description: '+15% construct attack, +10% construct defense.',
-        effect: { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, bonuses: [{ stat: 'attack', percent: 15 }, { stat: 'defense', percent: 10 }] },
+        effects: [
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack', percent: 15 },
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, stat: 'defense', percent: 10 },
+        ],
       },
       {
         tier: 'master',
-        description: '+25% construct attack, +15% construct defense.',
-        effect: { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, bonuses: [{ stat: 'attack', percent: 25 }, { stat: 'defense', percent: 15 }] },
+        effects: [
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack', percent: 25 },
+          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, stat: 'defense', percent: 15 },
+        ],
       },
     ],
   },
@@ -170,21 +179,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      {
-        tier: 'novice',
-        description: '-10% enemy fortification bonus in battles.',
-        effect: { type: 'reduce_fortification', percent: 10 },
-      },
-      {
-        tier: 'expert',
-        description: '-25% enemy fortification bonus in battles.',
-        effect: { type: 'reduce_fortification', percent: 25 },
-      },
-      {
-        tier: 'master',
-        description: '-50% enemy fortification bonus in battles.',
-        effect: { type: 'reduce_fortification', percent: 50 },
-      },
+      { tier: 'novice', effects: [{ type: 'reduce_fortification_multi', percent: 10 }] },
+      { tier: 'expert', effects: [{ type: 'reduce_fortification_multi', percent: 25 }] },
+      { tier: 'master', effects: [{ type: 'reduce_fortification_multi', percent: 50 }] },
     ],
   },
 
@@ -197,21 +194,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      {
-        tier: 'novice',
-        description: '25% chance to gain +1 movement at the start of each turn.',
-        effect: { type: 'army_logistics', chance: 0.25 },
-      },
-      {
-        tier: 'expert',
-        description: '50% chance to gain +1 movement at the start of each turn.',
-        effect: { type: 'army_logistics', chance: 0.50 },
-      },
-      {
-        tier: 'master',
-        description: '75% chance to gain +1 movement at the start of each turn.',
-        effect: { type: 'army_logistics', chance: 0.75 },
-      },
+      { tier: 'novice', effects: [{ type: 'army_logistics', chance: 0.25 }] },
+      { tier: 'expert', effects: [{ type: 'army_logistics', chance: 0.50 }] },
+      { tier: 'master', effects: [{ type: 'army_logistics', chance: 0.75 }] },
     ],
   },
 
@@ -226,18 +211,21 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        description: '-10% unit recruit cost in governed province.',
-        effect: { type: 'unit_cost_discount', percent: 10 },
+        effects: [{ type: 'unit_cost_multi', percent: 10 }],
       },
       {
         tier: 'expert',
-        description: '-15% unit recruit cost and -1 recruit turn in governed province.',
-        effect: { type: 'unit_cost_discount', percent: 15, recruitSpeedBonus: 1 },
+        effects: [
+          { type: 'unit_cost_multi', percent: 15 },
+          { type: 'unit_recruit_speed', amount: 1 },
+        ],
       },
       {
         tier: 'master',
-        description: '-20% unit recruit cost and -2 recruit turns in governed province.',
-        effect: { type: 'unit_cost_discount', percent: 20, recruitSpeedBonus: 2 },
+        effects: [
+          { type: 'unit_cost_multi', percent: 20 },
+          { type: 'unit_recruit_speed', amount: 2 },
+        ],
       },
     ],
   },
@@ -253,21 +241,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      {
-        tier: 'novice',
-        description: '+10% province defense bonus when governing.',
-        effect: { type: 'province_defense_bonus', percent: 10 },
-      },
-      {
-        tier: 'expert',
-        description: '+20% province defense bonus when governing.',
-        effect: { type: 'province_defense_bonus', percent: 20 },
-      },
-      {
-        tier: 'master',
-        description: '+30% province defense bonus when governing.',
-        effect: { type: 'province_defense_bonus', percent: 30 },
-      },
+      { tier: 'novice', effects: [{ type: 'province_defense_multi', percent: 10 }] },
+      { tier: 'expert', effects: [{ type: 'province_defense_multi', percent: 20 }] },
+      { tier: 'master', effects: [{ type: 'province_defense_multi', percent: 30 }] },
     ],
   },
 
@@ -280,21 +256,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      {
-        tier: 'novice',
-        description: '+1 militia cap in governed province.',
-        effect: { type: 'province_militia_bonus', amount: 1 },
-      },
-      {
-        tier: 'expert',
-        description: '+2 militia cap in governed province.',
-        effect: { type: 'province_militia_bonus', amount: 2 },
-      },
-      {
-        tier: 'master',
-        description: '+3 militia cap in governed province.',
-        effect: { type: 'province_militia_bonus', amount: 3 },
-      },
+      { tier: 'novice', effects: [{ type: 'province_militia_bonus', amount: 1 }] },
+      { tier: 'expert', effects: [{ type: 'province_militia_bonus', amount: 2 }] },
+      { tier: 'master', effects: [{ type: 'province_militia_bonus', amount: 3 }] },
     ],
   },
 
@@ -307,21 +271,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      {
-        tier: 'novice',
-        description: '+5% chance for army units to be wounded instead of killed.',
-        effect: { type: 'army_wound_chance', bonus: 0.05 },
-      },
-      {
-        tier: 'expert',
-        description: '+10% chance for army units to be wounded instead of killed.',
-        effect: { type: 'army_wound_chance', bonus: 0.10 },
-      },
-      {
-        tier: 'master',
-        description: '+15% chance for army units to be wounded instead of killed.',
-        effect: { type: 'army_wound_chance', bonus: 0.15 },
-      },
+      { tier: 'novice', effects: [{ type: 'army_wound_chance', bonus: 0.05 }] },
+      { tier: 'expert', effects: [{ type: 'army_wound_chance', bonus: 0.10 }] },
+      { tier: 'master', effects: [{ type: 'army_wound_chance', bonus: 0.15 }] },
     ],
   },
 
@@ -334,21 +286,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      {
-        tier: 'novice',
-        description: 'Reduce wound recovery time by 1 turn (min 1).',
-        effect: { type: 'hero_wound_reduction', amount: 1 },
-      },
-      {
-        tier: 'expert',
-        description: 'Reduce wound recovery time by 2 turns (min 1).',
-        effect: { type: 'hero_wound_reduction', amount: 2 },
-      },
-      {
-        tier: 'master',
-        description: 'Reduce wound recovery time by 3 turns (min 1).',
-        effect: { type: 'hero_wound_reduction', amount: 3 },
-      },
+      { tier: 'novice', effects: [{ type: 'hero_wound_reduction', amount: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_wound_reduction', amount: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_wound_reduction', amount: 3 }] },
     ],
   },
 
@@ -363,21 +303,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      {
-        tier: 'novice',
-        description: '+8% income to governed province.',
-        effect: { type: 'province_income_bonus', percent: 8 },
-      },
-      {
-        tier: 'expert',
-        description: '+16% income to governed province.',
-        effect: { type: 'province_income_bonus', percent: 16 },
-      },
-      {
-        tier: 'master',
-        description: '+24% income to governed province.',
-        effect: { type: 'province_income_bonus', percent: 24 },
-      },
+      { tier: 'novice', effects: [{ type: 'province_income_multi', percent: 8 }] },
+      { tier: 'expert', effects: [{ type: 'province_income_multi', percent: 16 }] },
+      { tier: 'master', effects: [{ type: 'province_income_multi', percent: 24 }] },
     ],
   },
 
@@ -390,21 +318,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      {
-        tier: 'novice',
-        description: '+5 gold/turn to governed province.',
-        effect: { type: 'province_flat_gold', amount: 5 },
-      },
-      {
-        tier: 'expert',
-        description: '+10 gold/turn to governed province.',
-        effect: { type: 'province_flat_gold', amount: 10 },
-      },
-      {
-        tier: 'master',
-        description: '+15 gold/turn to governed province.',
-        effect: { type: 'province_flat_gold', amount: 15 },
-      },
+      { tier: 'novice', effects: [{ type: 'province_flat_gold', amount: 5 }] },
+      { tier: 'expert', effects: [{ type: 'province_flat_gold', amount: 10 }] },
+      { tier: 'master', effects: [{ type: 'province_flat_gold', amount: 15 }] },
     ],
   },
 
@@ -419,18 +335,21 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        description: '-5% building cost in governed province.',
-        effect: { type: 'province_build_discount', discountPercent: 5, speedBonus: 0 },
+        effects: [{ type: 'province_build_multi', percent: 5 }],
       },
       {
         tier: 'expert',
-        description: '-10% building cost and -1 build turn in governed province.',
-        effect: { type: 'province_build_discount', discountPercent: 10, speedBonus: 1 },
+        effects: [
+          { type: 'province_build_multi', percent: 10 },
+          { type: 'province_build_speed', amount: 1 },
+        ],
       },
       {
         tier: 'master',
-        description: '-20% building cost and -2 build turns in governed province.',
-        effect: { type: 'province_build_discount', discountPercent: 20, speedBonus: 2 },
+        effects: [
+          { type: 'province_build_multi', percent: 20 },
+          { type: 'province_build_speed', amount: 2 },
+        ],
       },
     ],
   },
@@ -446,21 +365,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      {
-        tier: 'novice',
-        description: '+8% research output in governed province.',
-        effect: { type: 'province_research_bonus', percent: 8 },
-      },
-      {
-        tier: 'expert',
-        description: '+16% research output in governed province.',
-        effect: { type: 'province_research_bonus', percent: 16 },
-      },
-      {
-        tier: 'master',
-        description: '+24% research output in governed province.',
-        effect: { type: 'province_research_bonus', percent: 24 },
-      },
+      { tier: 'novice', effects: [{ type: 'province_research_multi', percent: 8 }] },
+      { tier: 'expert', effects: [{ type: 'province_research_multi', percent: 16 }] },
+      { tier: 'master', effects: [{ type: 'province_research_multi', percent: 24 }] },
     ],
   },
 
@@ -473,21 +380,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      {
-        tier: 'novice',
-        description: '+1 mana regen per turn.',
-        effect: { type: 'hero_mana_regen', amount: 1 },
-      },
-      {
-        tier: 'expert',
-        description: '+2 mana regen per turn.',
-        effect: { type: 'hero_mana_regen', amount: 2 },
-      },
-      {
-        tier: 'master',
-        description: '+3 mana regen per turn.',
-        effect: { type: 'hero_mana_regen', amount: 3 },
-      },
+      { tier: 'novice', effects: [{ type: 'hero_mana_regen', amount: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_mana_regen', amount: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_mana_regen', amount: 3 }] },
     ],
   },
 
@@ -500,21 +395,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      {
-        tier: 'novice',
-        description: '+15 maximum mana.',
-        effect: { type: 'hero_flat_mana', amount: 15 },
-      },
-      {
-        tier: 'expert',
-        description: '+30 maximum mana.',
-        effect: { type: 'hero_flat_mana', amount: 30 },
-      },
-      {
-        tier: 'master',
-        description: '+45 maximum mana.',
-        effect: { type: 'hero_flat_mana', amount: 45 },
-      },
+      { tier: 'novice', effects: [{ type: 'hero_flat_mana', amount: 15 }] },
+      { tier: 'expert', effects: [{ type: 'hero_flat_mana', amount: 30 }] },
+      { tier: 'master', effects: [{ type: 'hero_flat_mana', amount: 45 }] },
     ],
   },
 
@@ -529,21 +412,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      {
-        tier: 'novice',
-        description: 'Can cast all tier 1 spells from schools your faction has spellbooks for.',
-        effect: { type: 'hero_channeling', tier: 1 },
-      },
-      {
-        tier: 'expert',
-        description: 'Can also cast tier 2 spells from schools with 2+ spellbooks.',
-        effect: { type: 'hero_channeling', tier: 2 },
-      },
-      {
-        tier: 'master',
-        description: 'Can cast all spell tiers from schools with 3 spellbooks.',
-        effect: { type: 'hero_channeling', tier: 3 },
-      },
+      { tier: 'novice', effects: [{ type: 'hero_channeling', tier: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_channeling', tier: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_channeling', tier: 3 }] },
     ],
   },
 
@@ -559,9 +430,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.FIRE,
     tiers: [
-      { tier: 'novice', description: 'Novice in Fire Magic. Boosts fire spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 1 } },
-      { tier: 'expert', description: 'Expert in Fire Magic. Further boosts fire spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 2 } },
-      { tier: 'master', description: 'Master of Fire Magic. Maximum fire spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 3 } },
+      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 3 }] },
     ],
   },
   {
@@ -573,9 +444,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.EARTH,
     tiers: [
-      { tier: 'novice', description: 'Novice in Earth Magic. Boosts earth spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 1 } },
-      { tier: 'expert', description: 'Expert in Earth Magic. Further boosts earth spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 2 } },
-      { tier: 'master', description: 'Master of Earth Magic. Maximum earth spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 3 } },
+      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 3 }] },
     ],
   },
   {
@@ -587,9 +458,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.AIR,
     tiers: [
-      { tier: 'novice', description: 'Novice in Air Magic. Boosts air spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 1 } },
-      { tier: 'expert', description: 'Expert in Air Magic. Further boosts air spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 2 } },
-      { tier: 'master', description: 'Master of Air Magic. Maximum air spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 3 } },
+      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 3 }] },
     ],
   },
   {
@@ -601,9 +472,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.ARCANE,
     tiers: [
-      { tier: 'novice', description: 'Novice in Arcane Magic. Boosts arcane spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 1 } },
-      { tier: 'expert', description: 'Expert in Arcane Magic. Further boosts arcane spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 2 } },
-      { tier: 'master', description: 'Master of Arcane Magic. Maximum arcane spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 3 } },
+      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 3 }] },
     ],
   },
   {
@@ -615,9 +486,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.RUNE,
     tiers: [
-      { tier: 'novice', description: 'Novice in Rune Magic. Boosts rune spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 1 } },
-      { tier: 'expert', description: 'Expert in Rune Magic. Further boosts rune spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 2 } },
-      { tier: 'master', description: 'Master of Rune Magic. Maximum rune spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 3 } },
+      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 3 }] },
     ],
   },
   {
@@ -629,9 +500,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.DEATH,
     tiers: [
-      { tier: 'novice', description: 'Novice in Death Magic. Boosts death spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 1 } },
-      { tier: 'expert', description: 'Expert in Death Magic. Further boosts death spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 2 } },
-      { tier: 'master', description: 'Master of Death Magic. Maximum death spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 3 } },
+      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 3 }] },
     ],
   },
   {
@@ -643,9 +514,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.NATURE,
     tiers: [
-      { tier: 'novice', description: 'Novice in Nature Magic. Boosts nature spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 1 } },
-      { tier: 'expert', description: 'Expert in Nature Magic. Further boosts nature spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 2 } },
-      { tier: 'master', description: 'Master of Nature Magic. Maximum nature spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 3 } },
+      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 3 }] },
     ],
   },
   {
@@ -657,9 +528,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.ANCIENT,
     tiers: [
-      { tier: 'novice', description: 'Novice in Ancient Magic. Boosts ancient spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 1 } },
-      { tier: 'expert', description: 'Expert in Ancient Magic. Further boosts ancient spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 2 } },
-      { tier: 'master', description: 'Master of Ancient Magic. Maximum ancient spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 3 } },
+      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 3 }] },
     ],
   },
   {
@@ -671,9 +542,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.ORDER,
     tiers: [
-      { tier: 'novice', description: 'Novice in Order Magic. Boosts order spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 1 } },
-      { tier: 'expert', description: 'Expert in Order Magic. Further boosts order spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 2 } },
-      { tier: 'master', description: 'Master of Order Magic. Maximum order spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 3 } },
+      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 3 }] },
     ],
   },
   {
@@ -685,14 +556,44 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.LIGHT,
     tiers: [
-      { tier: 'novice', description: 'Novice in Light Magic. Boosts light spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 1 } },
-      { tier: 'expert', description: 'Expert in Light Magic. Further boosts light spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 2 } },
-      { tier: 'master', description: 'Master of Light Magic. Maximum light spell efficiency.', effect: { type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 3 } },
+      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 1 }] },
+      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 2 }] },
+      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 3 }] },
     ],
   },
 ];
 
 export const HERO_SKILL_MAP = Object.fromEntries(HERO_SKILLS.map(s => [s.id, s]));
+
+/** Converts a skill tier's effects array into a human-readable multi-line HTML string. */
+export function skillEffectsToText(effects) {
+  const _cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  return (effects ?? []).map(eff => {
+    switch (eff.type) {
+      case 'army_unit_type_multi_bonus':  return `+${eff.percent}% ${eff.unitType} ${eff.stat === 'firstStrikeChance' ? 'first strike' : eff.stat}`;
+      case 'army_unit_type_bonus':        return `+${eff.flat}% ${eff.unitType} first strike`;
+      case 'army_all_units_multi_bonus':  return `+${eff.percent}% all units ${eff.stat}`;
+      case 'reduce_fortification_multi':  return `-${eff.percent}% enemy fortification`;
+      case 'army_wound_chance':           return `+${Math.round(eff.bonus * 100)}% wound chance`;
+      case 'army_logistics':              return `${Math.round(eff.chance * 100)}% chance: +1 movement/turn`;
+      case 'province_income_multi':       return `+${eff.percent}% province income`;
+      case 'province_flat_gold':          return `+${eff.amount} gold/turn`;
+      case 'province_build_multi':        return `-${eff.percent}% build cost`;
+      case 'province_build_speed':        return `-${eff.amount} build turn${eff.amount !== 1 ? 's' : ''}`;
+      case 'province_defense_multi':      return `+${eff.percent}% province defense`;
+      case 'province_militia_bonus':      return `+${eff.amount} militia cap`;
+      case 'province_research_multi':     return `+${eff.percent}% research output`;
+      case 'unit_cost_multi':             return `-${eff.percent}% recruit cost`;
+      case 'unit_recruit_speed':          return `-${eff.amount} recruit turn${eff.amount !== 1 ? 's' : ''}`;
+      case 'hero_mana_regen':             return `+${eff.amount} mana regen/turn`;
+      case 'hero_flat_mana':              return `+${eff.amount} max mana`;
+      case 'hero_channeling':             return `Cast tier ${eff.tier} spells`;
+      case 'hero_spell_school':           return `${_cap(eff.schoolId)} Magic: tier ${eff.tier}`;
+      case 'hero_wound_reduction':        return `-${eff.amount} wound recovery turn${eff.amount !== 1 ? 's' : ''}`;
+      default:                            return null;
+    }
+  }).filter(Boolean).join('<br>');
+}
 
 export const TIER_ORDER = ['novice', 'expert', 'master'];
 

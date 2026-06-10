@@ -360,7 +360,7 @@ export function computeMilitiaMax(province) {
     if (governor && governor.woundedFor === 0 && (!governor.assignment || governor.assignment.transitFor === 0)) {
       for (const { skillId, tier } of (governor.skills ?? [])) {
         const tierDef = HERO_SKILL_MAP[skillId]?.tiers.find(t => t.tier === tier);
-        if (tierDef?.effect?.type === 'province_militia_bonus') total += tierDef.effect.amount;
+        for (const eff of (tierDef?.effects ?? [])) if (eff.type === 'province_militia_bonus') total += eff.amount;
       }
     }
   }

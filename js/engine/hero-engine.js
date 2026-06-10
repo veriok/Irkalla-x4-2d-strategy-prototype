@@ -427,14 +427,12 @@ export function getHeroArmyBonuses(hero) {
     woundChanceBonus: 0,
   };
 
-  // Process skills — supports both effects:[] (array) and legacy effect:{} (single)
   for (const { skillId, tier } of hero.skills) {
     const skillDef = HERO_SKILL_MAP[skillId];
     if (!skillDef) continue;
     const tierDef = skillDef.tiers.find(t => t.tier === tier);
     if (!tierDef) continue;
-    const effs = tierDef.effects ?? (tierDef.effect ? [tierDef.effect] : []);
-    for (const eff of effs) _applySkillEffect(eff, result);
+    for (const eff of (tierDef.effects ?? [])) _applySkillEffect(eff, result);
   }
 
   // Process artifacts
@@ -448,9 +446,9 @@ export function getHeroArmyBonuses(hero) {
         if (eff.stat === HERO_ATTRIBUTES.ATK) result.statAtk += eff.amount;
         else if (eff.stat === HERO_ATTRIBUTES.DEF) result.statDef += eff.amount;
         else if (eff.stat === HERO_ATTRIBUTES.TACTICS) result.statTactics += eff.amount;
-      } else if (eff.type === 'army_unit_type_bonus') {
+      } else if (eff.type === 'army_unit_type_multi_bonus') {
         result.unitTypeBonuses.push({ unitType: eff.unitType, stat: eff.stat, percent: eff.percent });
-      } else if (eff.type === 'army_all_units_bonus') {
+      } else if (eff.type === 'army_all_units_multi_bonus') {
         result.allUnitsBonuses.push({ stat: eff.stat, percent: eff.percent });
       } else if (eff.type === 'army_movement_bonus') {
         result.movementBonus += eff.amount;
@@ -463,24 +461,13 @@ export function getHeroArmyBonuses(hero) {
 
 function _applySkillEffect(effect, result) {
   switch (effect.type) {
-    case 'army_unit_type_bonus':
+    case 'army_unit_type_multi_bonus':
       result.unitTypeBonuses.push({ unitType: effect.unitType, stat: effect.stat, percent: effect.percent });
       break;
-    case 'army_unit_type_multi_bonus':
-      for (const b of (effect.bonuses ?? [])) {
-        result.unitTypeBonuses.push({ unitType: effect.unitType, stat: b.stat, percent: b.percent });
-      }
-      if (effect.movementBonus) result.movementBonus += effect.movementBonus;
-      break;
-    case 'army_all_units_bonus':
+    case 'army_all_units_multi_bonus':
       result.allUnitsBonuses.push({ stat: effect.stat, percent: effect.percent });
       break;
-    case 'army_all_units_multi_bonus':
-      for (const b of (effect.bonuses ?? [])) {
-        result.allUnitsBonuses.push({ stat: b.stat, percent: b.percent });
-      }
-      break;
-    case 'reduce_fortification':
+    case 'reduce_fortification_multi':
       result.fortificationReduction += effect.percent;
       break;
     case 'army_movement_bonus':
@@ -514,25 +501,22 @@ export function getHeroProvinceBonuses(hero) {
   let unitCostDiscountPercent = 0;
   let unitRecruitSpeedBonus   = 0;
 
-  // Supports both effects:[] (array) and legacy effect:{} (single)
   for (const { skillId, tier } of hero.skills) {
     const skillDef = HERO_SKILL_MAP[skillId];
     if (!skillDef) continue;
     const tierDef = skillDef.tiers.find(t => t.tier === tier);
     if (!tierDef) continue;
-    const effs = tierDef.effects ?? (tierDef.effect ? [tierDef.effect] : []);
-    for (const eff of effs) {
+    for (const eff of (tierDef.effects ?? [])) {
       switch (eff.type) {
-        case 'province_income_bonus':   incomePercent       += eff.percent;                                    break;
-        case 'province_flat_gold':      flatGold            += eff.amount;                                     break;
-        case 'province_build_speed':    buildSpeedBonus     += eff.amount;                                     break;
-        case 'province_build_discount': buildDiscountPercent += eff.discountPercent ?? 0;
-                                        buildSpeedBonus     += eff.speedBonus ?? 0;                            break;
-        case 'province_research_bonus': researchPercent     += eff.percent;                                    break;
-        case 'province_defense_bonus':  defensePercent      += eff.percent;                                    break;
-        case 'province_militia_bonus':  militiaBonus        += eff.amount;                                     break;
-        case 'unit_cost_discount':      unitCostDiscountPercent += eff.percent ?? 0;
-                                        unitRecruitSpeedBonus   += eff.recruitSpeedBonus ?? 0;                 break;
+        case 'province_income_multi':   incomePercent           += eff.percent;  break;
+        case 'province_flat_gold':      flatGold                += eff.amount;   break;
+        case 'province_build_speed':    buildSpeedBonus         += eff.amount;   break;
+        case 'province_build_multi':    buildDiscountPercent    += eff.percent;  break;
+        case 'province_research_multi': researchPercent         += eff.percent;  break;
+        case 'province_defense_multi':  defensePercent          += eff.percent;  break;
+        case 'province_militia_bonus':  militiaBonus            += eff.amount;   break;
+        case 'unit_cost_multi':         unitCostDiscountPercent += eff.percent;  break;
+        case 'unit_recruit_speed':      unitRecruitSpeedBonus   += eff.amount;   break;
       }
     }
   }
@@ -546,7 +530,7 @@ export function getHeroProvinceBonuses(hero) {
     for (const eff of (artDef.effects ?? [])) {
       if (eff.type === 'hero_stat_bonus' && eff.stat === HERO_ATTRIBUTES.GOVERNANCE) {
         incomePercent += eff.amount * 3;
-      } else if (eff.type === 'province_income_bonus') {
+      } else if (eff.type === 'province_income_multi') {
         incomePercent += eff.percent;
       }
     }
@@ -569,7 +553,7 @@ export function getHeroMaxMana(hero) {
     const skillDef = HERO_SKILL_MAP[skillId];
     if (!skillDef) continue;
     const tierDef = skillDef.tiers.find(t => t.tier === tier);
-    if (tierDef?.effect?.type === 'hero_flat_mana') max += tierDef.effect.amount;
+    for (const eff of (tierDef?.effects ?? [])) if (eff.type === 'hero_flat_mana') max += eff.amount;
   }
   for (const slot of ['weapon', 'armor', 'accessory1', 'accessory2']) {
     const artId = hero.artifacts[slot];
@@ -593,7 +577,7 @@ export function getHeroManaRegen(hero) {
     const skillDef = HERO_SKILL_MAP[skillId];
     if (!skillDef) continue;
     const tierDef = skillDef.tiers.find(t => t.tier === tier);
-    if (tierDef?.effect?.type === 'hero_mana_regen') regen += tierDef.effect.amount;
+    for (const eff of (tierDef?.effects ?? [])) if (eff.type === 'hero_mana_regen') regen += eff.amount;
   }
   return regen;
 }
@@ -625,8 +609,8 @@ export function getHeroSchoolTier(hero, schoolId) {
     const skillDef = HERO_SKILL_MAP[skillId];
     if (!skillDef) continue;
     const tierDef = skillDef.tiers.find(t => t.tier === tier);
-    if (tierDef?.effect?.type === 'hero_spell_school' && tierDef.effect.schoolId === schoolId) {
-      return tierDef.effect.tier;
+    for (const eff of (tierDef?.effects ?? [])) {
+      if (eff.type === 'hero_spell_school' && eff.schoolId === schoolId) return eff.tier;
     }
   }
   return 0;
@@ -664,7 +648,7 @@ function _getHeroChannelingTier(hero) {
     const skillDef = HERO_SKILL_MAP[skillId];
     if (!skillDef) continue;
     const tierDef = skillDef.tiers.find(t => t.tier === tier);
-    if (tierDef?.effect?.type === 'hero_channeling') return tierDef.effect.tier;
+    for (const eff of (tierDef?.effects ?? [])) if (eff.type === 'hero_channeling') return eff.tier;
   }
   return 0;
 }
@@ -779,7 +763,7 @@ function _getHeroWoundReduction(hero) {
   let reduction = 0;
   for (const { skillId, tier } of hero.skills) {
     const tierDef = HERO_SKILL_MAP[skillId]?.tiers.find(t => t.tier === tier);
-    if (tierDef?.effect?.type === 'hero_wound_reduction') reduction += tierDef.effect.amount;
+    for (const eff of (tierDef?.effects ?? [])) if (eff.type === 'hero_wound_reduction') reduction += eff.amount;
   }
   return reduction;
 }
@@ -795,7 +779,7 @@ export function getHeroLogisticsChance(army) {
   let chance = 0;
   for (const { skillId, tier } of hero.skills) {
     const tierDef = HERO_SKILL_MAP[skillId]?.tiers.find(t => t.tier === tier);
-    if (tierDef?.effect?.type === 'army_logistics') chance += tierDef.effect.chance ?? 0;
+    for (const eff of (tierDef?.effects ?? [])) if (eff.type === 'army_logistics') chance += eff.chance ?? 0;
   }
   return Math.min(1, chance);
 }

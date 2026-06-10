@@ -4,11 +4,11 @@
  * ~20 artifact definitions across 4 equipment slots.
  *
  * Effect shapes (hero-engine.js resolves these):
- *   { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES key, amount }   — direct stat bonus
- *   { type: 'army_unit_type_bonus', unitType, stat, percent }    — bonus to a unit type
- *   { type: 'army_all_units_bonus', stat, percent }              — bonus to all units
- *   { type: 'province_income_bonus', percent }                   — income bonus when governing
- *   { type: 'hero_mana_bonus', amount }                          — flat max mana bonus
+ *   { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES key, amount }        — direct stat bonus
+ *   { type: 'army_unit_type_multi_bonus', unitType, stat, percent }   — % bonus to a unit type
+ *   { type: 'army_all_units_multi_bonus', stat, percent }             — % bonus to all units
+ *   { type: 'province_income_multi', percent }                        — % income when governing
+ *   { type: 'hero_mana_bonus', amount }                               — flat max mana bonus
  */
 
 import { ARTIFACT_IDS, ARTIFACT_SLOTS, ARTIFACT_RARITIES, HERO_ATTRIBUTES, UNIT_TYPES } from './enums.js';
@@ -49,7 +49,7 @@ export const ARTIFACTS = [
     description: 'Carved from the bone of a slain elder dragon. Its power is unmistakable.',
     effects: [
       { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.ATK, amount: 4 },
-      { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 10 },
+      { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 10 },
     ],
   },
   {
@@ -61,7 +61,7 @@ export const ARTIFACTS = [
     description: 'A heavy mace symbolising authority, bolstering the morale of nearby infantry.',
     effects: [
       { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.ATK, amount: 1 },
-      { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 5 },
+      { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 5 },
     ],
   },
   {
@@ -112,7 +112,7 @@ export const ARTIFACTS = [
     description: 'Armour fashioned from the shell of a great sea creature. Sturdy and enduring.',
     effects: [
       { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.DEF, amount: 3 },
-      { type: 'army_all_units_bonus', stat: 'defense', percent: 5 },
+      { type: 'army_all_units_multi_bonus', stat: 'defense', percent: 5 },
     ],
   },
   {
@@ -137,7 +137,7 @@ export const ARTIFACTS = [
     description: 'A stout shield emblazoned with a guardian sigil, inspiring defensive discipline.',
     effects: [
       { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.DEF, amount: 2 },
-      { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'defense', percent: 5 },
+      { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'defense', percent: 5 },
     ],
   },
 
@@ -152,7 +152,7 @@ export const ARTIFACTS = [
     description: 'A merchant\'s ring that draws gold to its wearer.',
     effects: [
       { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.GOVERNANCE, amount: 2 },
-      { type: 'province_income_bonus', percent: 5 },
+      { type: 'province_income_multi', percent: 5 },
     ],
   },
   {
@@ -221,8 +221,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.RARE,
     description: 'A legendary banner that inspires all troops to fight beyond their limits.',
     effects: [
-      { type: 'army_all_units_bonus', stat: 'attack', percent: 8 },
-      { type: 'army_all_units_bonus', stat: 'defense', percent: 8 },
+      { type: 'army_all_units_multi_bonus', stat: 'attack', percent: 8 },
+      { type: 'army_all_units_multi_bonus', stat: 'defense', percent: 8 },
     ],
   },
   {

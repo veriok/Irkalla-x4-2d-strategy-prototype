@@ -19,7 +19,7 @@ import { createNativePreviewCard } from './card-renderer.js';
 import { TECH_MAP } from '../data/techs-data.js';
 import { FACTION_ACTIONS } from '../data/faction-actions-data.js';
 import { HERO_CLASS_MAP } from '../data/hero-classes-data.js';
-import { HERO_SKILL_MAP } from '../data/hero-skills-data.js';
+import { HERO_SKILL_MAP, skillEffectsToText } from '../data/hero-skills-data.js';
 import { heroGenderEmoji, xpForLevel, xpForNextLevel, MAX_HERO_LEVEL } from '../models/hero.js';
 import { getHeroMaxMana } from '../engine/hero-engine.js';
 
@@ -888,7 +888,7 @@ export function showSkillTooltip(skillId, tier, anchorEl) {
   tooltipEl.innerHTML = `
     <div class="btt-header">${skillDef.icon ?? ''} ${skillDef.name}</div>
     <div class="btt-section"><div class="btt-row btt-bonus">▸ ${tierLabel}</div></div>
-    <div class="btt-desc">${tierDef?.description ?? ''}</div>
+    <div class="btt-desc">${skillEffectsToText(tierDef?.effects)}</div>
   `.trim();
   tooltipEl.hidden = false;
   requestAnimationFrame(() => {
@@ -933,13 +933,13 @@ export function showArtifactTooltip(artDef, anchorEl) {
     if (eff.type === 'hero_stat_bonus' && eff.stat) {
       return `<div class="btt-row btt-bonus">▸ ${_ARTIFACT_STAT_LABELS[eff.stat] ?? eff.stat}: +${eff.amount}</div>`;
     }
-    if (eff.type === 'army_unit_type_bonus') {
+    if (eff.type === 'army_unit_type_multi_bonus') {
       return `<div class="btt-row btt-bonus">▸ ${eff.unitType} ${eff.stat}: +${eff.percent}%</div>`;
     }
-    if (eff.type === 'army_all_units_bonus') {
+    if (eff.type === 'army_all_units_multi_bonus') {
       return `<div class="btt-row btt-bonus">▸ All units ${eff.stat}: +${eff.percent}%</div>`;
     }
-    if (eff.type === 'province_income_bonus') {
+    if (eff.type === 'province_income_multi') {
       return `<div class="btt-row btt-bonus">▸ Province income: +${eff.percent}%</div>`;
     }
     if (eff.type === 'hero_mana_bonus') {

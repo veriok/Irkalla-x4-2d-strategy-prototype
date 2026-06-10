@@ -12,7 +12,7 @@ import {
   getHeroMaxMana, getHeroManaRegen,
 } from '../engine/hero-engine.js';
 import { HERO_CLASS_MAP, getHeroClassesForFaction } from '../data/hero-classes-data.js';
-import { HERO_SKILL_MAP, TIER_ORDER } from '../data/hero-skills-data.js';
+import { HERO_SKILL_MAP, TIER_ORDER, skillEffectsToText } from '../data/hero-skills-data.js';
 import { ARTIFACT_MAP } from '../data/artifacts-data.js';
 import { heroGenderEmoji, xpForNextLevel, xpForLevel, MAX_HERO_LEVEL } from '../models/hero.js';
 import { ARTIFACT_SLOTS } from '../data/enums.js';
@@ -501,7 +501,7 @@ function _renderHeroDetail(fs) {
       slot.innerHTML = `
         <div class="hpanel-skill-name">${skillDef?.name ?? skillEntry.skillId}</div>
         <div class="hpanel-skill-tier hpanel-tier--${skillEntry.tier}">${skillEntry.tier}</div>
-        <div class="hpanel-skill-desc">${tierDef?.description ?? ''}</div>
+        <div class="hpanel-skill-desc">${skillEffectsToText(tierDef?.effects)}</div>
       `;
     } else {
       slot.className = 'hpanel-skill-slot hpanel-skill-slot--empty';
@@ -662,7 +662,7 @@ function _renderLevelUpDetail(detailEl, hero, classDef, fs) {
           ${isUpgrade ? `→ ${newTier}` : `New · ${newTier}`}
         </span>
       </div>
-      <div class="hpanel-choice-desc">${tierDef?.description ?? ''}</div>
+      <div class="hpanel-choice-desc">${skillEffectsToText(tierDef?.effects)}</div>
     `;
 
     card.addEventListener('click', () => {
