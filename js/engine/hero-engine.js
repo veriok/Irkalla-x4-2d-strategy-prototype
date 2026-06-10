@@ -362,6 +362,17 @@ export function applyLevelUp(hero, skillChoice) {
     statGained: statGainKey,
   });
 
+  // If XP already meets the next threshold, queue another level-up immediately.
+  if (hero.level < MAX_HERO_LEVEL && hero.experience >= XP_THRESHOLDS[hero.level]) {
+    hero.pendingLevelUp = true;
+    emit(GAME_EVENTS.HERO_CAN_LEVEL, {
+      factionId: hero.factionId,
+      heroId:    hero.id,
+      heroName:  hero.name,
+      newLevel:  hero.level + 1,
+    });
+  }
+
   return statGainKey;
 }
 
