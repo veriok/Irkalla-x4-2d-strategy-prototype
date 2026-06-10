@@ -118,9 +118,9 @@ export const FACTION_REACTION_IDS = Object.freeze({
 // ─── Hero System Enums ────────────────────────────────────
 
 export const HERO_CLASS_IDS = Object.freeze({
-  // Kur Margal (Dwarf undead)
-  DEATH_KNIGHT:     'death_knight',
-  LICH:             'lich',
+  // Kur Margal (Babylonian undead dwarves)
+  GALLU:            'gallu',
+  NAPPAHU:          'nappahu',
   // Iron Freeholds (Dwarf industrial)
   IRONLORD:         'ironlord',
   RUNESMITH:        'runesmith',

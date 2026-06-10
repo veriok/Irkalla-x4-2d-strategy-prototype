@@ -379,13 +379,34 @@ function _makeHeroSlot(army) {
     ? `<div class="hero-slot-mana-bar" title="Mana: ${hero.mana}/${maxMana}"><div class="hero-slot-mana-fill" style="width:${manaPct}%"></div></div>`
     : '';
 
-  slot.innerHTML = `
+  // Background and portrait images — added first so text overlays sit on top in DOM order
+  const fDef = FACTION_MAP[army.factionId] ?? null;
+  if (fDef?.unitCardBgImg) {
+    const bgImg = document.createElement('img');
+    bgImg.className = 'hero-slot-bg-img';
+    bgImg.src = fDef.unitCardBgImg;
+    bgImg.alt = '';
+    bgImg.addEventListener('error', () => bgImg.remove());
+    slot.appendChild(bgImg);
+  }
+  if (classDef?.cardImg) {
+    const fgImg = document.createElement('img');
+    fgImg.className = 'hero-slot-fg-img';
+    fgImg.src = classDef.cardImg;
+    fgImg.alt = '';
+    fgImg.addEventListener('error', () => fgImg.remove());
+    slot.appendChild(fgImg);
+  }
+
+  const overlays = document.createElement('div');
+  overlays.innerHTML = `
     <div class="hero-slot-level">${hero.level}</div>
     <div class="hero-slot-icon">${classDef?.isSpellcaster ? '🧙' : '⚔'}</div>
     <div class="hero-slot-name">${hero.name}</div>
     ${statusLine}
     ${manaBar}
   `;
+  while (overlays.firstChild) slot.appendChild(overlays.firstChild);
 
   // Small unassign button in top-right corner
   const unassignBtn = document.createElement('button');

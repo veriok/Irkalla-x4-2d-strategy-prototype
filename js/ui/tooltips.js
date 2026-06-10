@@ -203,7 +203,7 @@ export function showHeroTooltip(hero, factionDef, anchorEl) {
   // Hero card preview
   const preview = createNativePreviewCard({
     backgroundSrc: factionDef?.unitCardBgImg ?? null,
-    foregroundSrc: null,
+    foregroundSrc: classDef?.cardImg ?? null,
     fallbackIcon: classDef?.isSpellcaster ? '🧙' : '⚔',
     fallbackName: hero.name,
     fallbackSub: `Lv.${hero.level} ${classDef?.name ?? ''}`,
