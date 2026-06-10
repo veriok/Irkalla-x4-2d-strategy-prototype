@@ -108,10 +108,15 @@ function _effectiveBuildingCost(bDef, prov = null) {
     fs?.appliedTechEffects ?? []
   );
   const govDiscount = prov ? _getGovernorBuildDiscountPercent(prov) : 0;
+  const advResId0 = faction?.resources?.advanced?.[0]?.id;
+  const advResId1 = faction?.resources?.advanced?.[1]?.id;
   const cost = {};
   for (const [res, amt] of Object.entries(bDef.cost ?? {})) {
+    let resolvedRes = res;
+    if (res === 'faction_primary_adv')   resolvedRes = advResId0 ?? res;
+    if (res === 'faction_secondary_adv') resolvedRes = advResId1 ?? res;
     const base = Math.ceil(amt * buildingMultiplier);
-    cost[res] = govDiscount > 0 ? Math.max(0, Math.ceil(base * (1 - govDiscount / 100))) : base;
+    cost[resolvedRes] = govDiscount > 0 ? Math.max(0, Math.ceil(base * (1 - govDiscount / 100))) : base;
   }
   return { cost, buildTurns: bDef.buildTurns + timePenalty };
 }
