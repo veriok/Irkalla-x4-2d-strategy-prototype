@@ -13,7 +13,8 @@ import { getHeroCastableSpells, getHeroMaxMana, getHeroSpellpower, getHeroSchool
 import { applyArmyDamageOutOfCombat } from '../engine/combat.js';
 import { SPELL_MAP, SPELLS, BIOME_SUMMON_MAP } from '../data/hero-spells-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
-import { recalcArmyMoves, createArmy } from '../models/army.js';
+import { recalcArmyMoves } from '../models/army.js';
+import { spawnUnitsIntoArmies } from '../engine/spawn-units.js';
 
 // ── State ────────────────────────────────────────────────────
 
@@ -725,14 +726,9 @@ function _applyProvinceSubEffect(hero, spell, eff, factionId, fs, targetProvince
       unitId = BIOME_SUMMON_MAP[biomeId] ?? BIOME_SUMMON_MAP['plains'];
     }
 
-    if (!unitId) return;
-    const unitDef = UNIT_MAP[unitId];
-    if (!unitDef) return;
+    if (!unitId || !UNIT_MAP[unitId]) return;
 
-    // Summoned units form their own companion army, not the hero's army
-    const companion = createArmy(army.factionId, army.provinceId, [{ typeId: unitId, count }]);
-    placeArmy(companion);
-    recalcArmyMoves(companion, UNIT_MAP);
+    spawnUnitsIntoArmies(unitId, count, army.factionId, army.provinceId, army);
     renderArmyPanel();
     return;
   }

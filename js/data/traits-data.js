@@ -31,7 +31,7 @@ export const TRAITS = [
   {
     id: TRAIT_IDS.LEVY_BOOST_AURA,
     name: 'Drill Master',
-    description: 'Drills levy troops: levy units in this army gain +1 attack and +1 defense.',
+    description: 'Levy units in this army gain +1 attack and +1 defense.',
     effect: { scope: 'army', type: 'army_levy_stat_bonus', attack: 1, defense: 1 },
   },
   {
@@ -70,6 +70,12 @@ export const TRAITS = [
     name: 'First Strike',
     description: 'May fire a volley before combat begins.',
     effect: { scope: 'army', type: 'first_strike' },
+  },
+  {
+    id: TRAIT_IDS.SHIELD,
+    name: 'Shield Wall',
+    description: '+3 defense during the first-strike combat round.',
+    effect: { scope: 'army', type: 'shield_first_strike', defenseBonus: 3 },
   },
 ];
 

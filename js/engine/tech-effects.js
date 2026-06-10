@@ -10,7 +10,7 @@
  */
 
 import { getFaction, getProvince } from './game-state.js';
-import { UNIT_TYPES } from '../data/enums.js';
+import { UNIT_TYPES, UNIT_TAGS } from '../data/enums.js';
 import { TRAIT_MAP } from '../data/traits-data.js';
 import { isHeroActive, getHeroArmyBonuses } from './hero-engine.js';
 
@@ -107,6 +107,35 @@ export function getEffectiveUnitStats(typeId, factionId, unitMap, army = null) {
     }
   }
 
+  // 6. Aura bonuses from other unit types present in the army.
+  //    Iterates over unit types (not individual units) — a type contributes its aura once
+  //    regardless of stack size, so 2× drill_masters == 1× drill_master.
+  //    Non-stacking auras (e.g. levy boost) are deduplicated: first source wins.
+  if (army) {
+    const nonStackSeen = new Set();
+    for (const { typeId: auraTypeId } of (army.units ?? [])) {
+      if (auraTypeId === typeId) continue; // auras never self-apply
+      const auraDef = unitMap[auraTypeId];
+      for (const traitId of (auraDef?.traitIds ?? [])) {
+        const trait = TRAIT_MAP[traitId];
+        const eff = trait?.effect;
+        if (!eff) continue;
+        if (eff.type === 'army_attack_bonus') {
+          // Each different aura source stacks independently (Sun Priest ≠ Beast Bond)
+          attack += eff.amount ?? 0;
+        }
+        if (eff.type === 'army_levy_stat_bonus' && !nonStackSeen.has('army_levy_stat_bonus')) {
+          // Only affects LEVY-tagged units; deduplicated so multiple levy-booster types don't stack
+          if ((base?.tagIds ?? []).includes(UNIT_TAGS.LEVY)) {
+            nonStackSeen.add('army_levy_stat_bonus');
+            attack  += eff.attack  ?? 0;
+            defense += eff.defense ?? 0;
+          }
+        }
+      }
+    }
+  }
+
   return { attack, defense };
 }
 
@@ -118,70 +147,23 @@ function _conditionMet(condition, army) {
 }
 
 /**
- * Total effective attack for an army — includes all effect sources and trait auras.
+ * Total effective attack for an army.
+ * Aura bonuses are included via getEffectiveUnitStats (step 6).
  */
 export function getEffectiveArmyAttack(army, factionId, unitMap) {
-  const units = army.units ?? [];
-  let total = 0;
-  for (const { typeId, count } of units) {
-    const { attack } = getEffectiveUnitStats(typeId, factionId, unitMap, army);
-    total += attack * count;
-  }
-
-  // Trait aura bonuses (army_attack_bonus: Sun Priest, Beast Bond, etc.)
-  const armyTotal = units.reduce((s, u) => s + u.count, 0);
-  for (const { typeId, count } of units) {
-    const uDef = unitMap[typeId];
-    if (!uDef || count <= 0) continue;
-    for (const traitId of (uDef.traitIds ?? [])) {
-      const trait = TRAIT_MAP[traitId];
-      const eff = trait?.effect;
-      if (!eff) continue;
-      if (eff.type === 'army_attack_bonus') {
-        const others = Math.max(0, armyTotal - count);
-        total += others * (eff.amount ?? 0);
-      }
-      if (eff.type === 'army_levy_stat_bonus') {
-        // Grants +atk to levy units in same army (excludes self)
-        const levyCount = units
-          .filter(u => u.typeId !== typeId && unitMap[u.typeId]?.id?.includes('levy'))
-          .reduce((s, u) => s + u.count, 0);
-        total += levyCount * (eff.attack ?? 0);
-      }
-    }
-  }
-
-  return total;
+  return (army.units ?? []).reduce((total, { typeId, count }) => {
+    return total + getEffectiveUnitStats(typeId, factionId, unitMap, army).attack * count;
+  }, 0);
 }
 
 /**
- * Total effective defense for an army — includes all effect sources and trait auras.
+ * Total effective defense for an army.
+ * Aura bonuses are included via getEffectiveUnitStats (step 6).
  */
 export function getEffectiveArmyDefense(army, factionId, unitMap) {
-  const units = army.units ?? [];
-  let total = 0;
-  for (const { typeId, count } of units) {
-    const { defense } = getEffectiveUnitStats(typeId, factionId, unitMap, army);
-    total += defense * count;
-  }
-
-  // Levy defense aura (drill_master levy_boost_aura)
-  for (const { typeId, count } of units) {
-    const uDef = unitMap[typeId];
-    if (!uDef || count <= 0) continue;
-    for (const traitId of (uDef.traitIds ?? [])) {
-      const trait = TRAIT_MAP[traitId];
-      const eff = trait?.effect;
-      if (eff?.type === 'army_levy_stat_bonus') {
-        const levyCount = units
-          .filter(u => u.typeId !== typeId && unitMap[u.typeId]?.id?.includes('levy'))
-          .reduce((s, u) => s + u.count, 0);
-        total += levyCount * (eff.defense ?? 0);
-      }
-    }
-  }
-
-  return total;
+  return (army.units ?? []).reduce((total, { typeId, count }) => {
+    return total + getEffectiveUnitStats(typeId, factionId, unitMap, army).defense * count;
+  }, 0);
 }
 
 /**

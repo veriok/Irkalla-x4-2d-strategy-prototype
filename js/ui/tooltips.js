@@ -7,7 +7,7 @@
  */
 
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
-import { RESEARCH_RESOURCE } from '../data/enums.js';
+import { RESEARCH_RESOURCE, UNIT_TAGS } from '../data/enums.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { MONSTER_UNITS } from '../data/monsters-data.js';
 import { BUILDING_MAP, LOCATION_MAIN_CHAIN } from '../data/buildings-data.js';
@@ -133,7 +133,27 @@ export function showUnitTooltip(uDef, factionDef, anchorEl, currentHp = null, ma
     upkeep.textContent = `Upkeep: ${upkeepGold} gold/turn`;
     stats.appendChild(upkeep);
   }
-  unitTooltipEl.appendChild(stats);
+  const tagIds = uDef.tagIds ?? [];
+  if (tagIds.length > 0) {
+    // Wrap stats + tag column side-by-side
+    const statsRow = document.createElement('div');
+    statsRow.style.cssText = 'display:flex;align-items:flex-start;gap:8px;';
+    stats.style.flex = '1';
+    statsRow.appendChild(stats);
+
+    const tagCol = document.createElement('div');
+    tagCol.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:2px;';
+    for (const tagId of tagIds) {
+      const pill = document.createElement('span');
+      pill.textContent = _tagLabel(tagId);
+      pill.style.cssText = 'background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);border-radius:3px;padding:2px 7px;font-size:0.72em;color:var(--text-muted,#aaa);letter-spacing:0.05em;white-space:nowrap;';
+      tagCol.appendChild(pill);
+    }
+    statsRow.appendChild(tagCol);
+    unitTooltipEl.appendChild(statsRow);
+  } else {
+    unitTooltipEl.appendChild(stats);
+  }
 
   const traits = _resolveTraits(uDef.traitIds ?? []);
   if (traits.length > 0) {
@@ -727,6 +747,13 @@ function _resolveTraits(traitIds) {
   return traitIds
     .map(id => TRAIT_MAP[id])
     .filter(Boolean);
+}
+
+const _TAG_LABELS = Object.fromEntries(
+  Object.entries(UNIT_TAGS).map(([, v]) => [v, v.charAt(0).toUpperCase() + v.slice(1)])
+);
+function _tagLabel(tagId) {
+  return _TAG_LABELS[tagId] ?? tagId;
 }
 
 // ─── Effect line renderer

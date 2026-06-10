@@ -56,6 +56,7 @@ import { TECH_MAP } from '../data/techs-data.js';
 import { getEffectiveUnitStats } from '../engine/tech-effects.js';
 import { resolveMonsterDenCombat } from '../engine/combat.js';
 import { renderArmyPanel } from './army-panel.js';
+import { spawnUnitsIntoArmies } from '../engine/spawn-units.js';
 import { showResearchModalAndHighlight } from './research-modal.js';
 import { showDenCombatReportModal } from './modal.js';
 import { logCombat } from './event-log.js';
@@ -1414,30 +1415,27 @@ function collectProvinceActions(prov, onRefresh) {
   const actions = [];
 
   if (isFactionActionUnlocked(factionId, 'conscript_levies')) {
-    const hasEternalPhalanx = fs?.unlockedTechs?.includes('eternal_phalanx');
-    const cost = hasEternalPhalanx ? 2 : 3;
-    const leviesAdded = hasEternalPhalanx ? 3 : 2;
+    const CONSCRIPT_COST = 10;
+    const CONSCRIPT_COUNT = 2;
     const tribute = fs?.resources?.tribute ?? 0;
     const conscriptDef = PROVINCE_STATUS_MAP['conscript_strain'];
     const existingConscript = prov.statusEffects.find(s => s.type === 'conscript_strain');
     const currentStacks = existingConscript?.stacks ?? 0;
     const maxStacks = conscriptDef?.maxStacks ?? 3;
     const nextPercent = (currentStacks + 1) * (conscriptDef?.effects?.[0]?.percent ?? -20);
-    const canDo = tribute >= cost && currentStacks < maxStacks;
+    const canDo = tribute >= CONSCRIPT_COST && currentStacks < maxStacks;
     actions.push({
       emoji: FACTION_ACTIONS.conscript_levies.icon,
       label: 'Conscript',
-      costLabel: `${cost} Tribute → +${leviesAdded} [${currentStacks}/${maxStacks}]`,
-      description: `Instantly add ${leviesAdded} levies. Conscript strain: ${nextPercent}% all income total.`,
+      costLabel: `${CONSCRIPT_COST} Tribute → +${CONSCRIPT_COUNT} levies [${currentStacks}/${maxStacks}]`,
+      description: `Instantly spawn ${CONSCRIPT_COUNT} Archonate Levy units into your army. Conscript strain: ${nextPercent}% all income total.`,
       enabled: canDo,
-      disabledReason: currentStacks >= maxStacks ? 'Maximum conscription reached' : `Need ${cost} Tribute (have ${tribute})`,
+      disabledReason: currentStacks >= maxStacks ? 'Maximum conscription reached' : `Need ${CONSCRIPT_COST} Tribute (have ${tribute})`,
       doAction: () => {
         if (!canDo) return;
-        fs.resources.tribute = Math.max(0, tribute - cost);
-        if (prov.militia) {
-          const max = computeMilitiaMax(prov);
-          prov.militia.current = Math.min(prov.militia.current + leviesAdded, max + leviesAdded);
-        }
+        fs.resources.tribute = Math.max(0, tribute - CONSCRIPT_COST);
+        spawnUnitsIntoArmies('archonate_levy', CONSCRIPT_COUNT, factionId, prov.id);
+        renderArmyPanel();
         const inst = prov.statusEffects.find(s => s.type === 'conscript_strain');
         const shouldAdd = conscriptDef?.onApply?.(prov, null, inst) ?? true;
         if (shouldAdd && !inst?._updated) {

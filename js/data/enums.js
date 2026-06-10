@@ -86,6 +86,11 @@ export const TRAIT_IDS = Object.freeze({
   NO_HEAL:              'no_heal',
   ANTI_CAVALRY:         'anti_cavalry',
   FIRST_STRIKE:         'first_strike',
+  SHIELD:               'shield',
+});
+
+export const UNIT_TAGS = Object.freeze({
+  LEVY: 'levy',
 });
 
 export const TECH_ERAS = Object.freeze({

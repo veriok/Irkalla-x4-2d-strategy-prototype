@@ -918,7 +918,7 @@ const ARCHONATE_GREYHAVEN_CHAINS = [
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.ADMINISTRATION,
     techRequired: null,
-    cost: { gold: 70, tribute: 5 }, buildTurns: 3,
+    cost: { gold: 45 }, buildTurns: 2,
     bonuses: { tribute: 1 },
     prerequisites: [],
     unlocksBuildings: [],

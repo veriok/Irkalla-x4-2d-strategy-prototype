@@ -340,6 +340,7 @@ function _collectArmyUnits(army, factionId = null) {
         defense: defense + effDefBonus,
         unitType: def.unitType ?? null,
         traitIds: def.traitIds ?? [],
+        tagIds: def.tagIds ?? [],
       });
     }
   }
@@ -382,23 +383,26 @@ function _effectiveAttack(unit, includeRoll = true) {
   return includeRoll ? (base + _d8()) : base;
 }
 
-function _damageAgainst(attacker, target, targetIsDefender, defenderFlatBonus, includeRandom) {
+function _damageAgainst(attacker, target, targetIsDefender, defenderFlatBonus, includeRandom, isFirstStrike = false) {
   let atk = _effectiveAttack(attacker, includeRandom);
   if ((attacker.traitIds ?? []).includes('anti_cavalry') && target.unitType === UNIT_TYPES.CAVALRY) {
     atk += 3;
   }
-  const targetDef = (target.defense ?? 0) + (targetIsDefender ? defenderFlatBonus : 0);
+  let targetDef = (target.defense ?? 0) + (targetIsDefender ? defenderFlatBonus : 0);
+  if (isFirstStrike && (target.traitIds ?? []).includes(TRAIT_IDS.SHIELD)) {
+    targetDef += 3;
+  }
   return Math.max(1, Math.round(atk - targetDef));
 }
 
-function _pickTarget(attacker, enemies, bestChance, targetIsDefender, defenderFlatBonus) {
+function _pickTarget(attacker, enemies, bestChance, targetIsDefender, defenderFlatBonus, isFirstStrike = false) {
   if (!enemies || enemies.length === 0) return null;
   const pickBest = Math.random() < bestChance;
   if (!pickBest) return enemies[Math.floor(Math.random() * enemies.length)];
 
   const sorted = [...enemies].sort((a, b) => {
-    const da = _damageAgainst(attacker, a, targetIsDefender, defenderFlatBonus, false);
-    const db = _damageAgainst(attacker, b, targetIsDefender, defenderFlatBonus, false);
+    const da = _damageAgainst(attacker, a, targetIsDefender, defenderFlatBonus, false, isFirstStrike);
+    const db = _damageAgainst(attacker, b, targetIsDefender, defenderFlatBonus, false, isFirstStrike);
     return db - da;
   });
   return sorted[0] ?? enemies[Math.floor(Math.random() * enemies.length)];
@@ -564,15 +568,15 @@ function _resolveFirstStrikeRound(attArmy, defArmy, militiaPool, province, defen
   const damageToAtt = new Map();
 
   for (const unit of attStrikers) {
-    const target = _pickTarget(unit, defUnits, 0.5, true, defenderFlatBonus);
+    const target = _pickTarget(unit, defUnits, 0.5, true, defenderFlatBonus, true);
     if (!target) continue;
-    const dmg = Math.round(_damageAgainst(unit, target, true, defenderFlatBonus, true) * seaPenalty);
+    const dmg = Math.round(_damageAgainst(unit, target, true, defenderFlatBonus, true, true) * seaPenalty);
     damageToDef.set(target.key, (damageToDef.get(target.key) ?? 0) + dmg);
   }
   for (const unit of defStrikers) {
-    const target = _pickTarget(unit, attUnits, 0.5, false, 0);
+    const target = _pickTarget(unit, attUnits, 0.5, false, 0, true);
     if (!target) continue;
-    const dmg = _damageAgainst(unit, target, false, 0, true);
+    const dmg = _damageAgainst(unit, target, false, 0, true, true);
     damageToAtt.set(target.key, (damageToAtt.get(target.key) ?? 0) + dmg);
   }
 
