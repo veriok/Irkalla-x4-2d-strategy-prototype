@@ -678,7 +678,7 @@ const ARCHONATE_GREYHAVEN_TECHS = [
     era: TECH_ERAS.STONE,
     factionId: FACTION_IDS.ARCHONATE_GREYHAVEN, replacesId: 'writing',
     quote: '"The subject caste exists to serve. We exist to lead."',
-    description: 'Tribute Hall buildings generate +0.5 additional Tribute/turn. Training buildings yield +0.5 gold/turn.',
+    description: 'Tribute Hall buildings generate +0.5 additional Tribute/turn, and training category buildings yield +0.5 gold/turn.',
     buildingBonuses: [
       { buildingId: 'tribute_hall', bonusKey: RESOURCE_IDS.TRIBUTE, amount: 0.5 },
     ],
@@ -702,9 +702,9 @@ const ARCHONATE_GREYHAVEN_TECHS = [
     era: TECH_ERAS.IRON,
     factionId: FACTION_IDS.ARCHONATE_GREYHAVEN, replacesId: 'guilds',
     quote: '"We have held this line for a thousand years. We will hold it for a thousand more."',
-    description: 'Unlocks the Iron Phalanx and Archonate Sentinel units. Reduces Conscript Levy cost from 10 to 7 Tribute, and adds an extra levy unit.',
+    description: 'Unlocks the Iron Phalanx and Archonate Sentinel units. Reduces Conscript Levy cost from 10 to 7 tribute.',
     unlockUnits: ['iron_phalanx', 'archonate_sentinel'],
-    effects: [{ scope: 'faction', type: 'conscript_cost_reduction', costReduction: 3, bonusLevies: 1 }],
+    effects: [{ scope: 'faction', type: 'conscript_cost_reduction', costReduction: 3 }],
   },
 ];
 

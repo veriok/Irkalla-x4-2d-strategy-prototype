@@ -1417,7 +1417,7 @@ function collectProvinceActions(prov, onRefresh) {
   if (isFactionActionUnlocked(factionId, 'conscript_levies')) {
     const conscriptEff = (fs?.appliedTechEffects ?? []).flatMap(e => e.effects ?? []).find(e => e.type === 'conscript_cost_reduction');
     const CONSCRIPT_COST = 10 - (conscriptEff?.costReduction ?? 0);
-    const CONSCRIPT_COUNT = 2 + (conscriptEff?.bonusLevies ?? 0);
+    const CONSCRIPT_COUNT = 2;
     const tribute = fs?.resources?.tribute ?? 0;
     const conscriptDef = PROVINCE_STATUS_MAP['conscript_strain'];
     const existingConscript = prov.statusEffects.find(s => s.type === 'conscript_strain');
