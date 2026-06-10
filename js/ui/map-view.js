@@ -315,7 +315,7 @@ function showProvinceTooltip(provinceId, x, y) {
 
       _ttWinChance.textContent  = `🎯 Win chance: ~${est.winChancePct}%`;
       _ttWinChance.style.color  = chanceColor;
-      _ttDefBonus.textContent   = `🏔 Defense bonus: +${est.terrainBonus}%${est.fortBonus > 0 ? ` (+${est.fortBonus} fort)` : ''}`;
+      _ttDefBonus.textContent   = `🏔 Defense bonus: ${est.totalDefBonus >= 0 ? '+' : ''}${est.totalDefBonus}%`;
       _ttCasualties.textContent = `⚔ Casualties: ${est.casualtyLevel}`;
       _ttCasualties.style.color = casColor;
       _ttCombatInfo.hidden = false;

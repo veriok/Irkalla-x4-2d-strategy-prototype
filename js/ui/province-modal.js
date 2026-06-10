@@ -315,13 +315,15 @@ function _renderHeader(prov) {
     defChip.className = 'pmod-stat-chip';
     const defSign = totalDefPct >= 0 ? '+' : '';
     defChip.textContent = `🛡 Defense: ${defSign}${totalDefPct}%`;
-    const biomePct = Math.round(defStats.biome * 100);
-    const bldgPct  = Math.round(defStats.buildings * 100);
-    const fortPct  = Math.round(defStats.status * 100);
+    const biomePct   = Math.round(defStats.biome * 100);
+    const bldgPct    = Math.round(defStats.buildings * 100);
+    const statusPct  = Math.round(defStats.status * 100);
+    const heroPct    = Math.round(defStats.hero * 100);
     defChip.title = [
       `Biome (${biome.name}): ${biomePct >= 0 ? '+' : ''}${biomePct}%`,
       defStats.buildings !== 0 ? `Buildings: ${bldgPct >= 0 ? '+' : ''}${bldgPct}%` : null,
-      defStats.status    !== 0 ? `Fortifications: ${fortPct >= 0 ? '+' : ''}${fortPct}%` : null,
+      defStats.status    !== 0 ? `Status Effects: ${statusPct >= 0 ? '+' : ''}${statusPct}%` : null,
+      defStats.hero      !== 0 ? `Governor: ${heroPct >= 0 ? '+' : ''}${heroPct}%` : null,
     ].filter(Boolean).join('\n');
     statsRowEl.appendChild(defChip);
 
@@ -529,11 +531,13 @@ function _computeDefenseStats(prov) {
       if (eff.type === 'defense_percent') statusDef += (eff.amount ?? 0) / 100 * (se.stacks ?? 1);
     }
   }
+  const heroDef = (_getGovernorBonuses(prov)?.defensePercent ?? 0) / 100;
   return {
     biome:     biome.terrainDefBonus ?? 0,
     buildings: buildingDef,
     status:    statusDef,
-    total:     (biome.terrainDefBonus ?? 0) + buildingDef + statusDef,
+    hero:      heroDef,
+    total:     (biome.terrainDefBonus ?? 0) + buildingDef + statusDef + heroDef,
   };
 }
 

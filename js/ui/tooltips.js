@@ -144,7 +144,7 @@ export function showUnitTooltip(uDef, factionDef, anchorEl, currentHp = null, ma
     traitWrap.appendChild(title);
     for (const trait of traits) {
       const line = document.createElement('div');
-      line.textContent = `- ${trait.name}: ${trait.description}`;
+      line.innerHTML = `- <strong>${trait.name}</strong>: ${trait.description}`;
       traitWrap.appendChild(line);
     }
     unitTooltipEl.appendChild(traitWrap);

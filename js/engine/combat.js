@@ -1150,6 +1150,21 @@ export function estimateCombat(attackerArmyId, targetProvinceId) {
   const terrainMod = 1 + (biome?.terrainDefBonus ?? 0);
   const fortBonus = targetP.locations.reduce((sum, loc) => sum + getLocationDefenseBonus(loc, BUILDING_MAP), 0);
 
+  let statusDefPct = 0;
+  for (const se of (targetP.statusEffects ?? [])) {
+    const seDef = PROVINCE_STATUS_MAP[se.type];
+    for (const eff of (seDef?.effects ?? [])) {
+      if (eff.type === 'defense_percent') statusDefPct += (eff.amount ?? 0) * (se.stacks ?? 1);
+    }
+  }
+  const defFactionState = getFaction(targetP.ownerId);
+  const defGovernor = targetP.governorId
+    ? (defFactionState?.heroes?.find(h => h.id === targetP.governorId) ?? null)
+    : null;
+  const heroDefPct = (defGovernor && isHeroActive(defGovernor))
+    ? (getHeroProvinceBonuses(defGovernor)?.defensePercent ?? 0)
+    : 0;
+
   // Sea attack penalty: -20% when attacking FROM shallow ocean
   const attackerOriginProv = getProvince(attArmy.provinceId);
   const isSeaAttack = !!(attackerOriginProv?.isOcean && attackerOriginProv?.oceanType === 'shallow');
@@ -1186,12 +1201,16 @@ export function estimateCombat(attackerArmyId, targetProvinceId) {
   else if (ratio >= 0.7) casualtyLevel = 'Heavy';
   else casualtyLevel = 'Catastrophic';
 
+  const totalDefBonus = Math.round((biome?.terrainDefBonus ?? 0) * 100)
+    + Math.round(fortBonus * 100)
+    + statusDefPct
+    + heroDefPct;
+
   return {
     atkStr: Math.round(attStr),
     defStr: Math.round(defStr),
     winChancePct,
-    terrainBonus: Math.round((biome?.terrainDefBonus ?? 0) * 100),
-    fortBonus,
+    totalDefBonus,
     casualtyLevel,
   };
 }
