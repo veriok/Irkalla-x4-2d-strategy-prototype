@@ -307,11 +307,11 @@ const IRON_AGE = [
     era: TECH_ERAS.IRON,
     baseCost: 80, requires: 'castle_construction',
     quote: '"When the king speaks the law, and the priest speaks god — they must say the same thing."',
-    description: 'Sacred legal authority. Administration buildings yield +2 gold/turn. Militia +2.',
+    description: 'Sacred legal authority. Administration buildings yield +2 gold/turn. Militia +1.',
     buildingCategoryBonuses: [
       { category: BUILDING_CATEGORIES.ADMINISTRATION, bonusKey: RESOURCE_IDS.GOLD, amount: 2 },
     ],
-    militiaBonus: 2,
+    militiaBonus: 1,
   },
   {
     id: 'iron_working', name: 'Iron Working', emoji: '⚒️',
@@ -320,7 +320,7 @@ const IRON_AGE = [
     quote: '"Iron is patient. It waits in the earth for a thousand years, then rules the age."',
     description: 'Smelted iron surpasses bronze entirely. Infantry gain +2 attack and +1 defense.',
     unitStatBonuses: [
-      { unitType: UNIT_TYPES.INFANTRY, stat: 'attack',  amount: 2 },
+      { unitType: UNIT_TYPES.INFANTRY, stat: 'attack',  amount: 1 },
       { unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
     ],
     clearsLocationTypes: ['dense_jungle', 'frozen_wastes'],
@@ -678,9 +678,9 @@ const ARCHONATE_GREYHAVEN_TECHS = [
     era: TECH_ERAS.STONE,
     factionId: FACTION_IDS.ARCHONATE_GREYHAVEN, replacesId: 'writing',
     quote: '"The subject caste exists to serve. We exist to lead."',
-    description: 'Tribute Hall buildings generate +0.5 additional Tribute/turn, and training category buildings yield +0.5 gold/turn.',
+    description: 'Tribute Hall buildings generate +0.25 additional Tribute/turn, and training category buildings yield +0.5 gold/turn.',
     buildingBonuses: [
-      { buildingId: 'tribute_hall', bonusKey: RESOURCE_IDS.TRIBUTE, amount: 0.5 },
+      { buildingId: 'tribute_hall', bonusKey: RESOURCE_IDS.TRIBUTE, amount: 0.25 },
     ],
     buildingCategoryBonuses: [
       { category: BUILDING_CATEGORIES.TRAINING, bonusKey: RESOURCE_IDS.GOLD, amount: 0.5 },

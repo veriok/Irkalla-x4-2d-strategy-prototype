@@ -216,7 +216,7 @@ export const FACTIONS = [
     unitEmoji: '🛡️',
     playstyle: 'Defensive · Tribute Halls fund instant conscription on demand. Phalanx formations are nearly unbreakable when stacked.',
     biomePrefs: { primary: 'forest', secondary: 'coastal' },
-    startingUnits: [{ unitId: 'archonate_levy', count: 3 }, { unitId: 'phalanx_soldier', count: 1 }],
+    startingUnits: [{ unitId: 'archonate_levy', count: 2 }, { unitId: 'phalanx_soldier', count: 1 }],
     startingSpellbooks: { [SPELL_SCHOOL_IDS.ARCANE]: 3, [SPELL_SCHOOL_IDS.EARTH]: 3 },
     startingActions: ['conscript_levies'],
   },
