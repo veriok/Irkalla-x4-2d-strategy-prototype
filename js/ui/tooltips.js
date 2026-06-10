@@ -519,11 +519,18 @@ function _buildTechHtml(techDef) {
   }
 
   if ((techDef.unlockBuildings ?? []).length > 0) {
-    const names = techDef.unlockBuildings.map(id => {
-      const b = BUILDING_MAP[id];
-      return b ? `${b.emoji} ${b.name}` : id;
-    }).join(', ');
-    effectParts.push(`🔓 Unlocks: ${names}`);
+    const pFactionId = state.playerFactionId ?? null;
+    const names = techDef.unlockBuildings
+      .filter(id => {
+        const b = BUILDING_MAP[id];
+        if (!b) return true;
+        if (b.factionId && b.factionId !== pFactionId) return false;
+        if (pFactionId && (b.disabledFactions ?? []).includes(pFactionId)) return false;
+        return true;
+      })
+      .map(id => { const b = BUILDING_MAP[id]; return b ? `${b.emoji} ${b.name}` : id; })
+      .join(', ');
+    if (names) effectParts.push(`🔓 Unlocks: ${names}`);
   }
 
   for (const actionId of (techDef.unlockActions ?? [])) {

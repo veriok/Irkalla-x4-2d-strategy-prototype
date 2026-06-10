@@ -76,11 +76,11 @@ const STONE_AGE = [
     era: TECH_ERAS.STONE,
     baseCost: 20, requires: null,
     quote: '"In the silence between heartbeats, the divine whispers its secrets."',
-    description: 'Sacred knowledge grants +1 research/turn to all religious main buildings.',
+    description: 'Sacred knowledge grants +0.5 research/turn to all religious main buildings.',
     buildingBonuses: [
-      { buildingId: 'religious_1', bonusKey: RESOURCE_IDS.RESEARCH, amount: 1 },
-      { buildingId: 'religious_2', bonusKey: RESOURCE_IDS.RESEARCH, amount: 1 },
-      { buildingId: 'religious_3', bonusKey: RESOURCE_IDS.RESEARCH, amount: 1 },
+      { buildingId: 'religious_1', bonusKey: RESOURCE_IDS.RESEARCH, amount: 0.5 },
+      { buildingId: 'religious_2', bonusKey: RESOURCE_IDS.RESEARCH, amount: 0.5 },
+      { buildingId: 'religious_3', bonusKey: RESOURCE_IDS.RESEARCH, amount: 0.5 },
     ],
   },
   {
@@ -138,7 +138,7 @@ const STONE_AGE = [
     baseCost: 20, requires: null,
     quote: '"A man alone is a man afraid. A warband is something else entirely."',
     description: 'Organised raiding parties formalize into standing warbands. Unlocks the Mustering Field training building.',
-    unlockBuildings: ['mustering_field'],
+    unlockBuildings: ['mustering_field', 'discipline_hall_1'],
   },
   {
     id: 'masonry', name: 'Masonry', emoji: '🪨',
@@ -189,7 +189,7 @@ const BRONZE_AGE = [
     id: 'fortification', name: 'Fortification', emoji: '🏰',
     era: TECH_ERAS.BRONZE,
     baseCost: 45, requires: 'masonry',
-    quote: '"A wall is not just stone — it is the will of a people made solid."',
+    quote: '"A wall is not just stone - it is the will of a people made solid."',
     description: 'Advanced defensive architecture. Defensive buildings yield +1 gold/turn. Militia +1.',
     buildingCategoryBonuses: [
       { category: BUILDING_CATEGORIES.DEFENSIVE, bonusKey: RESOURCE_IDS.GOLD, amount: 1 },
@@ -239,7 +239,7 @@ const BRONZE_AGE = [
     baseCost: 45, requires: 'warbands',
     quote: '"War is the crucible of nations. Only those who master it earn the right to call themselves one."',
     description: 'Formalised battle doctrine and inter-clan rivalry sharpen warfare. Unlocks the Warrior Lodge. Armies can support +1 additional unit.',
-    unlockBuildings: ['warrior_lodge'],
+    unlockBuildings: ['warrior_lodge', 'discipline_hall_2'],
     effects: [{ scope: 'faction', type: 'army_support_limit', amount: 1 }],
   },
   {
@@ -288,9 +288,9 @@ const IRON_AGE = [
     id: 'trade_networks', name: 'Trade Networks', emoji: '🤝',
     era: TECH_ERAS.IRON,
     baseCost: 80, requires: 'taxation',
-    quote: '"Commerce is war by other means — and far more profitable."',
-    description: 'Organised merchant leagues spanning provinces. +15% to all faction gold income.',
-    resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.GOLD, percent: 15 }],
+    quote: '"Commerce is war by other means - and far more profitable."',
+    description: 'Organised merchant leagues spanning provinces. +10% to all faction gold income.',
+    resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.GOLD, percent: 10 }],
   },
   {
     id: 'scholarship', name: 'Scholarship', emoji: '🎓',
@@ -360,7 +360,7 @@ const IRON_AGE = [
     baseCost: 80, requires: 'clan_warfare',
     quote: '"A soldier fights for himself. A formation fights for everyone. That is why it wins."',
     description: 'Coordinated tactical doctrine enables professional soldiery. Unlocks the Barracks (tier 3 training building, +2 militia, further reduces recruit time).',
-    unlockBuildings: ['barracks'],
+    unlockBuildings: ['barracks', 'discipline_hall_3'],
   },
   {
     id: 'metallurgy', name: 'Metallurgy', emoji: '🔩',
@@ -453,24 +453,24 @@ const ELF_RACE_TECHS = [
     quote: '"The sea holds more secrets than any library — and unlike scholars, it never lies."',
     description: 'Elven mastery of oceanic patterns. Coastal provinces generate +1 Aether/turn.',
     buildingBonuses: [],   // handled by biome income (coastal aether is in azure_docks buildings)
-    resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.AETHER, percent: 15 }],
+    resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.AETHER, percent: 10 }],
   },
   {
     id: 'aetheric_arts', name: 'Aetheric Arts', emoji: '✨',
     era: TECH_ERAS.BRONZE,
     raceId: RACE_IDS.ELF, replacesId: 'fortification',
     quote: '"The Aether is the language of creation. Learn it and the world bends."',
-    description: 'Elves may spend 5 Aether to reduce the cost of the next technology by 10%.',
-    effects: [{ scope: 'faction', type: 'aether_tech_discount', aetherCost: 5, discountPercent: 10 }],
+    description: 'Ancient elven aether manipulation. Allows construction of the Aetheric Tower, channelling ambient aether into scholarly insight.',
+    unlockBuildings: ['aetheric_tower'],
   },
   {
     id: 'wayfarers_guild', name: 'Wayfarers\' Guild', emoji: '🧭',
-    era: TECH_ERAS.BRONZE,
-    raceId: RACE_IDS.ELF, replacesId: 'steel',
+    era: TECH_ERAS.IRON,
+    raceId: RACE_IDS.ELF, replacesId: 'trade_networks',
     quote: '"Every horizon is the beginning of someone\'s home."',
-    description: 'Expert navigators and explorers. Province clearing costs -1 turn (minimum 1).',
-    clearsLocationTypes: [],   // reduces clear time — handled by checking this tech in turn-engine
-    effects: [{ scope: 'faction', type: 'clear_time_reduction', amount: 1 }],
+    description: 'Elven mastery of ocean routes. +15% gold income. Armies starting a turn on ocean provinces gain +1 movement.',
+    resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.GOLD, percent: 15 }],
+    effects: [{ scope: 'faction', type: 'ocean_movement_bonus', biomes: ['shallow_ocean', 'deep_ocean'], movementBonus: 1 }],
   },
 ];
 
@@ -674,24 +674,27 @@ const POLEIS_AETHERA_TECHS = [
 
 const ARCHONATE_GREYHAVEN_TECHS = [
   {
-    id: 'iron_discipline', name: 'Iron Discipline', emoji: '🏯',
-    era: TECH_ERAS.IRON,
-    factionId: FACTION_IDS.ARCHONATE_GREYHAVEN, replacesId: 'trade_networks',
-    quote: '"Pain is weakness leaving the body. We have none of it left."',
-    description: 'Unlocks the Phalanx Soldier unit. INFANTRY tier 2+ units gain +1 defense.',
-    unlockUnits: ['phalanx_soldier'],
-    unitStatBonuses: [
-      { unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
+    id: 'subject_taxation', name: 'Subject Taxation', emoji: '⚖️',
+    era: TECH_ERAS.STONE,
+    factionId: FACTION_IDS.ARCHONATE_GREYHAVEN, replacesId: 'writing',
+    quote: '"The subject caste exists to serve. We exist to lead."',
+    description: 'Tribute Hall buildings generate +0.5 additional Tribute/turn. Training buildings yield +0.5 gold/turn.',
+    buildingBonuses: [
+      { buildingId: 'tribute_hall', bonusKey: RESOURCE_IDS.TRIBUTE, amount: 0.5 },
+    ],
+    buildingCategoryBonuses: [
+      { category: BUILDING_CATEGORIES.TRAINING, bonusKey: RESOURCE_IDS.GOLD, amount: 0.5 },
     ],
   },
   {
-    id: 'subject_taxation', name: 'Subject Taxation', emoji: '⚖️',
-    era: TECH_ERAS.IRON,
-    factionId: FACTION_IDS.ARCHONATE_GREYHAVEN, replacesId: 'scholarship',
-    quote: '"The subject caste exists to serve. We exist to lead."',
-    description: 'Tribute Hall buildings generate +1 additional Tribute/turn (total 2).',
-    buildingBonuses: [
-      { buildingId: 'tribute_hall', bonusKey: RESOURCE_IDS.TRIBUTE, amount: 1 },
+    id: 'discipline', name: 'Discipline', emoji: '🏯',
+    era: TECH_ERAS.BRONZE,
+    factionId: FACTION_IDS.ARCHONATE_GREYHAVEN, replacesId: 'steel',
+    quote: '"Pain is weakness leaving the body. We have none of it left."',
+    description: 'Unlocks the Phalanx Soldier unit. All INFANTRY units gain +1 defense.',
+    unlockUnits: ['phalanx_soldier'],
+    unitStatBonuses: [
+      { unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
     ],
   },
   {
@@ -699,9 +702,9 @@ const ARCHONATE_GREYHAVEN_TECHS = [
     era: TECH_ERAS.IRON,
     factionId: FACTION_IDS.ARCHONATE_GREYHAVEN, replacesId: 'guilds',
     quote: '"We have held this line for a thousand years. We will hold it for a thousand more."',
-    description: 'Unlocks the Iron Phalanx and Archonate Sentinel units. Conscript Levy costs 2 Tribute (reduced from 3) and adds 3 levies instead of 2.',
+    description: 'Unlocks the Iron Phalanx and Archonate Sentinel units. Reduces Conscript Levy cost from 10 to 7 Tribute, and adds an extra levy unit.',
     unlockUnits: ['iron_phalanx', 'archonate_sentinel'],
-    effects: [{ scope: 'faction', type: 'conscript_cost_reduction', costReduction: 1, bonusLevies: 1 }],
+    effects: [{ scope: 'faction', type: 'conscript_cost_reduction', costReduction: 3, bonusLevies: 1 }],
   },
 ];
 

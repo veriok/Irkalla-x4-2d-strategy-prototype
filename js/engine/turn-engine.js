@@ -439,10 +439,17 @@ function tickProvinceStatuses() {
 // ─── Army move reset ──────────────────────────────────────
 
 function resetArmyMoves(factionId) {
+  const oceanMoveEff = (getFaction(factionId)?.appliedTechEffects ?? [])
+    .flatMap(e => e.effects ?? [])
+    .find(e => e.type === 'ocean_movement_bonus');
+
   for (const army of getArmiesByFaction(factionId)) {
     const prov = getProvince(army.provinceId);
     const hasRoads = prov?.locations.some(loc => getInstalledBuildingIds(loc).includes('roads'));
     if (hasRoads) army.statusEffects.push({ type: 'roads_movement', movementBonus: 1, turnsRemaining: 1 });
+    if (oceanMoveEff && (oceanMoveEff.biomes ?? []).includes(prov?.biomeId)) {
+      army.statusEffects.push({ type: 'ocean_movement', movementBonus: oceanMoveEff.movementBonus, turnsRemaining: 1 });
+    }
     // Logistics skill: random extra movement point
     const logisticsChance = getHeroLogisticsChance(army);
     if (logisticsChance > 0 && Math.random() < logisticsChance) {
