@@ -1091,15 +1091,6 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     }
   }
 
-  if (outcome === 'inconclusive') {
-    const attNow = getEffectiveArmyAttack(attArmy, attArmy.factionId, UNIT_MAP) + getEffectiveArmyDefense(attArmy, attArmy.factionId, UNIT_MAP);
-    const defNow = (enemyDefArmy ? getEffectiveArmyAttack(enemyDefArmy, enemyDefArmy.factionId, UNIT_MAP) + getEffectiveArmyDefense(enemyDefArmy, enemyDefArmy.factionId, UNIT_MAP) : 0)
-      + (enemyDefArmy?._isMilitia ? 0 : _militiaDefense(militiaPool));
-    const ratio = defNow > 0 ? attNow / defNow : (attNow > 0 ? 2 : 0.5);
-    if (ratio >= 1.1) outcome = 'attacker';
-    else if (ratio <= 0.9) outcome = 'defender';
-  }
-
   // Strip combat effects: cap HP to base maxHp first (maxHp buffs may have let units absorb extra damage)
   for (const army of [attArmy, enemyDefArmy]) {
     if (!army) continue;
