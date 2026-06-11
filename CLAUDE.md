@@ -1,12 +1,11 @@
-# Irkalla-x4 2D Strategy Prototype — Codebase Guidelines
+# Codebase Guidelines
 
 ## 1. Think Before Coding
 
 Don't assume. Don't hide confusion. Surface tradeoffs.
 
 Before implementing:
-
-- State your assumptions explicitly. If uncertain, ask.
+- State your assumptions explicitly. If uncertain or vague requirement, ask.
 - If multiple interpretations exist, present them - don't pick silently.
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
@@ -19,33 +18,14 @@ Minimum code that solves the problem. Nothing speculative.
 - No abstractions for single-use code.
 - No "flexibility" or "configurability" that wasn't requested.
 - No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-## 3. Surgical Changes
-
-Touch only what you must. Clean up only your own mess.
-
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
 
 ---
 
 ## Enumerable Types — Finite Categories Belong in Enums
 
-Plain strings are fine for names, descriptions, IDs, and other open-ended values. But any **finite categorical set** — a type system where the full list of valid values is known and bounded — must be defined as a frozen enum in [js/data/enums.js](js/data/enums.js) and referenced by its const everywhere.
+Plain strings are fine for names, descriptions, IDs, and other open-ended values. But any **finite categorical set** — a type system where the full list of valid values is known and bounded - must be defined as a frozen enum in [js/data/enums.js](js/data/enums.js) and referenced by its const everywhere.
 
-Examples of things that are enumerables: unit types, faction IDs, resource IDs, building categories, tech eras, biome types, terrain types.
+Examples of things that are enumerables: unit types, factions, resources, building categories, tech eras, biome types.
 
 **Pattern:**
 ```js
@@ -67,23 +47,7 @@ When adding a new categorical type, add it to `enums.js` first, then reference t
 
 ## Effects System — Structured, Scoped Effect Objects
 
-Game modifiers must be expressed as structured effect objects, not as scattered imperative mutations. Each effect has a `type` that the engine knows how to apply, and a `scope` that determines what it targets.
-
-**Scopes:**
-- `army` — modifies units/stats within a single army
-- `province` — modifies a province's income, defense, etc.
-- `country` — modifies faction-wide values (resource generation, caps, etc.)
-- `world` — modifies global rules (movement costs, combat modifiers for all factions)
-
-**Supported effect shapes (extend as needed):**
-```js
-{ type: 'income_percent',  scope: 'province', resourceId: 'all' | RESOURCE_IDS.GOLD, percent: -50 }
-{ type: 'defense_percent', scope: 'province', amount: 10 }
-{ type: 'stat_modifier',   scope: 'army',     stat: 'attack' | 'defense', amount: 5, unitType: UNIT_TYPES.INFANTRY }
-{ type: 'unlock_action',   scope: 'army',     actionId: 'code_of_honor' }
-```
-
-Effects are defined in data files (province-status, techs, buildings, traits) and resolved centrally by the engine — see [js/engine/tech-effects.js](js/engine/tech-effects.js) for the unit-stat resolution pattern and [js/data/province-status-data.js](js/data/province-status-data.js) for the province-scope pattern. Do not compute or apply modifiers ad-hoc in UI code or turn logic.
+TBD.
 
 ---
 

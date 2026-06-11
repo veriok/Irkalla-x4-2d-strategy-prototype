@@ -37,7 +37,7 @@
  *   hero_spell_school            — { schoolId, tier } (school-specific efficiency; future use)
  */
 
-import { HERO_SKILL_IDS, HERO_ATTRIBUTES, UNIT_TYPES, SPELL_SCHOOL_IDS } from './enums.js';
+import { HERO_SKILL_IDS, HERO_ATTRIBUTES, UNIT_TYPES, SPELL_SCHOOL_IDS, RESOURCE_IDS, EFFECT_SCOPES, EFFECT_TYPES } from './enums.js';
 
 export const HERO_SKILLS = [
 
@@ -54,20 +54,20 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        effects: [{ type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 10 }],
+        effects: [{ scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 10 }],
       },
       {
         tier: 'expert',
         effects: [
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 15 },
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'defense', percent: 10 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 15 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.INFANTRY, stat: 'defense', percent: 10 },
         ],
       },
       {
         tier: 'master',
         effects: [
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 25 },
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'defense', percent: 15 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 25 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.INFANTRY, stat: 'defense', percent: 15 },
         ],
       },
     ],
@@ -84,20 +84,20 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        effects: [{ type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 10 }],
+        effects: [{ scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 10 }],
       },
       {
         tier: 'expert',
         effects: [
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 15 },
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'defense', percent: 10 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 15 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.CAVALRY, stat: 'defense', percent: 10 },
         ],
       },
       {
         tier: 'master',
         effects: [
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 35 },
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'defense', percent: 20 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 35 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.CAVALRY, stat: 'defense', percent: 20 },
         ],
       },
     ],
@@ -115,24 +115,24 @@ export const HERO_SKILLS = [
       {
         tier: 'novice',
         effects: [
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'attack', percent: 10 },
-          { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'firstStrikeChance', flat: 5 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.ARCHER, stat: 'attack', percent: 10 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_BONUS, unitType: UNIT_TYPES.ARCHER, stat: 'firstStrikeChance', flat: 5 },
         ],
       },
       {
         tier: 'expert',
         effects: [
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'attack', percent: 15 },
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'defense', percent: 10 },
-          { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'firstStrikeChance', flat: 10 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.ARCHER, stat: 'attack', percent: 15 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.ARCHER, stat: 'defense', percent: 10 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_BONUS, unitType: UNIT_TYPES.ARCHER, stat: 'firstStrikeChance', flat: 10 },
         ],
       },
       {
         tier: 'master',
         effects: [
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'attack', percent: 25 },
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'defense', percent: 15 },
-          { type: 'army_unit_type_bonus', unitType: UNIT_TYPES.ARCHER, stat: 'firstStrikeChance', flat: 15 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.ARCHER, stat: 'attack', percent: 25 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.ARCHER, stat: 'defense', percent: 15 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_BONUS, unitType: UNIT_TYPES.ARCHER, stat: 'firstStrikeChance', flat: 15 },
         ],
       },
     ],
@@ -149,20 +149,20 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        effects: [{ type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack', percent: 10 }],
+        effects: [{ scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack', percent: 10 }],
       },
       {
         tier: 'expert',
         effects: [
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack', percent: 15 },
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, stat: 'defense', percent: 10 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack', percent: 15 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.CONSTRUCT, stat: 'defense', percent: 10 },
         ],
       },
       {
         tier: 'master',
         effects: [
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack', percent: 25 },
-          { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CONSTRUCT, stat: 'defense', percent: 15 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack', percent: 25 },
+          { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.CONSTRUCT, stat: 'defense', percent: 15 },
         ],
       },
     ],
@@ -179,9 +179,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'reduce_fortification_multi', percent: 10 }] },
-      { tier: 'expert', effects: [{ type: 'reduce_fortification_multi', percent: 25 }] },
-      { tier: 'master', effects: [{ type: 'reduce_fortification_multi', percent: 50 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.FORTIFICATION_BONUS, amount: -10 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.FORTIFICATION_BONUS, amount: -25 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.FORTIFICATION_BONUS, amount: -50 }] },
     ],
   },
 
@@ -194,9 +194,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'army_logistics', chance: 0.25 }] },
-      { tier: 'expert', effects: [{ type: 'army_logistics', chance: 0.50 }] },
-      { tier: 'master', effects: [{ type: 'army_logistics', chance: 0.75 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_LOGISTICS, chance: 0.25 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_LOGISTICS, chance: 0.50 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_LOGISTICS, chance: 0.75 }] },
     ],
   },
 
@@ -211,20 +211,20 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        effects: [{ type: 'unit_cost_multi', percent: 10 }],
+        effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.UNIT_COST_MULTI, percent: 10 }],
       },
       {
         tier: 'expert',
         effects: [
-          { type: 'unit_cost_multi', percent: 15 },
-          { type: 'unit_recruit_speed', amount: 1 },
+          { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.UNIT_COST_MULTI, percent: 15 },
+          { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.UNIT_RECRUIT_SPEED, amount: 1 },
         ],
       },
       {
         tier: 'master',
         effects: [
-          { type: 'unit_cost_multi', percent: 20 },
-          { type: 'unit_recruit_speed', amount: 2 },
+          { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.UNIT_COST_MULTI, percent: 20 },
+          { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.UNIT_RECRUIT_SPEED, amount: 2 },
         ],
       },
     ],
@@ -241,9 +241,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'province_defense_multi', percent: 10 }] },
-      { tier: 'expert', effects: [{ type: 'province_defense_multi', percent: 20 }] },
-      { tier: 'master', effects: [{ type: 'province_defense_multi', percent: 30 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.FORTIFICATION_BONUS, amount: 10 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.FORTIFICATION_BONUS, amount: 20 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.FORTIFICATION_BONUS, amount: 30 }] },
     ],
   },
 
@@ -256,9 +256,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'province_militia_bonus', amount: 1 }] },
-      { tier: 'expert', effects: [{ type: 'province_militia_bonus', amount: 2 }] },
-      { tier: 'master', effects: [{ type: 'province_militia_bonus', amount: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.MILITIA_BONUS, amount: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.MILITIA_BONUS, amount: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.MILITIA_BONUS, amount: 3 }] },
     ],
   },
 
@@ -271,9 +271,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'army_wound_chance', bonus: 0.05 }] },
-      { tier: 'expert', effects: [{ type: 'army_wound_chance', bonus: 0.10 }] },
-      { tier: 'master', effects: [{ type: 'army_wound_chance', bonus: 0.15 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_WOUND_CHANCE, bonus: 0.05 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_WOUND_CHANCE, bonus: 0.10 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_WOUND_CHANCE, bonus: 0.15 }] },
     ],
   },
 
@@ -286,9 +286,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_wound_reduction', amount: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_wound_reduction', amount: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_wound_reduction', amount: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_WOUND_REDUCTION, amount: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_WOUND_REDUCTION, amount: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_WOUND_REDUCTION, amount: 3 }] },
     ],
   },
 
@@ -303,9 +303,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'province_income_multi', percent: 8 }] },
-      { tier: 'expert', effects: [{ type: 'province_income_multi', percent: 16 }] },
-      { tier: 'master', effects: [{ type: 'province_income_multi', percent: 24 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: 'all', percent: 8 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: 'all', percent: 16 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: 'all', percent: 24 }] },
     ],
   },
 
@@ -318,9 +318,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'province_flat_gold', amount: 5 }] },
-      { tier: 'expert', effects: [{ type: 'province_flat_gold', amount: 10 }] },
-      { tier: 'master', effects: [{ type: 'province_flat_gold', amount: 15 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 5 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 10 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 15 }] },
     ],
   },
 
@@ -335,20 +335,20 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        effects: [{ type: 'province_build_multi', percent: 5 }],
+        effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILD_COST_PERCENT, percent: 5 }],
       },
       {
         tier: 'expert',
         effects: [
-          { type: 'province_build_multi', percent: 10 },
-          { type: 'province_build_speed', amount: 1 },
+          { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILD_COST_PERCENT, percent: 10 },
+          { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILD_TIME_BONUS, amount: 1 },
         ],
       },
       {
         tier: 'master',
         effects: [
-          { type: 'province_build_multi', percent: 20 },
-          { type: 'province_build_speed', amount: 2 },
+          { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILD_COST_PERCENT, percent: 20 },
+          { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILD_TIME_BONUS, amount: 2 },
         ],
       },
     ],
@@ -365,9 +365,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'province_research_multi', percent: 8 }] },
-      { tier: 'expert', effects: [{ type: 'province_research_multi', percent: 16 }] },
-      { tier: 'master', effects: [{ type: 'province_research_multi', percent: 24 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.RESEARCH_PERCENT, percent: 8 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.RESEARCH_PERCENT, percent: 16 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.RESEARCH_PERCENT, percent: 24 }] },
     ],
   },
 
@@ -380,9 +380,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_mana_regen', amount: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_mana_regen', amount: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_mana_regen', amount: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_MANA_REGEN, amount: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_MANA_REGEN, amount: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_MANA_REGEN, amount: 3 }] },
     ],
   },
 
@@ -395,9 +395,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_flat_mana', amount: 15 }] },
-      { tier: 'expert', effects: [{ type: 'hero_flat_mana', amount: 30 }] },
-      { tier: 'master', effects: [{ type: 'hero_flat_mana', amount: 45 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_FLAT_MANA, amount: 15 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_FLAT_MANA, amount: 30 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_FLAT_MANA, amount: 45 }] },
     ],
   },
 
@@ -412,9 +412,9 @@ export const HERO_SKILLS = [
     required: null,
     spellbook: null,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_channeling', tier: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_channeling', tier: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_channeling', tier: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_CHANNELING, tier: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_CHANNELING, tier: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_CHANNELING, tier: 3 }] },
     ],
   },
 
@@ -430,9 +430,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.FIRE,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.FIRE, tier: 3 }] },
     ],
   },
   {
@@ -444,9 +444,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.EARTH,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.EARTH, tier: 3 }] },
     ],
   },
   {
@@ -458,9 +458,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.AIR,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.AIR, tier: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.AIR, tier: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.AIR, tier: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.AIR, tier: 3 }] },
     ],
   },
   {
@@ -472,9 +472,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.ARCANE,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.ARCANE, tier: 3 }] },
     ],
   },
   {
@@ -486,9 +486,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.RUNE,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.RUNE, tier: 3 }] },
     ],
   },
   {
@@ -500,9 +500,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.DEATH,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.DEATH, tier: 3 }] },
     ],
   },
   {
@@ -514,9 +514,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.NATURE,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.NATURE, tier: 3 }] },
     ],
   },
   {
@@ -528,9 +528,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.ANCIENT,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.ANCIENT, tier: 3 }] },
     ],
   },
   {
@@ -542,9 +542,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.ORDER,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.ORDER, tier: 3 }] },
     ],
   },
   {
@@ -556,9 +556,9 @@ export const HERO_SKILLS = [
     required: HERO_SKILL_IDS.CHANNELING,
     spellbook: SPELL_SCHOOL_IDS.LIGHT,
     tiers: [
-      { tier: 'novice', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 1 }] },
-      { tier: 'expert', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 2 }] },
-      { tier: 'master', effects: [{ type: 'hero_spell_school', schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 3 }] },
+      { tier: 'novice', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 1 }] },
+      { tier: 'expert', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 2 }] },
+      { tier: 'master', effects: [{ scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_SPELL_SCHOOL, schoolId: SPELL_SCHOOL_IDS.LIGHT, tier: 3 }] },
     ],
   },
 ];
@@ -570,27 +570,48 @@ export function skillEffectsToText(effects) {
   const _cap = s => s.charAt(0).toUpperCase() + s.slice(1);
   return (effects ?? []).map(eff => {
     switch (eff.type) {
-      case 'army_unit_type_multi_bonus':  return `+${eff.percent}% ${eff.unitType} ${eff.stat === 'firstStrikeChance' ? 'first strike' : eff.stat}`;
-      case 'army_unit_type_bonus':        return `+${eff.flat}% ${eff.unitType} first strike`;
-      case 'army_all_units_multi_bonus':  return `+${eff.percent}% all units ${eff.stat}`;
-      case 'reduce_fortification_multi':  return `-${eff.percent}% enemy fortification`;
-      case 'army_wound_chance':           return `+${Math.round(eff.bonus * 100)}% wound chance`;
-      case 'army_logistics':              return `${Math.round(eff.chance * 100)}% chance: +1 movement/turn`;
-      case 'province_income_multi':       return `+${eff.percent}% province income`;
-      case 'province_flat_gold':          return `+${eff.amount} gold/turn`;
-      case 'province_build_multi':        return `-${eff.percent}% build cost`;
-      case 'province_build_speed':        return `-${eff.amount} build turn${eff.amount !== 1 ? 's' : ''}`;
-      case 'province_defense_multi':      return `+${eff.percent}% province defense`;
-      case 'province_militia_bonus':      return `+${eff.amount} militia cap`;
-      case 'province_research_multi':     return `+${eff.percent}% research output`;
-      case 'unit_cost_multi':             return `-${eff.percent}% recruit cost`;
-      case 'unit_recruit_speed':          return `-${eff.amount} recruit turn${eff.amount !== 1 ? 's' : ''}`;
-      case 'hero_mana_regen':             return `+${eff.amount} mana regen/turn`;
-      case 'hero_flat_mana':              return `+${eff.amount} max mana`;
-      case 'hero_channeling':             return `Cast tier ${eff.tier} spells`;
-      case 'hero_spell_school':           return `${_cap(eff.schoolId)} Magic: tier ${eff.tier}`;
-      case 'hero_wound_reduction':        return `-${eff.amount} wound recovery turn${eff.amount !== 1 ? 's' : ''}`;
-      default:                            return null;
+      case EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS:
+        return `+${eff.percent}% ${eff.unitType} ${eff.stat === 'firstStrikeChance' ? 'first strike' : eff.stat}`;
+      case EFFECT_TYPES.ARMY_UNIT_TYPE_BONUS:
+        return `+${eff.flat}% ${eff.unitType} first strike`;
+      case EFFECT_TYPES.ARMY_ALL_UNITS_MULTI_BONUS:
+        return `+${eff.percent}% all units ${eff.stat}`;
+      case EFFECT_TYPES.FORTIFICATION_BONUS:
+        return eff.scope === EFFECT_SCOPES.ARMY
+          ? `${eff.amount > 0 ? '+' : ''}${eff.amount} siege (enemy fort reduction)`
+          : `+${eff.amount} province defense`;
+      case EFFECT_TYPES.ARMY_WOUND_CHANCE:
+        return `+${Math.round(eff.bonus * 100)}% wound chance`;
+      case EFFECT_TYPES.ARMY_LOGISTICS:
+        return `${Math.round(eff.chance * 100)}% chance: +1 movement/turn`;
+      case EFFECT_TYPES.INCOME_PERCENT:
+        return `+${eff.percent}% province income`;
+      case EFFECT_TYPES.INCOME_FLAT:
+        return `+${eff.amount} gold/turn`;
+      case EFFECT_TYPES.BUILD_COST_PERCENT:
+        return `-${eff.percent}% build cost`;
+      case EFFECT_TYPES.BUILD_TIME_BONUS:
+        return `-${eff.amount} build turn${eff.amount !== 1 ? 's' : ''}`;
+      case EFFECT_TYPES.MILITIA_BONUS:
+        return `+${eff.amount} militia cap`;
+      case EFFECT_TYPES.RESEARCH_PERCENT:
+        return `+${eff.percent}% research output`;
+      case EFFECT_TYPES.UNIT_COST_MULTI:
+        return `-${eff.percent}% recruit cost`;
+      case EFFECT_TYPES.UNIT_RECRUIT_SPEED:
+        return `-${eff.amount} recruit turn${eff.amount !== 1 ? 's' : ''}`;
+      case EFFECT_TYPES.HERO_MANA_REGEN:
+        return `+${eff.amount} mana regen/turn`;
+      case EFFECT_TYPES.HERO_FLAT_MANA:
+        return `+${eff.amount} max mana`;
+      case EFFECT_TYPES.HERO_CHANNELING:
+        return `Cast tier ${eff.tier} spells`;
+      case EFFECT_TYPES.HERO_SPELL_SCHOOL:
+        return `${_cap(eff.schoolId)} Magic: tier ${eff.tier}`;
+      case EFFECT_TYPES.HERO_WOUND_REDUCTION:
+        return `-${eff.amount} wound recovery turn${eff.amount !== 1 ? 's' : ''}`;
+      default:
+        return null;
     }
   }).filter(Boolean).join('<br>');
 }

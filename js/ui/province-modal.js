@@ -48,7 +48,7 @@ import {
   showProvinceStatusTooltip, hideProvinceStatusTooltip,
 } from './tooltips.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
-import { FACTION_IDS } from '../data/enums.js';
+import { FACTION_IDS, EFFECT_TYPES } from '../data/enums.js';
 import { isFactionActionUnlocked } from '../engine/faction-actions.js';
 import { FACTION_ACTIONS } from '../data/faction-actions-data.js';
 import { accumulateBuildCostModifiers } from '../data/buildings-data.js';
@@ -60,6 +60,7 @@ import { spawnUnitsIntoArmies } from '../engine/spawn-units.js';
 import { showResearchModalAndHighlight } from './research-modal.js';
 import { showDenCombatReportModal } from './modal.js';
 import { logCombat } from './event-log.js';
+import { computeProvinceIncomeBreakdown } from '../engine/turn-engine.js';
 import { isHeroActive, getHeroProvinceBonuses } from '../engine/hero-engine.js';
 import { HERO_CLASS_MAP } from '../data/hero-classes-data.js';
 import { heroGenderEmoji } from '../models/hero.js';
@@ -92,7 +93,9 @@ function _getProvinceRecruitSpeed(prov) {
   for (const loc of prov.locations) {
     if (!loc.isControllable) continue;
     for (const { buildingId } of (loc.buildings ?? [])) {
-      speed += BUILDING_MAP[buildingId]?.bonuses?.recruitSpeed ?? 0;
+      speed += (BUILDING_MAP[buildingId]?.effects ?? [])
+        .filter(e => e.type === EFFECT_TYPES.UNIT_RECRUIT_SPEED)
+        .reduce((s, e) => s + (e.amount ?? 0), 0);
     }
   }
   return speed;
@@ -290,7 +293,7 @@ function _renderHeader(prov) {
     };
     for (const r of playerFaction.resources.advanced) allResById[r.id] = r;
 
-    const breakdown = _computeProvinceBreakdown(prov, playerFaction);
+    const breakdown = computeProvinceIncomeBreakdown(prov, state.playerFactionId);
 
     for (const [resId, info] of Object.entries(breakdown)) {
       if (info.total <= 0) continue;
@@ -428,108 +431,24 @@ function _renderGovernorArea(prov, isPlayerOwned) {
   areaEl.appendChild(slot);
 }
 
-function _computeProvinceBreakdown(prov, playerFaction) {
-  const biome     = getBiome(prov.biomeId);
-  const advResId0 = playerFaction.resources.advanced?.[0]?.id;
-  const advResId1 = playerFaction.resources.advanced?.[1]?.id;
-  const factionResIds = new Set([
-    playerFaction.resources.research.id,
-    playerFaction.resources.gold.id,
-    ...(advResId0 ? [advResId0] : []),
-    ...(advResId1 ? [advResId1] : []),
-  ]);
-
-  // ── Flat sources (raw, no modifiers) ─────────────────────
-  // Keyed by building name to group duplicates.
-  const flatAcc = {}; // resId → Map<name, { amount, count }>
-  function addFlat(resId, name, amount) {
-    if (!factionResIds.has(resId)) return;
-    if (!flatAcc[resId]) flatAcc[resId] = new Map();
-    const entry = flatAcc[resId].get(name);
-    if (entry) {
-      entry.amount = parseFloat((entry.amount + amount).toFixed(2));
-      entry.count += 1;
-    } else {
-      flatAcc[resId].set(name, { amount, count: 1 });
-    }
-  }
-
-  addFlat('gold', 'Province base', 3);
-
-  for (const loc of prov.locations) {
-    if (!loc.isControllable) continue;
-    for (const { buildingId } of loc.buildings) {
-      const bDef = BUILDING_MAP[buildingId];
-      if (!bDef) continue;
-      for (const [key, val] of Object.entries(bDef.bonuses ?? {})) {
-        if (key === 'defense' || key === 'growthSlots') continue;
-        let resId = key;
-        if (key === 'faction_primary_adv')   resId = advResId0;
-        if (key === 'faction_secondary_adv') resId = advResId1;
-        if (!resId) continue;
-        if (val !== 0) addFlat(resId, bDef.name, parseFloat(val.toFixed(2)));
-      }
-    }
-  }
-
-  // ── Modifiers (biome + status effects) ───────────────────
-  const allModifiers = [];
-  const resModifiers = {};
-
-  const biomePercent = Math.round((biome.resourceMod - 1) * 100);
-  if (biomePercent !== 0) {
-    allModifiers.push({ label: biome.name, percent: biomePercent });
-  }
-
-  for (const se of (prov.statusEffects ?? [])) {
-    const def = PROVINCE_STATUS_MAP[se.type];
-    if (!def) continue;
-    const stacks = se.stacks ?? 1;
-    for (const eff of (def.effects ?? [])) {
-      if (eff.type !== 'income_percent') continue;
-      const percent = (eff.percent ?? 0) * stacks;
-      if (eff.resourceId === 'all') {
-        allModifiers.push({ label: def.label, percent });
-      } else {
-        if (!resModifiers[eff.resourceId]) resModifiers[eff.resourceId] = [];
-        resModifiers[eff.resourceId].push({ label: def.label, percent });
-      }
-    }
-  }
-
-  // ── Build result ─────────────────────────────────────────
-  const breakdown = {};
-  for (const [resId, byName] of Object.entries(flatAcc)) {
-    const flat = Array.from(byName.entries()).map(([name, { amount, count }]) => ({
-      label:  count > 1 ? `${name} ×${count}` : name,
-      amount,
-    }));
-    const flatTotal   = parseFloat(flat.reduce((s, e) => s + e.amount, 0).toFixed(2));
-    const modifiers   = [...allModifiers, ...(resModifiers[resId] ?? [])];
-    const combinedPct = modifiers.reduce((s, m) => s + m.percent, 0);
-    const factor      = Math.max(0, 1 + combinedPct / 100);
-    const total       = parseFloat((flatTotal * factor).toFixed(2));
-
-    breakdown[resId] = { flat, flatTotal, modifiers, total };
-  }
-
-  return breakdown;
-}
-
 function _computeDefenseStats(prov) {
   const biome = getBiome(prov.biomeId);
   let buildingDef = 0;
   for (const loc of prov.locations) {
     for (const { buildingId } of (loc.buildings ?? [])) {
       const bDef = BUILDING_MAP[buildingId];
-      if (bDef?.bonuses?.defense) buildingDef += bDef.bonuses.defense;
+      if (bDef) {
+        buildingDef += (bDef.effects ?? [])
+          .filter(e => e.type === EFFECT_TYPES.FORTIFICATION_BONUS)
+          .reduce((s, e) => s + (e.amount ?? 0), 0) / 100;
+      }
     }
   }
   let statusDef = 0;
   for (const se of (prov.statusEffects ?? [])) {
     const def = PROVINCE_STATUS_MAP[se.type];
     for (const eff of (def?.effects ?? [])) {
-      if (eff.type === 'defense_percent') statusDef += (eff.amount ?? 0) / 100 * (se.stacks ?? 1);
+      if (eff.type === EFFECT_TYPES.FORTIFICATION_BONUS) statusDef += (eff.amount ?? 0) / 100 * (se.stacks ?? 1);
     }
   }
   const heroDef = (_getGovernorBonuses(prov)?.defensePercent ?? 0) / 100;

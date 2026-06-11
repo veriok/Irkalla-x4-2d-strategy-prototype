@@ -35,12 +35,13 @@ import { getLocationDefenseBonus } from '../models/location.js';
 import { flashCombat, flashConquest } from '../ui/map-view.js';
 import { logCapture, logMessage } from '../ui/event-log.js';
 import { emit } from './game-events.js';
-import { GAME_EVENTS, UNIT_TYPES, TRAIT_IDS } from '../data/enums.js';
-import { isHeroActive, addHeroExperience, woundHero, getHeroArmyBonuses, getHeroWoundChanceBonus, getHeroProvinceBonuses, getHeroSpellpower, getHeroSchoolTier } from './hero-engine.js';
+import { GAME_EVENTS, UNIT_TYPES, TRAIT_IDS, EFFECT_TYPES, EFFECT_SCOPES } from '../data/enums.js';
+import { isHeroActive, addHeroExperience, woundHero, getHeroArmyBonuses, getHeroWoundChanceBonus, getHeroProvinceBonuses, getHeroSpellpower, getHeroSchoolTier, getHeroFortificationReduction } from './hero-engine.js';
 import { HERO_SKILL_MAP } from '../data/hero-skills-data.js';
 import { ARTIFACT_MAP, rollRandomArtifact } from '../data/artifacts-data.js';
 import { SPELL_MAP } from '../data/hero-spells-data.js';
-import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense, getSiegeExpertReduction } from './tech-effects.js';
+import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense } from './tech-effects.js';
+import { TRAIT_MAP } from '../data/traits-data.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { playerCanSee } from './game-state.js';
 import { MONSTER_UNITS, BIOME_DEN_ENCOUNTER } from '../data/monsters-data.js';
@@ -126,7 +127,9 @@ function _getHeroFirstStrikeBonusForUnit(hero, unit) {
 function _getDefenderFortFirstStrikeBonus(province) {
   return (province?.locations ?? []).reduce((sum, loc) => {
     const b = BUILDING_MAP[loc.buildingId];
-    return sum + (b?.bonuses?.firstStrikeChance ?? 0);
+    return sum + (b?.effects ?? [])
+      .filter(e => e.type === EFFECT_TYPES.FORTIFICATION_FIRST_STRIKE_CHANCE)
+      .reduce((s, e) => s + (e.amount ?? 0), 0);
   }, 0);
 }
 
@@ -939,7 +942,7 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     const def = PROVINCE_STATUS_MAP[se.type];
     const effectsList = def?.effects ?? se.effects ?? [];
     for (const eff of effectsList) {
-      if (eff.type === 'defense_percent') statusDefensePercent += (eff.amount ?? 0) * (se.stacks ?? 1);
+      if (eff.type === EFFECT_TYPES.FORTIFICATION_BONUS) statusDefensePercent += (eff.amount ?? 0) * (se.stacks ?? 1);
     }
   }
   // Governor Stalwart defense bonus
@@ -951,8 +954,18 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     }
   }
   const statusDefMult = 1 + statusDefensePercent / 100;
-  // Siege Expert trait reduces the defender's fortification/terrain bonus
-  const siegeReduction = getSiegeExpertReduction(attArmy, UNIT_MAP);
+  // Siege reduction: unit siege traits (count-based) + hero siege skills
+  let totalSiegePct = 0;
+  for (const { typeId, count } of (attArmy.units ?? [])) {
+    for (const traitId of (UNIT_MAP[typeId]?.traitIds ?? [])) {
+      for (const eff of (TRAIT_MAP[traitId]?.effects ?? [])) {
+        if (eff.scope === EFFECT_SCOPES.UNIT && eff.type === EFFECT_TYPES.FORTIFICATION_BONUS && (eff.amount ?? 0) < 0)
+          totalSiegePct += Math.abs(eff.amount) * count;
+      }
+    }
+  }
+  totalSiegePct += getHeroFortificationReduction(attArmy);
+  const siegeReduction = Math.max(0, 1 - totalSiegePct / 100);
   const defenderFlatBonus = Math.max(0, Math.round(((biome?.terrainDefBonus ?? 0) * 10 + fortBonus * 12) * siegeReduction * statusDefMult));
 
   // Sea attack penalty: -20% when attacking FROM shallow ocean
@@ -1294,7 +1307,7 @@ export function estimateCombat(attackerArmyId, targetProvinceId) {
   for (const se of (targetP.statusEffects ?? [])) {
     const seDef = PROVINCE_STATUS_MAP[se.type];
     for (const eff of (seDef?.effects ?? [])) {
-      if (eff.type === 'defense_percent') statusDefPct += (eff.amount ?? 0) * (se.stacks ?? 1);
+      if (eff.type === EFFECT_TYPES.FORTIFICATION_BONUS) statusDefPct += (eff.amount ?? 0) * (se.stacks ?? 1);
     }
   }
   const defFactionState = getFaction(targetP.ownerId);

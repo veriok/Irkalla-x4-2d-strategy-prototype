@@ -21,6 +21,8 @@
  *   _defaults   — fields merged onto new instances on first apply
  */
 
+import { EFFECT_SCOPES, EFFECT_TYPES } from './enums.js';
+
 // Shared stacking onApply: increments stacks on existing instance (capped at maxStacks),
 // extends turnsRemaining by turnsPerStack if the status is not permanent.
 function _stackOnApply(maxStacks, turnsPerStack = 0) {
@@ -44,7 +46,7 @@ const PROVINCE_STATUSES = [
     label:       'New Conquest',
     description: 'Administrative and leadership challenges of integrating a newly conquered province.',
     effects: [
-      { type: 'income_percent', resourceId: 'all', percent: -50 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: 'all', percent: -50 },
     ],
     maxStacks: 1,
     onApply:  null,
@@ -57,7 +59,7 @@ const PROVINCE_STATUSES = [
     label:       'Iron Fortification',
     description: 'Engineering works have reinforced this province\'s defences.',
     effects: [
-      { type: 'defense_percent', amount: 10 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.FORTIFICATION_BONUS, amount: 10 },
     ],
     maxStacks: 3,
     onApply:  _stackOnApply(3),
@@ -71,7 +73,7 @@ const PROVINCE_STATUSES = [
     label:       'Conscription Strain',
     description: 'Forced conscription has strained the province\'s resources.',
     effects: [
-      { type: 'income_percent', resourceId: 'all', percent: -20 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: 'all', percent: -20 },
     ],
     maxStacks: 3,
     onApply:  _stackOnApply(3, 5),
@@ -85,7 +87,7 @@ const PROVINCE_STATUSES = [
     label:       'Plague',
     description: 'A deadly plague ravages the province. Recruitment is slowed.',
     effects: [
-      { type: 'recruit_time_penalty', amount: 1 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.RECRUIT_TIME_PENALTY, amount: 1 },
     ],
     maxStacks: 1,
     onApply:  null,

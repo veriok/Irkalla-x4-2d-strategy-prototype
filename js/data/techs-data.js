@@ -14,17 +14,14 @@
  *   description   — brief mechanical description
  *
  * Optional effect fields:
- *   unlockBuildings          — building ids (must match building techRequired)
- *   buildingBonuses          — [{ buildingId, bonusKey, amount }]
- *   buildingCategoryBonuses  — [{ category, bonusKey, amount }]
- *   unitStatBonuses          — [{ unitId?, unitType?, stat, amount }]
- *   unlockUnits              — unit ids (must match unit techRequired)
- *   obsoleteUnits            — unit ids that become unrecruitable (stay in armies)
- *   resourceYieldPercentBonuses — [{ resourceId, percent }]
- *   militiaBonus             — flat addition to faction globalMilitiaBonus
- *   unlockReactions          — [{ reactionId: FACTION_REACTION_IDS.X, event: GAME_EVENTS.Y }]
- *                              Registers a new EventBus reaction for the researching faction.
- *                              Reaction handler must exist in faction-reactions.js.
+ *   effects[]                    — structured effect objects (FACTION or ARMY scope)
+ *   unlockBuildings              — building ids (must match building techRequired)
+ *   unlockUnits                  — unit ids (must match unit techRequired)
+ *   obsoleteUnits                — unit ids that become unrecruitable (stay in armies)
+ *   militiaBonus                 — flat addition to faction globalMilitiaBonus
+ *   unlockReactions              — [{ reactionId: FACTION_REACTION_IDS.X, event: GAME_EVENTS.Y }]
+ *                                  Registers a new EventBus reaction for the researching faction.
+ *                                  Reaction handler must exist in faction-reactions.js.
  *
  * Optional display fields:
  *   img           — relative path to card image; defaults to assets/cards/techs/{id}.png
@@ -35,7 +32,7 @@
  *   raceId        — race-wide override (lower priority than faction)
  */
 
-import { TECH_ERAS, UNIT_TYPES, BUILDING_CATEGORIES, RESOURCE_IDS, RACE_IDS, FACTION_IDS } from './enums.js';
+import { TECH_ERAS, UNIT_TYPES, BUILDING_CATEGORIES, RESOURCE_IDS, RACE_IDS, FACTION_IDS, EFFECT_SCOPES, EFFECT_TYPES } from './enums.js';
 import { FACTION_MAP } from './factions-data.js';
 
 // ─────────────────────────────────────────────────────────
@@ -49,10 +46,10 @@ const STONE_AGE = [
     baseCost: 20, requires: null,
     quote: '"Only those who toil in the soil understand that from the earth, all things flow."',
     description: 'Organised farming grants +1 gold/turn to all mercantile settlement buildings.',
-    buildingBonuses: [
-      { buildingId: 'mercantile_1', bonusKey: RESOURCE_IDS.GOLD, amount: 1 },
-      { buildingId: 'mercantile_2', bonusKey: RESOURCE_IDS.GOLD, amount: 1 },
-      { buildingId: 'mercantile_3', bonusKey: RESOURCE_IDS.GOLD, amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'mercantile_1', resourceId: RESOURCE_IDS.GOLD, amount: 1 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'mercantile_2', resourceId: RESOURCE_IDS.GOLD, amount: 1 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'mercantile_3', resourceId: RESOURCE_IDS.GOLD, amount: 1 },
     ],
   },
   {
@@ -77,10 +74,10 @@ const STONE_AGE = [
     baseCost: 20, requires: null,
     quote: '"In the silence between heartbeats, the divine whispers its secrets."',
     description: 'Sacred knowledge grants +0.5 research/turn to all religious main buildings.',
-    buildingBonuses: [
-      { buildingId: 'religious_1', bonusKey: RESOURCE_IDS.RESEARCH, amount: 0.5 },
-      { buildingId: 'religious_2', bonusKey: RESOURCE_IDS.RESEARCH, amount: 0.5 },
-      { buildingId: 'religious_3', bonusKey: RESOURCE_IDS.RESEARCH, amount: 0.5 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'religious_1', resourceId: RESOURCE_IDS.RESEARCH, amount: 0.5 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'religious_2', resourceId: RESOURCE_IDS.RESEARCH, amount: 0.5 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'religious_3', resourceId: RESOURCE_IDS.RESEARCH, amount: 0.5 },
     ],
   },
   {
@@ -162,7 +159,9 @@ const BRONZE_AGE = [
     baseCost: 45, requires: 'pottery',
     quote: '"Let the field rest, and it will feed you twice as well come spring."',
     description: 'Improved farming technique. +10% to all faction gold income.',
-    resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.GOLD, percent: 10 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: RESOURCE_IDS.GOLD, percent: 10 },
+    ],
   },
   {
     id: 'sailing', name: 'Sailing', emoji: '⛵',
@@ -170,9 +169,9 @@ const BRONZE_AGE = [
     baseCost: 45, requires: 'boatbuilding',
     quote: '"The sea is not an obstacle — it is a road waiting to be walked."',
     description: 'Deep-water navigation. All trade and exploration buildings yield +1 gold/turn.',
-    buildingCategoryBonuses: [
-      { category: BUILDING_CATEGORIES.TRADE,       bonusKey: RESOURCE_IDS.GOLD, amount: 1 },
-      { category: BUILDING_CATEGORIES.EXPLORATION, bonusKey: RESOURCE_IDS.GOLD, amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.TRADE,       resourceId: RESOURCE_IDS.GOLD, amount: 1 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.EXPLORATION, resourceId: RESOURCE_IDS.GOLD, amount: 1 },
     ],
   },
   {
@@ -181,8 +180,8 @@ const BRONZE_AGE = [
     baseCost: 45, requires: 'writing',
     quote: '"I know that I know nothing — and that knowledge is the beginning of wisdom."',
     description: 'Formal inquiry into nature and reason. All scientific buildings yield +1 research/turn.',
-    buildingCategoryBonuses: [
-      { category: BUILDING_CATEGORIES.SCIENTIFIC, bonusKey: RESOURCE_IDS.RESEARCH, amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.SCIENTIFIC, resourceId: RESOURCE_IDS.RESEARCH, amount: 1 },
     ],
   },
   {
@@ -191,8 +190,8 @@ const BRONZE_AGE = [
     baseCost: 45, requires: 'masonry',
     quote: '"A wall is not just stone - it is the will of a people made solid."',
     description: 'Advanced defensive architecture. Defensive buildings yield +1 gold/turn. Militia +1.',
-    buildingCategoryBonuses: [
-      { category: BUILDING_CATEGORIES.DEFENSIVE, bonusKey: RESOURCE_IDS.GOLD, amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.DEFENSIVE, resourceId: RESOURCE_IDS.GOLD, amount: 1 },
     ],
     militiaBonus: 1,
   },
@@ -202,7 +201,9 @@ const BRONZE_AGE = [
     baseCost: 45, requires: 'masonry',
     quote: '"Copper bends. Tin yields. Together they forge something neither can be alone."',
     description: 'Superior metal alloy. All infantry units gain +1 attack.',
-    unitStatBonuses: [{ unitType: UNIT_TYPES.INFANTRY, stat: 'attack', amount: 1 }],
+    effects: [
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.INFANTRY, stat: 'attack', amount: 1 },
+    ],
     clearsLocationTypes: ['dense_forest', 'dry_wastes'],
   },
 
@@ -212,8 +213,8 @@ const BRONZE_AGE = [
     baseCost: 60, requires: 'crop_rotation',
     quote: '"The empire is built not on conquest, but on the reliable collection of grain."',
     description: 'Organised record-keeping. Administration buildings yield +2 gold/turn.',
-    buildingCategoryBonuses: [
-      { category: BUILDING_CATEGORIES.ADMINISTRATION, bonusKey: RESOURCE_IDS.GOLD, amount: 2 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.ADMINISTRATION, resourceId: RESOURCE_IDS.GOLD, amount: 2 },
     ],
   },
   {
@@ -222,7 +223,9 @@ const BRONZE_AGE = [
     baseCost: 60, requires: 'sailing',
     quote: '"Stars do not move — they merely wait for us to learn their language."',
     description: 'Celestial wayfinding. +10% to all faction gold income. Armies can venture into deep ocean provinces.',
-    resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.GOLD, percent: 10 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: RESOURCE_IDS.GOLD, percent: 10 },
+    ],
     unlockActions: ['embark_deep'],
   },
   {
@@ -231,7 +234,9 @@ const BRONZE_AGE = [
     baseCost: 60, requires: 'philosophy',
     quote: '"Numbers do not lie. It is only those who wield them that are capable of deception."',
     description: 'Geometry, accounting, and engineering. +10% to all faction research income.',
-    resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.RESEARCH, percent: 10 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: RESOURCE_IDS.RESEARCH, percent: 10 },
+    ],
   },
   {
     id: 'clan_warfare', name: 'Clan Warfare', emoji: '⚔️',
@@ -240,7 +245,9 @@ const BRONZE_AGE = [
     quote: '"War is the crucible of nations. Only those who master it earn the right to call themselves one."',
     description: 'Formalised battle doctrine and inter-clan rivalry sharpen warfare. Unlocks the Warrior Lodge. Armies can support +1 additional unit.',
     unlockBuildings: ['warrior_lodge', 'discipline_hall_2'],
-    effects: [{ scope: 'faction', type: 'army_support_limit', amount: 1 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.ARMY_SUPPORT_LIMIT, amount: 1 },
+    ],
   },
   {
     id: 'castle_construction', name: 'Castle Construction', emoji: '🏯',
@@ -257,9 +264,9 @@ const BRONZE_AGE = [
     baseCost: 60, requires: 'bronze_working',
     quote: '"The edge that wins the battle is not the sharpest — it is the last one standing."',
     description: 'Refined alloy of exceptional strength. Infantry gain +1 attack and +1 defense.',
-    unitStatBonuses: [
-      { unitType: UNIT_TYPES.INFANTRY, stat: 'attack',  amount: 1 },
-      { unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.INFANTRY, stat: 'attack',  amount: 1 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
     ],
   },
   {
@@ -275,7 +282,9 @@ const BRONZE_AGE = [
     baseCost: 60, requires: 'worship',
     quote: '"Come forward, champion. The realm has need of you."',
     description: 'Legends spread of great champions willing to serve for coin and glory. Allows recruitment of 1 additional hero.',
-    effects: [{ scope: 'faction', type: 'hero_count_bonus', amount: 1 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.HERO_COUNT_BONUS, amount: 1 },
+    ],
   },
 ];
 
@@ -290,7 +299,9 @@ const IRON_AGE = [
     baseCost: 80, requires: 'taxation',
     quote: '"Commerce is war by other means - and far more profitable."',
     description: 'Organised merchant leagues spanning provinces. +10% to all faction gold income.',
-    resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.GOLD, percent: 10 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: RESOURCE_IDS.GOLD, percent: 10 },
+    ],
   },
   {
     id: 'scholarship', name: 'Scholarship', emoji: '🎓',
@@ -298,8 +309,8 @@ const IRON_AGE = [
     baseCost: 80, requires: 'mathematics',
     quote: '"The scholar who reads one book is dangerous. The one who reads all of them is unstoppable."',
     description: 'Formal academic institutions. Scientific buildings yield +2 research/turn.',
-    buildingCategoryBonuses: [
-      { category: BUILDING_CATEGORIES.SCIENTIFIC, bonusKey: RESOURCE_IDS.RESEARCH, amount: 2 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.SCIENTIFIC, resourceId: RESOURCE_IDS.RESEARCH, amount: 2 },
     ],
   },
   {
@@ -308,8 +319,8 @@ const IRON_AGE = [
     baseCost: 80, requires: 'castle_construction',
     quote: '"When the king speaks the law, and the priest speaks god — they must say the same thing."',
     description: 'Sacred legal authority. Administration buildings yield +2 gold/turn. Militia +1.',
-    buildingCategoryBonuses: [
-      { category: BUILDING_CATEGORIES.ADMINISTRATION, bonusKey: RESOURCE_IDS.GOLD, amount: 2 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.ADMINISTRATION, resourceId: RESOURCE_IDS.GOLD, amount: 2 },
     ],
     militiaBonus: 1,
   },
@@ -319,9 +330,9 @@ const IRON_AGE = [
     baseCost: 80, requires: 'steel',
     quote: '"Iron is patient. It waits in the earth for a thousand years, then rules the age."',
     description: 'Smelted iron surpasses bronze entirely. Infantry gain +2 attack and +1 defense.',
-    unitStatBonuses: [
-      { unitType: UNIT_TYPES.INFANTRY, stat: 'attack',  amount: 1 },
-      { unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.INFANTRY, stat: 'attack',  amount: 1 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
     ],
     clearsLocationTypes: ['dense_jungle', 'frozen_wastes'],
   },
@@ -332,8 +343,8 @@ const IRON_AGE = [
     baseCost: 100, requires: 'trade_networks',
     quote: '"A craftsman who works alone makes a living. A craftsman who joins a guild makes history."',
     description: 'Organised merchant and craft associations. Trade buildings yield +2 gold/turn.',
-    buildingCategoryBonuses: [
-      { category: BUILDING_CATEGORIES.TRADE, bonusKey: RESOURCE_IDS.GOLD, amount: 2 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.TRADE, resourceId: RESOURCE_IDS.GOLD, amount: 2 },
     ],
   },
   {
@@ -343,7 +354,9 @@ const IRON_AGE = [
     quote: '"The university is where knowledge comes to die — and be reborn as wisdom."',
     description: 'Grand institutions of higher learning. Unlocks the Academy (tier 3 science building). +10% research.',
     unlockBuildings: ['research_academy'],
-    resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.RESEARCH, percent: 10 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: RESOURCE_IDS.RESEARCH, percent: 10 },
+    ],
   },
   {
     id: 'monarchy', name: 'Monarchy', emoji: '👑',
@@ -352,7 +365,9 @@ const IRON_AGE = [
     quote: '"A king without a crown is just a man with enemies. A king with one has enemies and obligations."',
     description: 'Centralised rule. Unlocks the Imperial Palace (town hall tier 3). Grand Hall grants +3 gold/turn.',
     unlockBuildings: ['town_hall_3'],
-    buildingBonuses: [{ buildingId: 'town_hall_2', bonusKey: RESOURCE_IDS.GOLD, amount: 3 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'town_hall_2', resourceId: RESOURCE_IDS.GOLD, amount: 3 },
+    ],
   },
   {
     id: 'battle_formations', name: 'Battle Formations', emoji: '🏴',
@@ -368,9 +383,9 @@ const IRON_AGE = [
     baseCost: 100, requires: 'iron_working',
     quote: '"The forge reveals the truth of all things — what is strong endures; what is weak, burns."',
     description: 'Advanced metalworking. All units gain +1 attack and +1 defense.',
-    unitStatBonuses: [
-      { unitType: UNIT_TYPES.ALL, stat: 'attack',  amount: 1 },
-      { unitType: UNIT_TYPES.ALL, stat: 'defense', amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.ALL, stat: 'attack',  amount: 1 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.ALL, stat: 'defense', amount: 1 },
     ],
   },
 ];
@@ -392,9 +407,8 @@ const DWARF_RACE_TECHS = [
     quote: '"A rune is not written — it is remembered, from before the world was young."',
     description: 'Ancient dwarven script is mastered. Unlocks the Rune Assignment panel in armies. All industrial buildings generate +0.5 Rune/turn.',
     unlockBuildings: ['dwarf_forge_1'],
-    buildingBonuses: [],
-    buildingCategoryBonuses: [
-      { category: BUILDING_CATEGORIES.INDUSTRIAL, bonusKey: RESOURCE_IDS.RUNES, amount: 0.5 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.INDUSTRIAL, resourceId: RESOURCE_IDS.RUNES, amount: 0.5 },
     ],
   },
   {
@@ -403,10 +417,6 @@ const DWARF_RACE_TECHS = [
     raceId: RACE_IDS.DWARF, replacesId: 'fortification',
     quote: '"Dwarf stone holds what no mortar can — stubborn memory."',
     description: 'Unlocks enhanced dwarf defensive buildings. Stone Fort and Stone Castle provide an additional +5% defense bonus for dwarf factions.',
-    buildingBonuses: [
-      { buildingId: 'fortress_1', bonusKey: 'defense', amount: 0.05 },
-      { buildingId: 'fortress_2', bonusKey: 'defense', amount: 0.05 },
-    ],
   },
   {
     id: 'runescript', name: 'Runescript', emoji: '📿',
@@ -415,7 +425,9 @@ const DWARF_RACE_TECHS = [
     quote: '"A lighter hand on the chisel, yet the same power flows."',
     description: 'Refined runic technique reduces upkeep by 1 Rune per runed unit (minimum 0). Rune assignments become cheaper to maintain.',
     unlockBuildings: ['dwarf_forge_2'],
-    effects: [{ scope: 'faction', type: 'rune_upkeep_reduction', amount: 1 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.RUNE_UPKEEP_REDUCTION, amount: 1 },
+    ],
   },
 ];
 
@@ -426,10 +438,10 @@ const HUMAN_RACE_TECHS = [
     raceId: RACE_IDS.HUMAN, replacesId: 'worship',
     quote: '"Blood may thin over generations, but the name carries weight forever."',
     description: 'Noble houses claim legitimacy. Capital town halls generate +1 Prestige/turn.',
-    buildingBonuses: [
-      { buildingId: 'town_hall_1', bonusKey: RESOURCE_IDS.PRESTIGE, amount: 1 },
-      { buildingId: 'town_hall_2', bonusKey: RESOURCE_IDS.PRESTIGE, amount: 2 },
-      { buildingId: 'town_hall_3', bonusKey: RESOURCE_IDS.PRESTIGE, amount: 3 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'town_hall_1', resourceId: RESOURCE_IDS.PRESTIGE, amount: 1 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'town_hall_2', resourceId: RESOURCE_IDS.PRESTIGE, amount: 2 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'town_hall_3', resourceId: RESOURCE_IDS.PRESTIGE, amount: 3 },
     ],
   },
   {
@@ -438,9 +450,9 @@ const HUMAN_RACE_TECHS = [
     raceId: RACE_IDS.HUMAN, replacesId: 'fortification',
     quote: '"A blade in the hand is worth a dozen in the armoury."',
     description: 'Centuries of warfare refined. All INFANTRY and CAVALRY units gain +1 attack.',
-    unitStatBonuses: [
-      { unitType: UNIT_TYPES.INFANTRY, stat: 'attack', amount: 1 },
-      { unitType: UNIT_TYPES.CAVALRY,  stat: 'attack', amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.INFANTRY, stat: 'attack', amount: 1 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.CAVALRY,  stat: 'attack', amount: 1 },
     ],
   },
 ];
@@ -452,8 +464,9 @@ const ELF_RACE_TECHS = [
     raceId: RACE_IDS.ELF, replacesId: 'worship',
     quote: '"The sea holds more secrets than any library — and unlike scholars, it never lies."',
     description: 'Elven mastery of oceanic patterns. Coastal provinces generate +1 Aether/turn.',
-    buildingBonuses: [],   // handled by biome income (coastal aether is in azure_docks buildings)
-    resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.AETHER, percent: 10 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: RESOURCE_IDS.AETHER, percent: 10 },
+    ],
   },
   {
     id: 'aetheric_arts', name: 'Aetheric Arts', emoji: '✨',
@@ -469,8 +482,10 @@ const ELF_RACE_TECHS = [
     raceId: RACE_IDS.ELF, replacesId: 'trade_networks',
     quote: '"Every horizon is the beginning of someone\'s home."',
     description: 'Elven mastery of ocean routes. +15% gold income. Armies starting a turn on ocean provinces gain +1 movement.',
-    resourceYieldPercentBonuses: [{ resourceId: RESOURCE_IDS.GOLD, percent: 15 }],
-    effects: [{ scope: 'faction', type: 'ocean_movement_bonus', biomes: ['shallow_ocean', 'deep_ocean'], movementBonus: 1 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.INCOME_PERCENT,       resourceId: RESOURCE_IDS.GOLD, percent: 15 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.OCEAN_MOVEMENT_BONUS, biomes: ['shallow_ocean', 'deep_ocean'], movementBonus: 1 },
+    ],
   },
 ];
 
@@ -481,7 +496,9 @@ const LIZARD_RACE_TECHS = [
     raceId: RACE_IDS.LIZARD, replacesId: 'worship',
     quote: '"We remember what was before the gods put words to the sky."',
     description: 'The lore of ages past is alive in lizardmen memory. Clearing ruins grants +2 Ancient Lore.',
-    effects: [{ scope: 'faction', type: 'ruin_clear_bonus', resourceId: RESOURCE_IDS.ANCIENT_LORE, amount: 2 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.RUIN_CLEAR_BONUS, resourceId: RESOURCE_IDS.ANCIENT_LORE, amount: 2 },
+    ],
   },
   {
     id: 'primordial_scales', name: 'Primordial Scales', emoji: '🦎',
@@ -489,8 +506,8 @@ const LIZARD_RACE_TECHS = [
     raceId: RACE_IDS.LIZARD, replacesId: 'fortification',
     quote: '"Nature already built the perfect armour — on our ancestors."',
     description: 'Ancient lizardmen harden their scales with ritual baths. All lizard units gain +1 defense.',
-    unitStatBonuses: [
-      { unitType: UNIT_TYPES.ALL, stat: 'defense', amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.ALL, stat: 'defense', amount: 1 },
     ],
   },
   {
@@ -499,7 +516,9 @@ const LIZARD_RACE_TECHS = [
     raceId: RACE_IDS.LIZARD, replacesId: 'steel',
     quote: '"The price of knowledge is always paid — sometimes in blood, sometimes in memory."',
     description: 'Deep ritual converts Ancient Lore into research insight. Spend 10 Ancient Lore for -20% on next tech cost.',
-    effects: [{ scope: 'faction', type: 'lore_tech_discount', loreCost: 10, discountPercent: 20 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.LORE_TECH_DISCOUNT, loreCost: 10, discountPercent: 20 },
+    ],
   },
 ];
 
@@ -515,11 +534,11 @@ const KUR_MARGAL_TECHS = [
     factionId: FACTION_IDS.KUR_MARGAL, replacesId: 'trade_networks',
     quote: '"Every enemy slain is another soldier for the kingdom."',
     description: 'Victory brings +2 extra Souls per province captured. Construct units gain +1 attack and +1 defense.',
-    unitStatBonuses: [
-      { unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack',  amount: 1 },
-      { unitType: UNIT_TYPES.CONSTRUCT, stat: 'defense', amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.ARMY,    type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.CONSTRUCT, stat: 'attack',  amount: 1 },
+      { scope: EFFECT_SCOPES.ARMY,    type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.CONSTRUCT, stat: 'defense', amount: 1 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.VICTORY_SOUL_BONUS, amount: 2 },
     ],
-    effects: [{ scope: 'faction', type: 'victory_soul_bonus', amount: 2 }],
   },
   {
     id: 'undying_legion', name: 'Undying Legion', emoji: '💀',
@@ -527,9 +546,9 @@ const KUR_MARGAL_TECHS = [
     factionId: FACTION_IDS.KUR_MARGAL, replacesId: 'scholarship',
     quote: '"They do not march to war — they march because war is all they know."',
     description: 'Undead Levy and Bone Thrower stack sizes increase by +1 when recruited.',
-    stackSizeBonuses: [
-      { unitId: 'undead_levy',  amount: 1 },
-      { unitId: 'bone_thrower', amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STACK_SIZE_BONUS, unitId: 'undead_levy',  amount: 1 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STACK_SIZE_BONUS, unitId: 'bone_thrower', amount: 1 },
     ],
   },
   {
@@ -538,7 +557,9 @@ const KUR_MARGAL_TECHS = [
     factionId: FACTION_IDS.KUR_MARGAL, replacesId: 'guilds',
     quote: '"Death is not an ending. It is merely a renegotiation."',
     description: 'Soul Resurrection now has a 50% chance to NOT consume a Soul when saving a dwarf unit.',
-    effects: [{ scope: 'faction', type: 'soul_resurrection_chance', noConsumeProbability: 0.5 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.SOUL_RESURRECTION_CHANCE, noConsumeProbability: 0.5 },
+    ],
   },
 ];
 
@@ -549,10 +570,10 @@ const IRON_FREEHOLDS_TECHS = [
     factionId: FACTION_IDS.IRON_FREEHOLDS, replacesId: 'trade_networks',
     quote: '"No king commanded us to build this — we built it because it was profitable."',
     description: 'Each market building generates +1 Schematics/turn.',
-    buildingBonuses: [
-      { buildingId: 'market_1', bonusKey: RESOURCE_IDS.SCHEMATICS, amount: 1 },
-      { buildingId: 'market_2', bonusKey: RESOURCE_IDS.SCHEMATICS, amount: 1 },
-      { buildingId: 'market_3', bonusKey: RESOURCE_IDS.SCHEMATICS, amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'market_1', resourceId: RESOURCE_IDS.SCHEMATICS, amount: 1 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'market_2', resourceId: RESOURCE_IDS.SCHEMATICS, amount: 1 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'market_3', resourceId: RESOURCE_IDS.SCHEMATICS, amount: 1 },
     ],
   },
   {
@@ -571,7 +592,9 @@ const IRON_FREEHOLDS_TECHS = [
     quote: '"A dwarf with a blueprint is more dangerous than one with an axe."',
     description: 'Unlocks the Siege Engineer unit. Province Fortification now costs 2 Schematics instead of 3.',
     unlockUnits: ['siege_engineer'],
-    effects: [{ scope: 'faction', type: 'fortify_cost_reduction', amount: 1 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.FORTIFY_COST_REDUCTION, amount: 1 },
+    ],
   },
 ];
 
@@ -606,7 +629,9 @@ const DRAIG_GOCH_TECHS = [
     baseCost: 80,
     quote: '"The dragon and the man made a pact older than kingdoms: strength for loyalty, fury for faith."',
     description: 'Ancient blood-oaths with dragon-kin draw legendary champions to Draig Goch\'s banner. +1 hero capacity.',
-    effects: [{ scope: 'faction', type: 'hero_count_bonus', amount: 1 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.HERO_COUNT_BONUS, amount: 1 },
+    ],
   },
 ];
 
@@ -617,10 +642,10 @@ const AURIC_EMPIRE_TECHS = [
     factionId: FACTION_IDS.AURIC_EMPIRE, replacesId: 'trade_networks',
     quote: '"A city\'s prosperity is measured not by its walls, but by its ledgers."',
     description: 'Each market building generates an additional +2 gold/turn.',
-    buildingBonuses: [
-      { buildingId: 'market_1', bonusKey: RESOURCE_IDS.GOLD, amount: 2 },
-      { buildingId: 'market_2', bonusKey: RESOURCE_IDS.GOLD, amount: 2 },
-      { buildingId: 'market_3', bonusKey: RESOURCE_IDS.GOLD, amount: 2 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'market_1', resourceId: RESOURCE_IDS.GOLD, amount: 2 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'market_2', resourceId: RESOURCE_IDS.GOLD, amount: 2 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'market_3', resourceId: RESOURCE_IDS.GOLD, amount: 2 },
     ],
   },
   {
@@ -630,8 +655,9 @@ const AURIC_EMPIRE_TECHS = [
     quote: '"A golden sail on the horizon means coin is coming."',
     description: 'Unlocks the Golden Lancer unit. Coastal provinces generate +0.25 Contracts/turn.',
     unlockUnits: ['golden_lancer'],
-    buildingCategoryBonuses: [],
-    effects: [{ scope: 'faction', type: 'coastal_resource_bonus', resourceId: RESOURCE_IDS.CONTRACTS, amount: 0.25 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.COASTAL_RESOURCE_BONUS, resourceId: RESOURCE_IDS.CONTRACTS, amount: 0.25 },
+    ],
   },
   {
     id: 'mercenary_contracts', name: 'Mercenary Contracts', emoji: '📜',
@@ -640,7 +666,9 @@ const AURIC_EMPIRE_TECHS = [
     quote: '"Why fight when you can pay someone else to do it — and better?"',
     description: 'Unlocks Mercenary Swords and Mercenary Crossbow units (build instantly). Conquest penalty reduced from 10 to 6 turns.',
     unlockUnits: ['mercenary_swords', 'mercenary_crossbow'],
-    effects: [{ scope: 'faction', type: 'conquest_penalty_reduction', turnsReduction: 4 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.CONQUEST_PENALTY_REDUCTION, turnsReduction: 4 },
+    ],
   },
 ];
 
@@ -651,7 +679,9 @@ const POLEIS_AETHERA_TECHS = [
     factionId: FACTION_IDS.POLEIS_AETHERA, replacesId: 'trade_networks',
     quote: '"The greatest explorer is not she who sees the most — but she who returns to tell about it."',
     description: 'Clearing ruins or monster dens awards +100% of the base gold/research reward.',
-    effects: [{ scope: 'faction', type: 'clear_reward_multiplier', multiplier: 1.0 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.CLEAR_REWARD_MULTIPLIER, multiplier: 1.0 },
+    ],
   },
   {
     id: 'philosophical_school', name: 'Philosophical School', emoji: '📜',
@@ -659,7 +689,9 @@ const POLEIS_AETHERA_TECHS = [
     factionId: FACTION_IDS.POLEIS_AETHERA, replacesId: 'scholarship',
     quote: '"A mind that questions is worth more than one that merely obeys."',
     description: 'The research cost multiplier grows at 1.024× per tech instead of the base 1.03×.',
-    effects: [{ scope: 'faction', type: 'research_multiplier_reduction', multiplier: 0.024 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.RESEARCH_MULTIPLIER_REDUCTION, multiplier: 0.024 },
+    ],
   },
   {
     id: 'naval_league', name: 'Naval League', emoji: '🌊',
@@ -668,7 +700,9 @@ const POLEIS_AETHERA_TECHS = [
     quote: '"The sea gives as much as it takes — if you know how to ask."',
     description: 'Unlocks the Azure Sea Raider. Coastal provinces generate +0.25 Aether/turn.',
     unlockUnits: ['azure_sea_raider'],
-    effects: [{ scope: 'faction', type: 'coastal_resource_bonus', resourceId: RESOURCE_IDS.AETHER, amount: 0.25 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.COASTAL_RESOURCE_BONUS, resourceId: RESOURCE_IDS.AETHER, amount: 0.25 },
+    ],
   },
 ];
 
@@ -679,11 +713,9 @@ const ARCHONATE_GREYHAVEN_TECHS = [
     factionId: FACTION_IDS.ARCHONATE_GREYHAVEN, replacesId: 'writing',
     quote: '"The subject caste exists to serve. We exist to lead."',
     description: 'Tribute Hall buildings generate +0.25 additional Tribute/turn, and training category buildings yield +0.5 gold/turn.',
-    buildingBonuses: [
-      { buildingId: 'tribute_hall', bonusKey: RESOURCE_IDS.TRIBUTE, amount: 0.25 },
-    ],
-    buildingCategoryBonuses: [
-      { category: BUILDING_CATEGORIES.TRAINING, bonusKey: RESOURCE_IDS.GOLD, amount: 0.5 },
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'tribute_hall',            resourceId: RESOURCE_IDS.TRIBUTE, amount: 0.25 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.TRAINING, resourceId: RESOURCE_IDS.GOLD,    amount: 0.5 },
     ],
   },
   {
@@ -693,8 +725,8 @@ const ARCHONATE_GREYHAVEN_TECHS = [
     quote: '"Pain is weakness leaving the body. We have none of it left."',
     description: 'Unlocks the Phalanx Soldier unit. All INFANTRY units gain +1 defense.',
     unlockUnits: ['phalanx_soldier'],
-    unitStatBonuses: [
-      { unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
     ],
   },
   {
@@ -704,7 +736,9 @@ const ARCHONATE_GREYHAVEN_TECHS = [
     quote: '"We have held this line for a thousand years. We will hold it for a thousand more."',
     description: 'Unlocks the Iron Phalanx and Archonate Sentinel units. Reduces Conscript Levy cost from 10 to 7 tribute.',
     unlockUnits: ['iron_phalanx', 'archonate_sentinel'],
-    effects: [{ scope: 'faction', type: 'conscript_cost_reduction', costReduction: 3 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.CONSCRIPT_COST_REDUCTION, costReduction: 3 },
+    ],
   },
 ];
 
@@ -725,7 +759,9 @@ const SUTEKH_RA_TECHS = [
     quote: '"The Sun does not ask permission to rise."',
     description: 'Unlocks the Sun Priest unit. Combat in desert or plains biomes grants all units +1 attack.',
     unlockUnits: ['sun_priest'],
-    effects: [{ scope: 'faction', type: 'biome_combat_bonus', biomes: ['desert', 'plains'], stat: 'attack', amount: 1 }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BIOME_COMBAT_BONUS, biomes: ['desert', 'plains'], stat: 'attack', amount: 1 },
+    ],
   },
   {
     id: 'desert_dominion', name: 'Desert Dominion', emoji: '🌵',
@@ -733,7 +769,9 @@ const SUTEKH_RA_TECHS = [
     factionId: FACTION_IDS.SUTEKH_RA, replacesId: 'scholarship',
     quote: '"The desert is not a wasteland — it is a treasury, waiting for the worthy."',
     description: 'Desert provinces generate +1 gold and +0.125 Faith per turn.',
-    effects: [{ scope: 'faction', type: 'biome_income_bonus', biome: 'desert', bonuses: { gold: 1, faith: 0.125 } }],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BIOME_INCOME_BONUS, biome: 'desert', bonuses: { gold: 1, faith: 0.125 } },
+    ],
   },
   {
     id: 'necromantic_arts', name: 'Necromantic Arts', emoji: '🌙',
@@ -742,7 +780,9 @@ const SUTEKH_RA_TECHS = [
     quote: '"Death is not the end — it is the Moon\'s beginning."',
     description: 'Unlocks the Moon Zealot unit. All units gain +5% chance to be wounded instead of destroyed in combat.',
     unlockUnits: ['moon_zealot'],
-    woundChanceBonus: 0.05,
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.ARMY_WOUND_CHANCE, amount: 0.05 },
+    ],
   },
 ];
 
@@ -762,9 +802,9 @@ const CLANS_FIRST_SCALE_TECHS = [
     factionId: FACTION_IDS.CLANS_FIRST_SCALE, replacesId: 'scholarship',
     quote: '"A lone predator hunts. A pack rules."',
     description: 'All MONSTER units gain +1 attack and +1 defense.',
-    unitStatBonuses: [
-      { unitType: UNIT_TYPES.MONSTER, stat: 'attack',  amount: 1 },
-      { unitType: UNIT_TYPES.MONSTER, stat: 'defense', amount: 1 },
+    effects: [
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.MONSTER, stat: 'attack',  amount: 1 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.MONSTER, stat: 'defense', amount: 1 },
     ],
   },
   {

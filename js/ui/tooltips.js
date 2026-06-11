@@ -7,7 +7,7 @@
  */
 
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
-import { RESEARCH_RESOURCE, UNIT_TAGS } from '../data/enums.js';
+import { RESEARCH_RESOURCE, UNIT_TAGS, EFFECT_TYPES } from '../data/enums.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { MONSTER_UNITS } from '../data/monsters-data.js';
 import { BUILDING_MAP, LOCATION_MAIN_CHAIN } from '../data/buildings-data.js';
@@ -501,21 +501,23 @@ export function hideTechTooltip() {
 function _buildTechHtml(techDef) {
   const effectParts = [];
 
-  for (const { buildingId, bonusKey, amount } of (techDef.buildingBonuses ?? [])) {
-    const b = BUILDING_MAP[buildingId];
-    const r = ALL_RES[bonusKey];
-    if (b && r) effectParts.push(`${b.emoji} ${b.name}: ${r.emoji} +${amount}/turn ${r.name}`);
+  for (const eff of (techDef.effects ?? [])) {
+    if (eff.type !== EFFECT_TYPES.BUILDING_INCOME_BONUS) continue;
+    const r = ALL_RES[eff.resourceId];
+    if (!r) continue;
+    if (eff.buildingId) {
+      const b = BUILDING_MAP[eff.buildingId];
+      if (b) effectParts.push(`${b.emoji} ${b.name}: ${r.emoji} +${eff.amount}/turn ${r.name}`);
+    } else if (eff.category) {
+      const catLabel = eff.category.charAt(0).toUpperCase() + eff.category.slice(1);
+      effectParts.push(`🏗 ${catLabel} buildings: ${r.emoji} +${eff.amount}/turn ${r.name}`);
+    }
   }
 
-  for (const { category, bonusKey, amount } of (techDef.buildingCategoryBonuses ?? [])) {
-    const r = ALL_RES[bonusKey];
-    const catLabel = category.charAt(0).toUpperCase() + category.slice(1);
-    if (r) effectParts.push(`🏗 ${catLabel} buildings: ${r.emoji} +${amount}/turn ${r.name}`);
-  }
-
-  for (const { unitId, unitType, stat, amount } of (techDef.unitStatBonuses ?? [])) {
-    const subject = unitId ? unitId : (unitType ? unitType.charAt(0).toUpperCase() + unitType.slice(1) : 'Units');
-    effectParts.push(`⚔ ${subject}: +${amount} ${stat.charAt(0).toUpperCase() + stat.slice(1)}`);
+  for (const eff of (techDef.effects ?? [])) {
+    if (eff.type !== EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE) continue;
+    const subject = eff.unitId ? eff.unitId : (eff.unitType ? eff.unitType.charAt(0).toUpperCase() + eff.unitType.slice(1) : 'Units');
+    effectParts.push(`⚔ ${subject}: +${eff.amount} ${eff.stat.charAt(0).toUpperCase() + eff.stat.slice(1)}`);
   }
 
   if ((techDef.unlockBuildings ?? []).length > 0) {
@@ -545,6 +547,11 @@ function _buildTechHtml(techDef) {
     if (eff.scope === 'faction' && eff.type === 'hero_count_bonus') {
       effectParts.push(`🦸 Hero capacity: +${eff.amount ?? 1}`);
     }
+    if (eff.type === EFFECT_TYPES.INCOME_PERCENT) {
+      const r = eff.resourceId === 'all' ? null : ALL_RES[eff.resourceId];
+      const label = eff.resourceId === 'all' ? 'All income' : (r ? `${r.emoji} ${r.name}` : eff.resourceId);
+      effectParts.push(`📊 ${label}: +${eff.percent}% income`);
+    }
   }
 
   // First unit unlocked by this tech for the player's faction (capped at 1 to avoid clutter)
@@ -553,11 +560,6 @@ function _buildTechHtml(techDef) {
     !u.isMilitia &&
     u.factionId === state.playerFactionId
   ).slice(0, 1);
-
-  for (const { resourceId, percent } of (techDef.resourceYieldPercentBonuses ?? [])) {
-    const r = ALL_RES[resourceId];
-    if (r) effectParts.push(`📊 ${r.emoji} ${r.name}: +${percent}% income`);
-  }
 
   if (techDef.militiaBonus) {
     effectParts.push(`⚔ Militia max: +${techDef.militiaBonus}`);
@@ -632,57 +634,43 @@ function _buildHtml(bDef, opts = {}) {
 
   // Bonus line(s)
   const bonusParts = [];
-  for (const [key, val] of Object.entries(bDef.bonuses ?? {})) {
-    if (key === 'defense') {
-      bonusParts.push(`+${Math.round(val * 100)}% Province Defense`);
-      continue;
+  for (const eff of (bDef.effects ?? [])) {
+    if (eff.type === EFFECT_TYPES.INCOME_FLAT) {
+      if (eff.resourceId === 'faction_primary_adv') {
+        const faction = FACTION_MAP[state?.playerFactionId];
+        const advRes = faction?.resources?.advanced?.[0];
+        bonusParts.push(`${advRes?.emoji ?? '✨'} +${eff.amount}/turn ${advRes?.name ?? 'Primary Resource'}`);
+      } else if (eff.resourceId === 'faction_secondary_adv') {
+        const faction = FACTION_MAP[state?.playerFactionId];
+        const advRes = faction?.resources?.advanced?.[1];
+        bonusParts.push(`${advRes?.emoji ?? '🔮'} +${eff.amount}/turn ${advRes?.name ?? 'Secondary Resource'}`);
+      } else {
+        const r = ALL_RES[eff.resourceId];
+        if (r) bonusParts.push(`${r.emoji} +${eff.amount}/turn ${r.name}`);
+      }
+    } else if (eff.type === EFFECT_TYPES.FORTIFICATION_BONUS) {
+      bonusParts.push(`+${eff.amount}% Province Defense`);
+    } else if (eff.type === EFFECT_TYPES.PROVINCE_GROWTH_SLOTS) {
+      bonusParts.push(`+${eff.amount} Building Slot${eff.amount > 1 ? 's' : ''}`);
+    } else if (eff.type === EFFECT_TYPES.MILITIA_BONUS) {
+      bonusParts.push(`⚔ +${eff.amount} Militia max`);
+    } else if (eff.type === EFFECT_TYPES.UNIT_RECRUIT_SPEED) {
+      bonusParts.push(`⚡ -${eff.amount} recruit turn${eff.amount > 1 ? 's' : ''}`);
+    } else if (eff.type === EFFECT_TYPES.HERO_COUNT_BONUS) {
+      bonusParts.push(`🦸 +${eff.amount} Hero slot`);
+    } else if (eff.type === EFFECT_TYPES.FORTIFICATION_FIRST_STRIKE_CHANCE) {
+      bonusParts.push(`⚡ +${Math.round(eff.amount * 100)}% First Strike chance`);
     }
-    if (key === 'growthSlots') {
-      bonusParts.push(`+${val} Building Slot${val > 1 ? 's' : ''}`);
-      continue;
-    }
-    if (key === 'faction_primary_adv') {
-      const faction = FACTION_MAP[state?.playerFactionId];
-      const advRes = faction?.resources?.advanced?.[0];
-      const resName = advRes?.name ?? 'Primary Resource';
-      const resEmoji = advRes?.emoji ?? '✨';
-      bonusParts.push(`${resEmoji} +${val}/turn ${resName}`);
-      continue;
-    }
-    if (key === 'faction_secondary_adv') {
-      const faction = FACTION_MAP[state?.playerFactionId];
-      const advRes = faction?.resources?.advanced?.[1];
-      const resName = advRes?.name ?? 'Secondary Resource';
-      const resEmoji = advRes?.emoji ?? '🔮';
-      bonusParts.push(`${resEmoji} +${val}/turn ${resName}`);
-      continue;
-    }
-    const r = ALL_RES[key];
-    if (r) {
-      bonusParts.push(`${r.emoji} +${val}/turn ${r.name}`);
-    }
-  }
-  if ((bDef.militiaBonus ?? 0) > 0) {
-    bonusParts.push(`⚔ +${bDef.militiaBonus} Militia max`);
-  }
-  if ((bDef.bonuses?.recruitSpeed ?? 0) > 0) {
-    bonusParts.push(`⚡ -${bDef.bonuses.recruitSpeed} recruit turn${bDef.bonuses.recruitSpeed > 1 ? 's' : ''}`);
   }
 
   // Tech-applied bonuses for this specific building
-  const techEffects = state.factions?.get(state.playerFactionId)?.appliedTechEffects ?? [];
-  for (const eff of techEffects) {
-    for (const { buildingId, bonusKey, amount } of (eff.buildingBonuses ?? [])) {
-      if (buildingId === bDef.id) {
-        const r = ALL_RES[bonusKey];
-        if (r) bonusParts.push(`${r.emoji} +${amount}/turn ${r.name} <span class="btt-tech-tag">Tech</span>`);
-      }
-    }
-    for (const { category, bonusKey, amount } of (eff.buildingCategoryBonuses ?? [])) {
-      if (category === bDef.category) {
-        const r = ALL_RES[bonusKey];
-        if (r) bonusParts.push(`${r.emoji} +${amount}/turn ${r.name} <span class="btt-tech-tag">Tech</span>`);
-      }
+  const appliedTechEffects = state.factions?.get(state.playerFactionId)?.appliedTechEffects ?? [];
+  for (const techDef of appliedTechEffects) {
+    for (const eff of (techDef.effects ?? [])) {
+      if (eff.type !== EFFECT_TYPES.BUILDING_INCOME_BONUS) continue;
+      if (eff.buildingId !== bDef.id && eff.category !== bDef.category) continue;
+      const r = ALL_RES[eff.resourceId];
+      if (r) bonusParts.push(`${r.emoji} +${eff.amount}/turn ${r.name} <span class="btt-tech-tag">Tech</span>`);
     }
   }
 
@@ -781,7 +769,7 @@ export function renderEffectLines(effects = [], multiplier = 1) {
       const r = ALL_RES[eff.resourceId];
       return `📊 ${r?.emoji ?? ''} ${r?.name ?? eff.resourceId}: ${sign}${total}%`;
     }
-    if (eff.type === 'defense_percent') {
+    if (eff.type === EFFECT_TYPES.FORTIFICATION_BONUS) {
       const total = (eff.amount ?? 0) * multiplier;
       return `🛡 Defense: +${total}%`;
     }
@@ -939,7 +927,7 @@ export function showArtifactTooltip(artDef, anchorEl) {
     if (eff.type === 'army_all_units_multi_bonus') {
       return `<div class="btt-row btt-bonus">▸ All units ${eff.stat}: +${eff.percent}%</div>`;
     }
-    if (eff.type === 'province_income_multi') {
+    if (eff.type === EFFECT_TYPES.INCOME_PERCENT) {
       return `<div class="btt-row btt-bonus">▸ Province income: +${eff.percent}%</div>`;
     }
     if (eff.type === 'hero_mana_bonus') {

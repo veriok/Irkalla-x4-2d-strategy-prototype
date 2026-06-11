@@ -10,7 +10,7 @@
  * Implementations live in js/engine/faction-reactions.js.
  */
 
-import { RACE_IDS, FACTION_IDS, FACTION_REACTION_IDS, GOLD_RESOURCE, RESEARCH_RESOURCE, SPELL_SCHOOL_IDS, SPELL_IDS } from './enums.js';
+import { RACE_IDS, FACTION_IDS, FACTION_REACTION_IDS, GOLD_RESOURCE, RESEARCH_RESOURCE, SPELL_SCHOOL_IDS, SPELL_IDS, EFFECT_SCOPES, EFFECT_TYPES } from './enums.js';
 
 export const FACTIONS = [
 
@@ -286,11 +286,10 @@ export const FACTIONS = [
     biomePrefs: { primary: 'forest', secondary: 'swamp' },
     startingUnits: [{ unitId: 'beast_tamer', count: 2 }, { unitId: 'clan_raider', count: 1 }],
 
-    // Faction-scope build cost effects — processed by accumulateFactionEffects()
     effects: [
-      { scope: 'faction', type: 'build_cost_percent', target: 'location', percent: 25 },
-      { scope: 'faction', type: 'build_cost_percent', target: 'building', percent: 50 },
-      { scope: 'faction', type: 'build_time_bonus',   target: 'all',      amount: 1 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILD_COST_PERCENT, target: 'location', percent: 25 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILD_COST_PERCENT, target: 'building', percent: 50 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILD_TIME_BONUS,   target: 'all',      amount: 1 },
     ],
 
     startingSpellbooks: { [SPELL_SCHOOL_IDS.NATURE]: 3, [SPELL_SCHOOL_IDS.ANCIENT]: 3 },

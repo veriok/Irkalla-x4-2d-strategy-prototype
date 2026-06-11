@@ -15,6 +15,8 @@
  *   onRemove        — (army, gameState) => void | null
  */
 
+import { EFFECT_SCOPES, EFFECT_TYPES } from './enums.js';
+
 const ARMY_STATUSES = [
   {
     id: 'code_of_honor_stance',
@@ -22,7 +24,7 @@ const ARMY_STATUSES = [
     icon: '⚔️',
     description: 'The warriors have invoked the Dragon Code. +3 attack, -2 defense until next turn.',
     effects: [
-      { scope: 'army', type: 'stat_modifier', attack: 3, defense: -2 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_ARMY, attack: 3, defense: -2 },
     ],
     turnsRemaining: 1,
     onApply: null,

@@ -373,7 +373,7 @@ async function init() {
 
   // 14. Army panel: re-render immediately on tech unlock (unit stat changes)
   document.addEventListener('technology-researched', ({ detail }) => {
-    if (detail?.techDef?.unitStatBonuses?.length) {
+    if (detail?.techDef?.effects?.some(e => e.type === 'stat_modifier_unit_type')) {
       renderArmyPanel();
     }
   });

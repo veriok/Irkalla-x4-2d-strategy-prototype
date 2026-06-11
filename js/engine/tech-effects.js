@@ -10,9 +10,11 @@
  */
 
 import { getFaction, getProvince } from './game-state.js';
-import { UNIT_TYPES, UNIT_TAGS } from '../data/enums.js';
+import { UNIT_TYPES, UNIT_TAGS, EFFECT_TYPES, EFFECT_SCOPES } from '../data/enums.js';
 import { TRAIT_MAP } from '../data/traits-data.js';
+import { ARMY_STATUS_MAP } from '../data/army-status-data.js';
 import { isHeroActive, getHeroArmyBonuses } from './hero-engine.js';
+import { collectEffectsForScope } from './effect-resolver.js';
 
 /**
  * Returns effective attack and defense for a unit type, with all bonuses applied.
@@ -28,15 +30,16 @@ export function getEffectiveUnitStats(typeId, factionId, unitMap, army = null) {
   let defense = base?.defense ?? 0;
 
   if (factionId) {
-    // 1. Tech unit stat bonuses
-    const techEffects = getFaction(factionId)?.appliedTechEffects ?? [];
-    for (const eff of techEffects) {
-      for (const b of (eff.unitStatBonuses ?? [])) {
-        const matchesId   = b.unitId   === typeId;
-        const matchesType = b.unitType && (b.unitType === UNIT_TYPES.ALL || base?.unitType === b.unitType);
+    // 1. Tech unit stat bonuses (STAT_MODIFIER_UNIT_TYPE at ARMY scope)
+    const fs = getFaction(factionId);
+    if (fs) {
+      for (const eff of collectEffectsForScope(EFFECT_SCOPES.ARMY, { factionState: fs })) {
+        if (eff.type !== EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE) continue;
+        const matchesId   = eff.unitId   === typeId;
+        const matchesType = eff.unitType && (eff.unitType === UNIT_TYPES.ALL || base?.unitType === eff.unitType);
         if (matchesId || matchesType) {
-          if (b.stat === 'attack')  attack  += b.amount;
-          if (b.stat === 'defense') defense += b.amount;
+          if (eff.stat === 'attack')  attack  += eff.amount ?? 0;
+          if (eff.stat === 'defense') defense += eff.amount ?? 0;
         }
       }
     }
@@ -44,20 +47,21 @@ export function getEffectiveUnitStats(typeId, factionId, unitMap, army = null) {
 
   // 2. Unit's own effects (permanent + conditional)
   for (const eff of (base?.effects ?? [])) {
-    if (eff.type !== 'stat_modifier') continue;
+    if (eff.type !== EFFECT_TYPES.STAT_MODIFIER) continue;
     if (!_conditionMet(eff.condition, army)) continue;
     attack  += eff.attack  ?? 0;
     defense += eff.defense ?? 0;
   }
 
-  // 3. Trait stat modifiers (e.g. leaderless_construct via trait reference)
+  // 3. Trait stat modifiers on this unit type (e.g. leaderless_construct)
   for (const traitId of (base?.traitIds ?? [])) {
     const trait = TRAIT_MAP[traitId];
-    const eff = trait?.effect;
-    if (!eff || eff.type !== 'stat_modifier') continue;
-    if (!_conditionMet(eff.condition, army)) continue;
-    attack  += eff.attack  ?? 0;
-    defense += eff.defense ?? 0;
+    for (const eff of (trait?.effects ?? [])) {
+      if (eff.type !== EFFECT_TYPES.STAT_MODIFIER) continue;
+      if (!_conditionMet(eff.condition, army)) continue;
+      attack  += eff.attack  ?? 0;
+      defense += eff.defense ?? 0;
+    }
   }
 
   // 4. Hero bonuses from army leader (or province governor if army has no hero)
@@ -91,16 +95,12 @@ export function getEffectiveUnitStats(typeId, factionId, unitMap, army = null) {
     }
   }
 
-  // 5. Army status effects targeting this specific unit type
+  // 5. Army status effects — STAT_MODIFIER_ARMY (e.g. code_of_honor_stance)
   if (army) {
     for (const status of (army.statusEffects ?? [])) {
-      if (status.type === 'unit_type_stat_bonus' && status.unitTypeId === typeId) {
-        attack  += status.attack  ?? 0;
-        defense += status.defense ?? 0;
-      }
-      // Army-wide stat modifiers (e.g. code_of_honor_stance)
-      for (const eff of (status.effects ?? [])) {
-        if (eff.type !== 'stat_modifier') continue;
+      const def = ARMY_STATUS_MAP[status.type];
+      for (const eff of (def?.effects ?? [])) {
+        if (eff.type !== EFFECT_TYPES.STAT_MODIFIER_ARMY) continue;
         attack  += eff.attack  ?? 0;
         defense += eff.defense ?? 0;
       }
@@ -118,18 +118,15 @@ export function getEffectiveUnitStats(typeId, factionId, unitMap, army = null) {
       const auraDef = unitMap[auraTypeId];
       for (const traitId of (auraDef?.traitIds ?? [])) {
         const trait = TRAIT_MAP[traitId];
-        const eff = trait?.effect;
-        if (!eff) continue;
-        if (eff.type === 'army_attack_bonus') {
-          // Each different aura source stacks independently (Sun Priest ≠ Beast Bond)
-          attack += eff.amount ?? 0;
-        }
-        if (eff.type === 'army_levy_stat_bonus' && !nonStackSeen.has('army_levy_stat_bonus')) {
-          // Only affects LEVY-tagged units; deduplicated so multiple levy-booster types don't stack
-          if ((base?.tagIds ?? []).includes(UNIT_TAGS.LEVY)) {
-            nonStackSeen.add('army_levy_stat_bonus');
-            attack  += eff.attack  ?? 0;
-            defense += eff.defense ?? 0;
+        for (const eff of (trait?.effects ?? [])) {
+          if (eff.type === EFFECT_TYPES.ARMY_ATTACK_BONUS) {
+            attack += eff.amount ?? 0;
+          } else if (eff.type === EFFECT_TYPES.ARMY_LEVY_STAT_BONUS && !nonStackSeen.has(EFFECT_TYPES.ARMY_LEVY_STAT_BONUS)) {
+            if ((base?.tagIds ?? []).includes(UNIT_TAGS.LEVY)) {
+              nonStackSeen.add(EFFECT_TYPES.ARMY_LEVY_STAT_BONUS);
+              attack  += eff.attack  ?? 0;
+              defense += eff.defense ?? 0;
+            }
           }
         }
       }
@@ -166,22 +163,3 @@ export function getEffectiveArmyDefense(army, factionId, unitMap) {
   }, 0);
 }
 
-/**
- * Compute the siege expert fortification reduction for an attacking army.
- * Returns a fraction [0, 1] representing how much to multiply defender's fort bonus.
- */
-export function getSiegeExpertReduction(army, unitMap) {
-  let totalReduction = 0;
-  for (const { typeId, count } of (army.units ?? [])) {
-    const uDef = unitMap[typeId];
-    if (!uDef) continue;
-    for (const traitId of (uDef.traitIds ?? [])) {
-      const trait = TRAIT_MAP[traitId];
-      if (trait?.effect?.type === 'reduce_defender_fortification') {
-        totalReduction += (trait.effect.percentPerUnit ?? 0) * count;
-      }
-    }
-  }
-  // Returns multiplier: e.g. 20% reduction → 0.8
-  return Math.max(0, 1 - totalReduction / 100);
-}

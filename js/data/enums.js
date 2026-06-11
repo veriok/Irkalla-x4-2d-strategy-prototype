@@ -302,3 +302,100 @@ export const ARTIFACT_RARITIES = Object.freeze({
   RARE:      'rare',
   LEGENDARY: 'legendary',
 });
+
+// ─── Effects System ───────────────────────────────────────
+
+export const EFFECT_SCOPES = Object.freeze({
+  UNIT:    'unit',      // effect bound to a single unit type (traits, unit definition effects)
+  ARMY:    'army',      // effect applies across an army (army-status, hero aura skills, tech army bonuses)
+  PROVINCE:'province',  // effect bound to a single province (province-status, buildings, hero-as-governor skills)
+  FACTION: 'faction',   // effect applies faction-wide from a faction-level source (techs, faction base effects)
+  HERO:    'hero',      // effect bound to a hero entity (mana, spell schools, hero stats)
+  WORLD:   'world',     // global (future)
+});
+
+export const EFFECT_TYPES = Object.freeze({
+  // Scope encodes the SOURCE BREADTH — where the rule comes from and how broadly it applies:
+  //   FACTION  = universally active across all provinces/armies for this faction (comes from a tech or faction def)
+  //   PROVINCE = active only for the specific province it is attached to (status effect, building, governor skill)
+  //   ARMY     = active only for the specific army it is attached to
+  //   UNIT     = active only for the specific unit type that carries it
+  //   HERO     = active only for the hero that owns it
+  // A single data source (artifact, tech) can emit effects at multiple scopes.
+  // Callers aggregate from multiple scopes and apply them together.
+
+  // --- Income ---
+  INCOME_FLAT:                    'income_flat',             // flat resource output; needs resourceId
+  INCOME_PERCENT:                 'income_percent',          // % modifier; needs resourceId or 'all'
+
+  // --- Fortification (signed flat)
+  // ARMY scope = attacker siege reduction (negative); PROVINCE/FACTION = defender bonus (positive)
+  // Combat: net = sum(PROVINCE+FACTION defender) + sum(ARMY+UNIT attacker), clamped ≥ 0
+  //         defender_unit_def *= (1 + net / 100)
+  FORTIFICATION_BONUS:            'fortification_bonus',
+
+  // --- Research & build ---
+  RESEARCH_PERCENT:               'research_percent',
+  BUILD_COST_PERCENT:             'build_cost_percent',
+  BUILD_TIME_BONUS:               'build_time_bonus',        // flat turn reduction to build time
+
+  // --- Recruitment ---
+  UNIT_COST_MULTI:                'unit_cost_multi',
+  UNIT_RECRUIT_SPEED:             'unit_recruit_speed',
+  RECRUIT_TIME_PENALTY:           'recruit_time_penalty',    // province status (turn count, not %)
+
+  // --- Province utility ---
+  MILITIA_BONUS:                  'militia_bonus',
+  PROVINCE_GROWTH_SLOTS:          'province_growth_slots',           // extra building slots
+  FORTIFICATION_FIRST_STRIKE_CHANCE: 'fortification_first_strike_chance', // garrison fires first probability
+
+  // --- Army-wide stat modifiers (flow through aggregator; no typeId needed) ---
+  STAT_MODIFIER_ARMY:             'stat_modifier_army',      // army-status → flat atk/def to all units
+  STAT_MODIFIER_UNIT_TYPE:        'stat_modifier_unit_type', // was unitStatBonuses[]; filter by unitId/unitType
+  ARMY_ATTACK_BONUS:              'army_attack_bonus',       // aura from another unit type → add atk to all
+  ARMY_LEVY_STAT_BONUS:           'army_levy_stat_bonus',    // aura for levy units only (dedup per source type)
+  ARMY_UNIT_TYPE_MULTI_BONUS:     'army_unit_type_multi_bonus', // % bonus to unit type stat
+  ARMY_UNIT_TYPE_BONUS:           'army_unit_type_bonus',    // flat bonus to unit type stat (e.g. firstStrikeChance)
+  ARMY_ALL_UNITS_MULTI_BONUS:     'army_all_units_multi_bonus',
+  ARMY_MOVEMENT_BONUS:            'army_movement_bonus',
+  ARMY_WOUND_CHANCE:              'army_wound_chance',
+  ARMY_LOGISTICS:                 'army_logistics',          // probabilistic +1 movement/turn (Logistics skill)
+  STACK_SIZE_BONUS:               'stack_size_bonus',
+
+  // --- Unit-personal effects (UNIT scope; NOT routed through aggregator) ---
+  // Read directly per typeId in tech-effects.js.
+  STAT_MODIFIER:                  'stat_modifier',           // flat atk/def this unit only
+  NO_HEAL:                        'no_heal',
+  ANTI_CAVALRY_BONUS:             'anti_cavalry_bonus',
+  FIRST_STRIKE:                   'first_strike',
+  SHIELD_FIRST_STRIKE:            'shield_first_strike',
+  // FORTIFICATION_BONUS also appears at UNIT scope (siege trait: negative flat)
+
+  // --- Faction-wide mechanics (FACTION scope only) ---
+  ARMY_SUPPORT_LIMIT:             'army_support_limit',
+  HERO_COUNT_BONUS:               'hero_count_bonus',
+  BUILDING_INCOME_BONUS:          'building_income_bonus',  // tech effect: per-building or per-category flat income
+  CONQUEST_PENALTY_REDUCTION:     'conquest_penalty_reduction',
+  OCEAN_MOVEMENT_BONUS:           'ocean_movement_bonus',
+  RUNE_UPKEEP_REDUCTION:          'rune_upkeep_reduction',
+  LORE_TECH_DISCOUNT:             'lore_tech_discount',
+  VICTORY_SOUL_BONUS:             'victory_soul_bonus',
+  SOUL_RESURRECTION_CHANCE:       'soul_resurrection_chance',
+  FORTIFY_COST_REDUCTION:         'fortify_cost_reduction',
+  COASTAL_RESOURCE_BONUS:         'coastal_resource_bonus',
+  CLEAR_REWARD_MULTIPLIER:        'clear_reward_multiplier',
+  RESEARCH_MULTIPLIER_REDUCTION:  'research_multiplier_reduction',
+  BIOME_INCOME_BONUS:             'biome_income_bonus',
+  BIOME_COMBAT_BONUS:             'biome_combat_bonus',
+  RUIN_CLEAR_BONUS:               'ruin_clear_bonus',       // extra resource per ruin/den cleared
+  CONSCRIPT_COST_REDUCTION:       'conscript_cost_reduction', // reduce conscript levy resource cost
+
+  // --- Hero-entity effects (HERO scope only) ---
+  HERO_STAT_BONUS:                'hero_stat_bonus',
+  HERO_MANA_BONUS:                'hero_mana_bonus',
+  HERO_FLAT_MANA:                 'hero_flat_mana',
+  HERO_MANA_REGEN:                'hero_mana_regen',
+  HERO_CHANNELING:                'hero_channeling',
+  HERO_SPELL_SCHOOL:              'hero_spell_school',
+  HERO_WOUND_REDUCTION:           'hero_wound_reduction',
+});

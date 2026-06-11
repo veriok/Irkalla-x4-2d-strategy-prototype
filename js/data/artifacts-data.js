@@ -3,15 +3,16 @@
  *
  * ~20 artifact definitions across 4 equipment slots.
  *
- * Effect shapes (hero-engine.js resolves these):
- *   { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES key, amount }        — direct stat bonus
- *   { type: 'army_unit_type_multi_bonus', unitType, stat, percent }   — % bonus to a unit type
- *   { type: 'army_all_units_multi_bonus', stat, percent }             — % bonus to all units
- *   { type: 'province_income_multi', percent }                        — % income when governing
- *   { type: 'hero_mana_bonus', amount }                               — flat max mana bonus
+ * Effect shapes (resolved by effect-resolver.js):
+ *   { scope: HERO,    type: HERO_STAT_BONUS, stat, amount }
+ *   { scope: HERO,    type: HERO_MANA_BONUS, amount }
+ *   { scope: ARMY,    type: ARMY_UNIT_TYPE_MULTI_BONUS, unitType, stat, percent }
+ *   { scope: ARMY,    type: ARMY_ALL_UNITS_MULTI_BONUS, stat, percent }
+ *   { scope: ARMY,    type: ARMY_MOVEMENT_BONUS, amount }
+ *   { scope: PROVINCE,type: INCOME_PERCENT, resourceId: 'all', percent }
  */
 
-import { ARTIFACT_IDS, ARTIFACT_SLOTS, ARTIFACT_RARITIES, HERO_ATTRIBUTES, UNIT_TYPES } from './enums.js';
+import { ARTIFACT_IDS, ARTIFACT_SLOTS, ARTIFACT_RARITIES, HERO_ATTRIBUTES, UNIT_TYPES, EFFECT_SCOPES, EFFECT_TYPES } from './enums.js';
 
 export const ARTIFACTS = [
 
@@ -25,7 +26,7 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.COMMON,
     description: 'A well-forged blade that sharpens a hero\'s martial edge.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.ATK, amount: 2 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.ATK, amount: 2 },
     ],
   },
   {
@@ -36,8 +37,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.UNCOMMON,
     description: 'Inscribed with dwarven war-runes, it strikes with both iron and arcane force.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.ATK, amount: 3 },
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.SPELLPOWER, amount: 1 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.ATK, amount: 3 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.SPELLPOWER, amount: 1 },
     ],
   },
   {
@@ -48,8 +49,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.RARE,
     description: 'Carved from the bone of a slain elder dragon. Its power is unmistakable.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.ATK, amount: 4 },
-      { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 10 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.ATK, amount: 4 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.CAVALRY, stat: 'attack', percent: 10 },
     ],
   },
   {
@@ -60,8 +61,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.COMMON,
     description: 'A heavy mace symbolising authority, bolstering the morale of nearby infantry.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.ATK, amount: 1 },
-      { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 5 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.ATK, amount: 1 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.INFANTRY, stat: 'attack', percent: 5 },
     ],
   },
   {
@@ -72,9 +73,9 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.RARE,
     description: 'A blade that reaps souls as easily as flesh, channelling death magic.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.ATK, amount: 3 },
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.SPELLPOWER, amount: 3 },
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.KNOWLEDGE, amount: 1 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.ATK, amount: 3 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.SPELLPOWER, amount: 3 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.KNOWLEDGE, amount: 1 },
     ],
   },
 
@@ -88,7 +89,7 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.COMMON,
     description: 'Solid iron plate armour that turns aside common blows.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.DEF, amount: 2 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.DEF, amount: 2 },
     ],
   },
   {
@@ -99,8 +100,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.RARE,
     description: 'Scales from a fire dragon, flexible yet nigh-impenetrable, and granting commanding presence.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.DEF, amount: 4 },
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.ATK, amount: 1 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.DEF, amount: 4 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.ATK, amount: 1 },
     ],
   },
   {
@@ -111,8 +112,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.UNCOMMON,
     description: 'Armour fashioned from the shell of a great sea creature. Sturdy and enduring.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.DEF, amount: 3 },
-      { type: 'army_all_units_multi_bonus', stat: 'defense', percent: 5 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.DEF, amount: 3 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_ALL_UNITS_MULTI_BONUS, stat: 'defense', percent: 5 },
     ],
   },
   {
@@ -123,9 +124,9 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.UNCOMMON,
     description: 'A robe woven from moonlight-threaded silk, prized by scholars and mages.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.KNOWLEDGE, amount: 2 },
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.SPELLPOWER, amount: 1 },
-      { type: 'hero_mana_bonus', amount: 10 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.KNOWLEDGE, amount: 2 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.SPELLPOWER, amount: 1 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_MANA_BONUS, amount: 10 },
     ],
   },
   {
@@ -136,8 +137,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.COMMON,
     description: 'A stout shield emblazoned with a guardian sigil, inspiring defensive discipline.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.DEF, amount: 2 },
-      { type: 'army_unit_type_multi_bonus', unitType: UNIT_TYPES.INFANTRY, stat: 'defense', percent: 5 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.DEF, amount: 2 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_UNIT_TYPE_MULTI_BONUS, unitType: UNIT_TYPES.INFANTRY, stat: 'defense', percent: 5 },
     ],
   },
 
@@ -151,8 +152,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.COMMON,
     description: 'A merchant\'s ring that draws gold to its wearer.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.GOVERNANCE, amount: 2 },
-      { type: 'province_income_multi', percent: 5 },
+      { scope: EFFECT_SCOPES.HERO,     type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.GOVERNANCE, amount: 2 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_PERCENT,  resourceId: 'all', percent: 5 },
     ],
   },
   {
@@ -163,7 +164,7 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.UNCOMMON,
     description: 'An heirloom worn by brilliant generals, sharpening strategic instinct.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.TACTICS, amount: 3 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.TACTICS, amount: 3 },
     ],
   },
   {
@@ -174,8 +175,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.UNCOMMON,
     description: 'An ancient tome filled with arcane formulae, expanding the mind and mana pool.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.KNOWLEDGE, amount: 2 },
-      { type: 'hero_mana_bonus', amount: 15 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.KNOWLEDGE, amount: 2 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_MANA_BONUS, amount: 15 },
     ],
   },
   {
@@ -186,7 +187,7 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.COMMON,
     description: 'An official seal that commands loyalty and improves provincial administration.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.GOVERNANCE, amount: 3 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.GOVERNANCE, amount: 3 },
     ],
   },
   {
@@ -197,8 +198,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.UNCOMMON,
     description: 'A quickening charm that lends speed to the wearer\'s entire army.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.TACTICS, amount: 1 },
-      { type: 'army_movement_bonus', amount: 1 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS,   stat: HERO_ATTRIBUTES.TACTICS, amount: 1 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_MOVEMENT_BONUS, amount: 1 },
     ],
   },
   {
@@ -209,8 +210,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.UNCOMMON,
     description: 'A crystallised shard of pure magical energy, vastly expanding mana reserves.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.SPELLPOWER, amount: 2 },
-      { type: 'hero_mana_bonus', amount: 20 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.SPELLPOWER, amount: 2 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_MANA_BONUS,  amount: 20 },
     ],
   },
   {
@@ -221,8 +222,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.RARE,
     description: 'A legendary banner that inspires all troops to fight beyond their limits.',
     effects: [
-      { type: 'army_all_units_multi_bonus', stat: 'attack', percent: 8 },
-      { type: 'army_all_units_multi_bonus', stat: 'defense', percent: 8 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_ALL_UNITS_MULTI_BONUS, stat: 'attack',  percent: 8 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.ARMY_ALL_UNITS_MULTI_BONUS, stat: 'defense', percent: 8 },
     ],
   },
   {
@@ -233,7 +234,7 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.COMMON,
     description: 'A spirit-carved charm tied to nature magic, boosting magical potency.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.SPELLPOWER, amount: 2 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.SPELLPOWER, amount: 2 },
     ],
   },
   {
@@ -244,8 +245,8 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.COMMON,
     description: 'A smooth stone etched with runes of warding. Valued by dwarven commanders.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.DEF, amount: 1 },
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.KNOWLEDGE, amount: 1 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.DEF,       amount: 1 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.KNOWLEDGE, amount: 1 },
     ],
   },
   {
@@ -256,9 +257,9 @@ export const ARTIFACTS = [
     rarity: ARTIFACT_RARITIES.RARE,
     description: 'A talisman linked to the realm of the dead, empowering those who command it.',
     effects: [
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.SPELLPOWER, amount: 3 },
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.ATK, amount: 2 },
-      { type: 'hero_stat_bonus', stat: HERO_ATTRIBUTES.KNOWLEDGE, amount: 1 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.SPELLPOWER, amount: 3 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.ATK,        amount: 2 },
+      { scope: EFFECT_SCOPES.HERO, type: EFFECT_TYPES.HERO_STAT_BONUS, stat: HERO_ATTRIBUTES.KNOWLEDGE,  amount: 1 },
     ],
   },
 ];

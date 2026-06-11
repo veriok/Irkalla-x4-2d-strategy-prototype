@@ -19,7 +19,8 @@
  */
 
 import { FACTIONS, FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
-import { GAME_EVENTS } from '../data/enums.js';
+import { GAME_EVENTS, EFFECT_TYPES, EFFECT_SCOPES } from '../data/enums.js';
+import { collectEffectsForScope } from './effect-resolver.js';
 import { emit } from './game-events.js';
 import { RACE_MAP } from '../data/races-data.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
@@ -291,26 +292,25 @@ export function getArmiesByFaction(factionId) {
 export function computeHeroCount(factionId) {
   let count = 0;
 
-  // Building contributions (town_hall_1/2/3 each have heroCountBonus: 1)
+  // Building contributions (town_hall_1/2/3 each add HERO_COUNT_BONUS)
   for (const province of state.provinces.values()) {
     if (province.ownerId !== factionId) continue;
     if (!province.isCapital) continue;
     for (const loc of province.locations) {
       for (const b of loc.buildings) {
         const bDef = BUILDING_MAP[b.buildingId];
-        count += bDef?.heroCountBonus ?? 0;
+        count += (bDef?.effects ?? [])
+          .filter(e => e.type === EFFECT_TYPES.HERO_COUNT_BONUS)
+          .reduce((s, e) => s + (e.amount ?? 0), 0);
       }
     }
   }
 
-  // Tech contributions
   const fs = state.factions.get(factionId);
   if (fs) {
-    for (const techDef of fs.appliedTechEffects) {
-      for (const eff of (techDef.effects ?? [])) {
-        if (eff.type === 'hero_count_bonus') count += eff.amount ?? 1;
-      }
-    }
+    count += collectEffectsForScope(EFFECT_SCOPES.FACTION, { factionState: fs })
+      .filter(e => e.type === EFFECT_TYPES.HERO_COUNT_BONUS)
+      .reduce((s, e) => s + (e.amount ?? 0), 0);
   }
 
   return count;
@@ -349,7 +349,9 @@ export function computeMilitiaMax(province) {
   for (const loc of province.locations) {
     for (const b of loc.buildings) {
       const bDef = BUILDING_MAP[b.buildingId];
-      total += bDef?.militiaBonus ?? 0;
+      total += (bDef?.effects ?? [])
+        .filter(e => e.type === EFFECT_TYPES.MILITIA_BONUS)
+        .reduce((s, e) => s + (e.amount ?? 0), 0);
     }
   }
   const fs = state.factions.get(province.ownerId);
@@ -360,7 +362,7 @@ export function computeMilitiaMax(province) {
     if (governor && governor.woundedFor === 0 && (!governor.assignment || governor.assignment.transitFor === 0)) {
       for (const { skillId, tier } of (governor.skills ?? [])) {
         const tierDef = HERO_SKILL_MAP[skillId]?.tiers.find(t => t.tier === tier);
-        for (const eff of (tierDef?.effects ?? [])) if (eff.type === 'province_militia_bonus') total += eff.amount;
+        for (const eff of (tierDef?.effects ?? [])) if (eff.type === EFFECT_TYPES.MILITIA_BONUS) total += eff.amount;
       }
     }
   }
@@ -439,12 +441,11 @@ export function captureProvince(provinceId, newOwnerId, battleResult = {}) {
 
   if (province.coreOf !== newOwnerId) {
     const def = PROVINCE_STATUS_MAP['new_conquest'];
-    // conquest_penalty_reduction tech effect (e.g. mercenary_contracts)
     const fs = state.factions.get(newOwnerId);
     let conquestTurns = 10;
-    for (const te of (fs?.appliedTechEffects ?? [])) {
-      for (const eff of (te.effects ?? [])) {
-        if (eff.type === 'conquest_penalty_reduction') conquestTurns -= (eff.turnsReduction ?? 0);
+    if (fs) {
+      for (const eff of collectEffectsForScope(EFFECT_SCOPES.FACTION, { factionState: fs })) {
+        if (eff.type === EFFECT_TYPES.CONQUEST_PENALTY_REDUCTION) conquestTurns -= (eff.turnsReduction ?? 0);
       }
     }
     conquestTurns = Math.max(1, conquestTurns);
@@ -669,8 +670,8 @@ export function unlockTech(factionId, techId) {
 
   // Apply faction-scope effects that update cached state immediately
   for (const eff of (techDef.effects ?? [])) {
-    if (eff.scope !== 'faction') continue;
-    if (eff.type === 'army_support_limit') {
+    if (eff.scope !== EFFECT_SCOPES.FACTION) continue;
+    if (eff.type === EFFECT_TYPES.ARMY_SUPPORT_LIMIT) {
       fs.armySupplyCap = (fs.armySupplyCap ?? 6) + (eff.amount ?? 1);
     }
   }

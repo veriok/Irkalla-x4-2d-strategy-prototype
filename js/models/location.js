@@ -5,6 +5,7 @@
  */
 
 import { FACTION_MAP } from '../data/factions-data.js';
+import { EFFECT_TYPES } from '../data/enums.js';
 
 /** Location type metadata */
 export const LOCATION_TYPES = {
@@ -152,7 +153,10 @@ export function getInstalledBuildingIds(location) {
 export function getLocationDefenseBonus(location, buildingMap) {
   return location.buildings.reduce((sum, b) => {
     const def = buildingMap[b.buildingId];
-    return sum + (def?.bonuses?.defense ?? 0);
+    const bonus = (def?.effects ?? [])
+      .filter(e => e.type === EFFECT_TYPES.FORTIFICATION_BONUS)
+      .reduce((s, e) => s + (e.amount ?? 0), 0);
+    return sum + bonus / 100;
   }, 0);
 }
 
@@ -163,48 +167,44 @@ export function getLocationDefenseBonus(location, buildingMap) {
  * Returns { [resourceId]: totalAmount }
  * @param {Object}   location
  * @param {Object}   buildingMap
- * @param {string|null} factionId  — owner faction, used to resolve faction_primary_adv
- * @param {Array}    techEffects   — appliedTechEffects from faction state
+ * @param {string|null} factionId     — owner faction, used to resolve faction_primary_adv
+ * @param {Array}       factionEffects — pre-collected FACTION-scope effects from the aggregator
  * @returns {Object}
  */
-export function getLocationResourceBonuses(location, buildingMap, factionId = null, techEffects = []) {
+export function getLocationResourceBonuses(location, buildingMap, factionId = null, factionEffects = []) {
   const totals = {};
   for (const { buildingId } of location.buildings) {
     const def = buildingMap[buildingId];
     if (!def) continue;
-    for (const [res, amt] of Object.entries(def.bonuses)) {
-      if (res === 'defense' || res === 'growthSlots') continue;
+    for (const eff of (def.effects ?? [])) {
+      if (eff.type !== EFFECT_TYPES.INCOME_FLAT) continue;
+      const res = eff.resourceId;
+      const amt = eff.amount ?? 0;
       if (res === 'faction_primary_adv') {
         if (factionId) {
           const faction = FACTION_MAP[factionId];
           const advResId = faction?.resources?.advanced?.[0]?.id;
           if (advResId) totals[advResId] = (totals[advResId] ?? 0) + amt;
         }
-        continue;
-      }
-      if (res === 'faction_secondary_adv') {
+      } else if (res === 'faction_secondary_adv') {
         if (factionId) {
           const faction = FACTION_MAP[factionId];
           const advResId = faction?.resources?.advanced?.[1]?.id;
           if (advResId) totals[advResId] = (totals[advResId] ?? 0) + amt;
         }
-        continue;
+      } else {
+        totals[res] = (totals[res] ?? 0) + amt;
       }
-      totals[res] = (totals[res] ?? 0) + amt;
     }
   }
 
-  // Apply tech effect bonuses (per-building-id and per-building-category)
-  for (const eff of techEffects) {
-    for (const { buildingId, bonusKey, amount } of (eff.buildingBonuses ?? [])) {
-      if (location.buildings.some(b => b.buildingId === buildingId)) {
-        totals[bonusKey] = (totals[bonusKey] ?? 0) + amount;
-      }
-    }
-    for (const { category, bonusKey, amount } of (eff.buildingCategoryBonuses ?? [])) {
-      if (location.buildings.some(b => buildingMap[b.buildingId]?.category === category)) {
-        totals[bonusKey] = (totals[bonusKey] ?? 0) + amount;
-      }
+  // Tech building income bonuses (per-building-id or per-category)
+  for (const eff of factionEffects) {
+    if (eff.type !== EFFECT_TYPES.BUILDING_INCOME_BONUS) continue;
+    const matchesBuilding  = eff.buildingId && location.buildings.some(b => b.buildingId === eff.buildingId);
+    const matchesCategory  = eff.category   && location.buildings.some(b => buildingMap[b.buildingId]?.category === eff.category);
+    if (matchesBuilding || matchesCategory) {
+      totals[eff.resourceId] = (totals[eff.resourceId] ?? 0) + (eff.amount ?? 0);
     }
   }
 
@@ -221,7 +221,9 @@ export function getLocationResourceBonuses(location, buildingMap, factionId = nu
 export function getAvailableBuildingSlots(location, buildingMap) {
   const extraSlots = location.buildings.reduce((sum, b) => {
     const def = buildingMap[b.buildingId];
-    return sum + (def?.bonuses?.growthSlots ?? 0);
+    return sum + (def?.effects ?? [])
+      .filter(e => e.type === EFFECT_TYPES.PROVINCE_GROWTH_SLOTS)
+      .reduce((s, e) => s + (e.amount ?? 0), 0);
   }, 0);
   return location.buildingSlots + extraSlots;
 }
