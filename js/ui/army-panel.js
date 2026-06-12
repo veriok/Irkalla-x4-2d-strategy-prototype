@@ -18,7 +18,6 @@ import { showModal, hideModal } from './modal.js';
 import { createCard } from './card-renderer.js';
 import { showUnitTooltip, hideUnitTooltip, showActionTooltip, hideActionTooltip, showHeroTooltip, hideHeroTooltip } from './tooltips.js';
 import { FACTION_ACTIONS } from '../data/faction-actions-data.js';
-import { getActionUnlockSource } from '../engine/faction-actions.js';
 import { ARMY_STATUS_MAP } from '../data/army-status-data.js';
 import { isHeroActive, getHeroMaxMana, getHeroCastableSpells, unassignHero } from '../engine/hero-engine.js';
 import { HERO_CLASS_MAP } from '../data/hero-classes-data.js';
@@ -329,8 +328,7 @@ function _renderArmyActionBar(army, containerEl) {
     }
     if (action.actionId && action.actionId !== 'spellbook' && FACTION_ACTIONS[action.actionId]) {
       const actionDef = FACTION_ACTIONS[action.actionId];
-      const unlockSrc = getActionUnlockSource(army.factionId, action.actionId);
-      btn.addEventListener('mouseenter', () => showActionTooltip(actionDef, unlockSrc, btn));
+      btn.addEventListener('mouseenter', () => showActionTooltip(actionDef, btn));
       btn.addEventListener('mouseleave', hideActionTooltip);
     }
     bar.appendChild(btn);

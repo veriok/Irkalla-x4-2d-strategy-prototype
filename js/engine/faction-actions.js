@@ -1,5 +1,6 @@
 import { getFaction } from './game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
+import { TECH_MAP } from '../data/techs-data.js';
 
 /**
  * Returns true if the faction has unlocked the given action.
@@ -12,36 +13,13 @@ export function isFactionActionUnlocked(factionId, actionId) {
   const fs = getFaction(factionId);
   if (!fs) return false;
 
-  for (const techDef of (fs.appliedTechEffects ?? [])) {
-    if (techDef.unlockActions?.includes(actionId)) return true;
+  for (const techId of (fs.unlockedTechs ?? [])) {
+    if (TECH_MAP[techId]?.unlockActions?.includes(actionId)) return true;
   }
 
   return false;
 }
 
-/**
- * Returns the source that grants the action, or null if locked.
- * Used by tooltips to display "Unlocked via: Boatbuilding".
- *
- * @returns {{ type: 'faction'|'tech', id: string, name: string } | null}
- */
-export function getActionUnlockSource(factionId, actionId) {
-  const factionDef = FACTION_MAP[factionId];
-  if (factionDef?.startingActions?.includes(actionId)) {
-    return { type: 'faction', id: factionId, name: factionDef.name };
-  }
-
-  const fs = getFaction(factionId);
-  if (!fs) return null;
-
-  for (const techDef of (fs.appliedTechEffects ?? [])) {
-    if (techDef.unlockActions?.includes(actionId)) {
-      return { type: 'tech', id: techDef.id, name: techDef.name };
-    }
-  }
-
-  return null;
-}
 
 /**
  * Returns a Set of all action ids currently unlocked for a faction.
@@ -53,8 +31,8 @@ export function getUnlockedActions(factionId) {
   for (const id of (factionDef?.startingActions ?? [])) result.add(id);
 
   const fs = getFaction(factionId);
-  for (const techDef of (fs?.appliedTechEffects ?? [])) {
-    for (const id of (techDef.unlockActions ?? [])) result.add(id);
+  for (const techId of (fs?.unlockedTechs ?? [])) {
+    for (const id of (TECH_MAP[techId]?.unlockActions ?? [])) result.add(id);
   }
 
   return result;

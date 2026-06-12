@@ -3,7 +3,7 @@
  *
  * Stat resolution — the single place that computes effective unit stats.
  * Reads from all applicable effect sources:
- *   1. Faction's appliedTechEffects (unitStatBonuses)
+ *   1. Faction's factionEffects (flat pre-tagged array)
  *   2. Unit definition's own effects[] (permanent or condition-gated)
  *   3. Army's statusEffects[] (rune bonuses, army-scope statuses)
  *   4. Trait effects (auras, conditions)

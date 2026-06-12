@@ -305,6 +305,12 @@ export const ARTIFACT_RARITIES = Object.freeze({
 
 // ─── Effects System ───────────────────────────────────────
 
+export const EFFECT_SOURCES = Object.freeze({
+  FACTION: 'faction',
+  TECH:    'tech',
+  OTHER:   'other',
+});
+
 export const EFFECT_SCOPES = Object.freeze({
   UNIT:    'unit',      // effect bound to a single unit type (traits, unit definition effects)
   ARMY:    'army',      // effect applies across an army (army-status, hero aura skills, tech army bonuses)

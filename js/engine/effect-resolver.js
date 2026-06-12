@@ -14,7 +14,7 @@
  *
  * @param {string} scope   — EFFECT_SCOPES value
  * @param {object} context — {
- *   factionState?  faction runtime state (has .id, .appliedTechEffects, .heroes)
+ *   factionState?  faction runtime state (has .id, .factionEffects, .heroes)
  *   army?          army instance (has .heroId, .units, .statusEffects)
  *   province?      province instance (has .locations, .statusEffects, .governorId)
  *   hero?          hero instance (used for HERO scope)
@@ -24,7 +24,6 @@
  */
 
 import { EFFECT_SCOPES } from '../data/enums.js';
-import { FACTION_MAP } from '../data/factions-data.js';
 import { HERO_SKILL_MAP } from '../data/hero-skills-data.js';
 import { ARTIFACT_MAP } from '../data/artifacts-data.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
@@ -39,15 +38,8 @@ export function collectEffectsForScope(scope, context) {
 
   // ── FACTION-level sources ──────────────────────────────────
   if (factionState) {
-    // Faction definition base effects (e.g. CLANS_FIRST_SCALE build cost modifiers)
-    const factionDef = FACTION_MAP[factionState.id];
-    for (const eff of (factionDef?.effects ?? []))
+    for (const eff of (factionState.factionEffects ?? []))
       if (eff.scope === scope) out.push(eff);
-
-    // Applied tech effects (all unlocked techs concatenated into one array)
-    for (const techDef of (factionState.appliedTechEffects ?? []))
-      for (const eff of (techDef.effects ?? []))
-        if (eff.scope === scope) out.push(eff);
   }
 
   // ── ARMY-level sources ─────────────────────────────────────

@@ -7,7 +7,7 @@
  */
 
 import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
-import { RESEARCH_RESOURCE, UNIT_TAGS, EFFECT_TYPES } from '../data/enums.js';
+import { RESEARCH_RESOURCE, UNIT_TAGS, EFFECT_TYPES, EFFECT_SOURCES } from '../data/enums.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
 import { MONSTER_UNITS } from '../data/monsters-data.js';
 import { BUILDING_MAP, LOCATION_MAIN_CHAIN } from '../data/buildings-data.js';
@@ -663,14 +663,15 @@ function _buildHtml(bDef, opts = {}) {
     }
   }
 
-  // Tech-applied bonuses for this specific building
-  const appliedTechEffects = state.factions?.get(state.playerFactionId)?.appliedTechEffects ?? [];
-  for (const techDef of appliedTechEffects) {
-    for (const eff of (techDef.effects ?? [])) {
-      if (eff.type !== EFFECT_TYPES.BUILDING_INCOME_BONUS) continue;
-      if (eff.buildingId !== bDef.id && eff.category !== bDef.category) continue;
-      const r = ALL_RES[eff.resourceId];
-      if (r) bonusParts.push(`${r.emoji} +${eff.amount}/turn ${r.name} <span class="btt-tech-tag">Tech</span>`);
+  // Faction-level bonuses for this specific building (faction base + techs)
+  const factionEffects = state.factions?.get(state.playerFactionId)?.factionEffects ?? [];
+  for (const eff of factionEffects) {
+    if (eff.type !== EFFECT_TYPES.BUILDING_INCOME_BONUS) continue;
+    if (eff.buildingId !== bDef.id && eff.category !== bDef.category) continue;
+    const r = ALL_RES[eff.resourceId];
+    if (r) {
+      const tag = eff.source === EFFECT_SOURCES.TECH ? ' <span class="btt-tech-tag">Tech</span>' : '';
+      bonusParts.push(`${r.emoji} +${eff.amount}/turn ${r.name}${tag}`);
     }
   }
 
@@ -972,27 +973,13 @@ export const hideArtifactTooltip = hideBuildingTooltip;
  * @param {{ type: 'faction'|'tech', id: string, name: string } | null} unlockSource
  * @param {Element} anchorEl
  */
-export function showActionTooltip(actionDef, unlockSource, anchorEl) {
+export function showActionTooltip(actionDef, anchorEl) {
   if (!tooltipEl || !actionDef) return;
   clearTimeout(_hideTimer);
-
-  let unlockSection;
-  if (unlockSource) {
-    const sourceLabel = unlockSource.type === 'tech' ? 'Tech' : 'Faction ability';
-    unlockSection = `<div class="btt-row btt-bonus">✓ ${sourceLabel}: ${unlockSource.name}</div>`;
-  } else if (actionDef.hintTechId) {
-    const hintTech = TECH_MAP[actionDef.hintTechId];
-    const techName = hintTech?.name ?? actionDef.hintTechId;
-    unlockSection = `<div class="btt-row btt-cost">🔒 Requires: ${techName}</div>`;
-  } else {
-    unlockSection = `<div class="btt-row btt-cost">🔒 Not available</div>`;
-  }
 
   tooltipEl.innerHTML = `
     <div class="btt-header">${actionDef.icon} ${actionDef.label}</div>
     <div class="btt-desc">${actionDef.description ?? ''}</div>
-    <hr class="btt-hr">
-    <div class="btt-section">${unlockSection}</div>
   `.trim();
 
   tooltipEl.hidden = false;

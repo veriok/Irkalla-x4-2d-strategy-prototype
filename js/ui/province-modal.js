@@ -107,10 +107,7 @@ function _effectiveBuildingCost(bDef, prov = null) {
   const factionId = state.playerFactionId;
   const faction   = FACTION_MAP[factionId];
   const fs        = getFaction(factionId);
-  const { buildingMultiplier, timePenalty } = accumulateBuildCostModifiers(
-    faction?.effects ?? [],
-    fs?.appliedTechEffects ?? []
-  );
+  const { buildingMultiplier, timePenalty } = accumulateBuildCostModifiers(fs?.factionEffects ?? []);
   const govDiscount = prov ? _getGovernorBuildDiscountPercent(prov) : 0;
   const advResId0 = faction?.resources?.advanced?.[0]?.id;
   const advResId1 = faction?.resources?.advanced?.[1]?.id;
@@ -127,12 +124,8 @@ function _effectiveBuildingCost(bDef, prov = null) {
 
 /** Apply faction location build cost modifiers. */
 function _effectiveLocationCost(baseCost, baseTurns) {
-  const faction   = FACTION_MAP[state.playerFactionId];
-  const fs        = getFaction(state.playerFactionId);
-  const { locationMultiplier, timePenalty } = accumulateBuildCostModifiers(
-    faction?.effects ?? [],
-    fs?.appliedTechEffects ?? []
-  );
+  const fs = getFaction(state.playerFactionId);
+  const { locationMultiplier, timePenalty } = accumulateBuildCostModifiers(fs?.factionEffects ?? []);
   const cost = {};
   for (const [res, amt] of Object.entries(baseCost)) {
     cost[res] = Math.ceil(amt * locationMultiplier);
@@ -1064,9 +1057,7 @@ function _renderRecruit(prov) {
 
   const fs = getFaction(state.playerFactionId);
   const unlockedTechs = fs?.unlockedTechs ?? [];
-  const obsoletedUnits = new Set(
-    (fs?.appliedTechEffects ?? []).flatMap(e => e.obsoleteUnits ?? [])
-  );
+  const obsoletedUnits = fs?.obsoleteUnits ?? new Set();
 
   const seen  = new Set();
   const units = [];
@@ -1334,7 +1325,7 @@ function collectProvinceActions(prov, onRefresh) {
   const actions = [];
 
   if (isFactionActionUnlocked(factionId, 'conscript_levies')) {
-    const conscriptEff = (fs?.appliedTechEffects ?? []).flatMap(e => e.effects ?? []).find(e => e.type === 'conscript_cost_reduction');
+    const conscriptEff = (fs?.factionEffects ?? []).find(e => e.type === 'conscript_cost_reduction');
     const CONSCRIPT_COST = 10 - (conscriptEff?.costReduction ?? 0);
     const CONSCRIPT_COUNT = 2;
     const tribute = fs?.resources?.tribute ?? 0;

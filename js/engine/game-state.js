@@ -19,7 +19,7 @@
  */
 
 import { FACTIONS, FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
-import { GAME_EVENTS, EFFECT_TYPES, EFFECT_SCOPES } from '../data/enums.js';
+import { GAME_EVENTS, EFFECT_TYPES, EFFECT_SCOPES, EFFECT_SOURCES } from '../data/enums.js';
 import { collectEffectsForScope } from './effect-resolver.js';
 import { emit } from './game-events.js';
 import { RACE_MAP } from '../data/races-data.js';
@@ -75,7 +75,8 @@ function createFactionState(faction) {
     armySupplyCap:         supplyCap,
     unlockedTechs:         [],           // string[] of unlocked tech ids
     researchCostMultiplier: 1.0,         // *= 1.03 per unlock (may be reduced by tech)
-    appliedTechEffects:    [],           // effect objects from all unlocked techs
+    factionEffects:        (faction.effects ?? []).map(e => ({ ...e, source: EFFECT_SOURCES.FACTION, sourceName: faction.name })),
+    obsoleteUnits:         new Set(),    // unit type ids obsoleted by unlocked techs
     globalMilitiaBonus:    0,            // cumulative militia bonus from techs
     woundChanceBonus:      0,            // additional wound-instead-of-destroy chance (necromantic_arts)
     // ─── Hero system ─────────────────────────────────────
@@ -650,15 +651,16 @@ export function unlockTech(factionId, techId) {
 
   // Apply research multiplier — may be reduced by philosophical_school tech effect
   const baseGrowth = 1.03;
-  const reductionEff = fs.appliedTechEffects.find(e =>
-    (e.effects ?? []).some(ef => ef.type === 'research_multiplier_reduction')
-  );
+  const reductionEff = fs.factionEffects.find(e => e.type === 'research_multiplier_reduction');
   const growthRate = reductionEff
-    ? (reductionEff.effects.find(ef => ef.type === 'research_multiplier_reduction')?.multiplier ?? 0.024)
+    ? (reductionEff.multiplier ?? 0.024)
     : (baseGrowth - 1);
   fs.researchCostMultiplier = parseFloat((fs.researchCostMultiplier * (1 + growthRate)).toFixed(6));
 
-  fs.appliedTechEffects.push(techDef);
+  for (const eff of (techDef.effects ?? []))
+    fs.factionEffects.push({ ...eff, source: EFFECT_SOURCES.TECH, sourceId: techId, sourceName: techDef.name });
+  for (const unitId of (techDef.obsoleteUnits ?? []))
+    fs.obsoleteUnits.add(unitId);
 
   // Apply cached state immediately so event listeners get clean data
   if (techDef.militiaBonus) fs.globalMilitiaBonus += techDef.militiaBonus;

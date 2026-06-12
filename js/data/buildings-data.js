@@ -1508,20 +1508,14 @@ function _getChainRoot(buildingId) {
  * Returns { locationMultiplier, buildingMultiplier, timePenalty }
  * Used by province-modal and production queue when displaying/applying costs.
  *
- * @param {Array} factionEffects     — faction.effects from factions-data (may be undefined)
- * @param {Array} appliedTechEffects — factionState.appliedTechEffects
+ * @param {Array} factionEffects — factionState.factionEffects (flat, pre-tagged with source)
  */
-export function accumulateBuildCostModifiers(factionEffects = [], appliedTechEffects = []) {
+export function accumulateBuildCostModifiers(factionEffects = []) {
   let locationMult = 1;
   let buildingMult = 1;
   let timePenalty  = 0;
 
-  const allEffects = [
-    ...factionEffects,
-    ...appliedTechEffects.flatMap(te => te.effects ?? []),
-  ];
-
-  for (const eff of allEffects) {
+  for (const eff of factionEffects) {
     if (eff.scope !== EFFECT_SCOPES.FACTION) continue;
     if (eff.type === EFFECT_TYPES.BUILD_COST_PERCENT) {
       const mult = 1 + (eff.percent ?? 0) / 100;

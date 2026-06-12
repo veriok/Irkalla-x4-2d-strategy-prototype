@@ -65,7 +65,6 @@ export function computeProvinceIncomeBreakdown(province, factionId) {
   if (!faction) return {};
 
   const factionState  = getFaction(factionId);
-  const appliedTechs  = factionState?.appliedTechEffects ?? [];
   const biome         = getBiome(province.biomeId);
   const advResId0     = faction.resources.advanced?.[0]?.id;
   const advResId1     = faction.resources.advanced?.[1]?.id;
@@ -88,13 +87,8 @@ export function computeProvinceIncomeBreakdown(province, factionId) {
 
   addFlat(faction.resources.gold.id, 'Province base', 3);
 
-  // Pre-collect tech BUILDING_INCOME_BONUS effects to avoid O(n²) per building
-  const buildingTechBonuses = [];
-  for (const techDef of appliedTechs) {
-    for (const eff of (techDef.effects ?? [])) {
-      if (eff.type === EFFECT_TYPES.BUILDING_INCOME_BONUS) buildingTechBonuses.push(eff);
-    }
-  }
+  const buildingIncomeBonuses = (factionState?.factionEffects ?? [])
+    .filter(e => e.type === EFFECT_TYPES.BUILDING_INCOME_BONUS);
 
   for (const loc of province.locations) {
     if (!loc.isControllable) continue;
@@ -110,7 +104,7 @@ export function computeProvinceIncomeBreakdown(province, factionId) {
         addFlat(resId, bDef.name, eff.amount ?? 0);
       }
 
-      for (const eff of buildingTechBonuses) {
+      for (const eff of buildingIncomeBonuses) {
         const matches = (eff.buildingId === buildingId) || (eff.category && eff.category === bDef.category);
         if (matches) addFlat(eff.resourceId, bDef.name, eff.amount ?? 0);
       }
@@ -141,11 +135,9 @@ export function computeProvinceIncomeBreakdown(province, factionId) {
     }
   }
 
-  for (const techDef of appliedTechs) {
-    for (const eff of (techDef.effects ?? [])) {
-      if (eff.type !== EFFECT_TYPES.INCOME_PERCENT) continue;
-      addMod(eff.resourceId, techDef.name, eff.percent ?? 0);
-    }
+  for (const eff of (factionState?.factionEffects ?? [])) {
+    if (eff.type !== EFFECT_TYPES.INCOME_PERCENT) continue;
+    addMod(eff.resourceId, eff.sourceName ?? '', eff.percent ?? 0);
   }
 
   if (province.governorId) {
@@ -464,8 +456,7 @@ function tickProvinceStatuses() {
 // ─── Army move reset ──────────────────────────────────────
 
 function resetArmyMoves(factionId) {
-  const oceanMoveEff = (getFaction(factionId)?.appliedTechEffects ?? [])
-    .flatMap(e => e.effects ?? [])
+  const oceanMoveEff = (getFaction(factionId)?.factionEffects ?? [])
     .find(e => e.type === 'ocean_movement_bonus');
 
   for (const army of getArmiesByFaction(factionId)) {
