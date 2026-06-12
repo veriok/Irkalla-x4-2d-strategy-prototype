@@ -306,8 +306,7 @@ export const FACTIONS = [
     startingUnits: [{ unitId: 'river_skirmisher', count: 2 }, { unitId: 'sun_warrior', count: 1 }],
     effects: [
       { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.LOCATION_COST_PERCENT,             target: 'shrine', percent: -10 },
-      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_IN_LOCATION_COST_PERCENT, target: 'shrine', percent: -10 },
-      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILD_TIME_BONUS,       target: 'all',       amount: 1 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_IN_LOCATION_COST_PERCENT, target: 'shrine', percent: -10 }
     ],
     startingSpellbooks: { [SPELL_SCHOOL_IDS.DEATH]: 3, [SPELL_SCHOOL_IDS.FIRE]: 3 },
     onArmyCasualties: [FACTION_REACTION_IDS.SUTEKH_RA_MUMMY_SPAWN],

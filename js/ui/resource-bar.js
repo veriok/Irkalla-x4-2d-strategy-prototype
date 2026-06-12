@@ -7,6 +7,7 @@
 import { state, getFaction, computeHeroCount } from '../engine/game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { computeIncomeBreakdown } from '../engine/turn-engine.js';
+import { showFactionEffectsTooltip, hideFactionEffectsTooltip } from './tooltips.js';
 
 const resourceBarEl  = document.getElementById('resource-bar');
 const factionFlagEl  = document.getElementById('faction-flag');
@@ -129,3 +130,11 @@ export function renderResourceBar() {
 }
 
 document.addEventListener('technology-researched', () => renderResourceBar());
+
+// Faction banner hover — show all active faction-level effects
+const factionBannerEl = document.getElementById('faction-banner');
+if (factionBannerEl) {
+  factionBannerEl.style.cursor = 'help';
+  factionBannerEl.addEventListener('mouseenter', (e) => showFactionEffectsTooltip(factionBannerEl, e));
+  factionBannerEl.addEventListener('mouseleave', hideFactionEffectsTooltip);
+}

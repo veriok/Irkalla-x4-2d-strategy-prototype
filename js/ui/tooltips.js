@@ -1002,3 +1002,225 @@ export function showActionTooltip(actionDef, anchorEl) {
 }
 
 export const hideActionTooltip = hideBuildingTooltip;
+
+// ─── Faction effects tooltip (faction banner hover) ────────────────────────
+
+export function showFactionEffectsTooltip(anchorEl, mouseEvent = null) {
+  if (!tooltipEl) return;
+  const fs = state.factions?.get(state.playerFactionId);
+  if (!fs) return;
+  const html = _buildFactionEffectsHtml(fs.factionEffects ?? []);
+
+  clearTimeout(_hideTimer);
+  tooltipEl.innerHTML = html;
+  tooltipEl.hidden = false;
+
+  requestAnimationFrame(() => {
+    const tw = 260;
+    const th = tooltipEl.offsetHeight;
+    const originX = mouseEvent?.clientX ?? anchorEl.getBoundingClientRect().right;
+    const originY = mouseEvent?.clientY ?? anchorEl.getBoundingClientRect().top;
+    let left = originX + 12;
+    let top  = originY + 12;
+    if (left + tw > window.innerWidth  - 8) left = originX - tw - 12;
+    if (top  + th > window.innerHeight - 8) top  = window.innerHeight - th - 8;
+    top = Math.max(8, top);
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top  = `${top}px`;
+    tooltipEl.classList.add('visible');
+  });
+}
+
+export const hideFactionEffectsTooltip = hideBuildingTooltip;
+
+function _buildFactionEffectsHtml(effects) {
+  // Merge effects with identical type + discriminating fields so stacked techs collapse
+  const merged = new Map();
+  for (const eff of effects) {
+    const key = [
+      eff.type, eff.scope ?? '',
+      eff.resourceId ?? '', eff.stat ?? '', eff.target ?? '',
+      eff.unitId ?? '', eff.unitType ?? '',
+      eff.buildingId ?? '', eff.category ?? '', eff.biome ?? '',
+    ].join('|');
+    if (merged.has(key)) {
+      const ex = merged.get(key);
+      if (eff.amount  != null) ex.amount  = (ex.amount  ?? 0) + eff.amount;
+      if (eff.percent != null) ex.percent = (ex.percent ?? 0) + eff.percent;
+    } else {
+      merged.set(key, { ...eff });
+    }
+  }
+
+  const lines = [];
+  for (const eff of merged.values()) {
+    const result = _factionEffectLabel(eff);
+    if (result) lines.push(result);
+  }
+
+  const faction = FACTION_MAP[state.playerFactionId];
+  const body = lines.length > 0
+    ? `<div class="btt-section">${lines.map(({ label, negative }) => `<div class="btt-row ${negative ? 'btt-penalty' : 'btt-bonus'}">▸ ${label}</div>`).join('')}</div>`
+    : `<div class="btt-desc">No outgoing faction effects.</div>`;
+  return `
+    <div class="btt-header">${faction?.emoji ?? ''} ${faction?.name ?? ''} Faction Effects</div>
+    ${body}
+  `.trim();
+}
+
+// Returns { label: string, negative: boolean } or null.
+// negative=true → red (.btt-penalty); false → green (.btt-bonus)
+// Rule: negative means "harmful to the player".
+//   Cost/time increases are harmful even though their raw value is positive.
+//   Reduction effects (displayed negated) are harmful only when the raw value is negative.
+function _factionEffectLabel(eff) {
+  const T = EFFECT_TYPES;
+  const sp    = (n) => n >= 0 ? `+${n}` : `${n}`;
+  const spPct = (n) => n >= 0 ? `+${n}%` : `${n}%`;
+  const cap   = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  const ok  = (label) => ({ label, negative: false });
+  const bad = (label) => ({ label, negative: true  });
+  const byAmt  = (label, amt)  => amt  < 0 ? bad(label) : ok(label);
+  const byPct  = (label, pct)  => pct  < 0 ? bad(label) : ok(label);
+  // For cost/time: higher value = worse for player
+  const byCost = (label, val)  => val  > 0 ? bad(label) : ok(label);
+
+  switch (eff.type) {
+    case T.INCOME_FLAT: {
+      const r = ALL_RES[eff.resourceId];
+      if (!r) return null;
+      return byAmt(`${r.emoji} ${r.name} income: ${sp(eff.amount)}/turn`, eff.amount ?? 0);
+    }
+    case T.INCOME_PERCENT: {
+      const label = eff.resourceId === 'all'
+        ? 'All income'
+        : (ALL_RES[eff.resourceId] ? `${ALL_RES[eff.resourceId].emoji} ${ALL_RES[eff.resourceId].name} income` : 'Income');
+      return byPct(`${label}: ${spPct(eff.percent)}`, eff.percent ?? 0);
+    }
+    case T.FORTIFICATION_BONUS: {
+      const amt = eff.amount ?? 0;
+      return byAmt(`Province defense: ${sp(amt)}%`, amt);
+    }
+    case T.RESEARCH_PERCENT:
+      return byPct(`Research speed: ${spPct(eff.percent ?? 0)}`, eff.percent ?? 0);
+    case T.BUILDING_COST_PERCENT: {
+      const tgt = eff.target === 'all' ? 'all buildings' : `${eff.target ?? 'buildings'} buildings`;
+      return byCost(`Build cost (${tgt}): ${spPct(eff.percent ?? 0)}`, eff.percent ?? 0);
+    }
+    case T.BUILDING_IN_LOCATION_COST_PERCENT: {
+      const tgt = eff.target === 'all' ? 'all locations' : (eff.target ?? 'location');
+      return byCost(`Building cost in ${tgt}: ${spPct(eff.percent ?? 0)}`, eff.percent ?? 0);
+    }
+    case T.LOCATION_COST_PERCENT: {
+      const tgt = eff.target === 'all' ? 'all locations' : (eff.target ?? 'location');
+      return byCost(`Location cost (${tgt}): ${spPct(eff.percent ?? 0)}`, eff.percent ?? 0);
+    }
+    case T.BUILD_TIME_BONUS: {
+      const amt = eff.amount ?? 0;
+      return byCost(`Build time: ${sp(amt)} turn${Math.abs(amt) !== 1 ? 's' : ''}`, amt);
+    }
+    case T.UNIT_COST_MULTI: {
+      const amt = eff.amount ?? 1;
+      return byCost(`Unit cost multiplier: ×${amt}`, amt - 1);
+    }
+    case T.UNIT_RECRUIT_SPEED: {
+      const amt = eff.amount ?? 0;
+      // positive amount = faster recruitment = good
+      return byAmt(`Recruit time: ${sp(-amt)} turn${Math.abs(amt) !== 1 ? 's' : ''}`, amt);
+    }
+    case T.ARMY_SUPPORT_LIMIT:
+      return byAmt(`⚔ Army supply cap: ${sp(eff.amount ?? 0)}`, eff.amount ?? 0);
+    case T.HERO_COUNT_BONUS:
+      return byAmt(`🦸 Hero capacity: ${sp(eff.amount ?? 0)}`, eff.amount ?? 0);
+    case T.BUILDING_INCOME_BONUS: {
+      const r = ALL_RES[eff.resourceId];
+      if (!r) return null;
+      const amt = eff.amount ?? 0;
+      let label;
+      if (eff.buildingId) {
+        const b = BUILDING_MAP[eff.buildingId];
+        label = `${b ? `${b.emoji} ${b.name}` : eff.buildingId} income: ${r.emoji} ${sp(amt)}/turn`;
+      } else if (eff.category) {
+        label = `${cap(eff.category)} buildings: ${r.emoji} ${sp(amt)}/turn`;
+      } else {
+        label = `Building income: ${r.emoji} ${sp(amt)}/turn`;
+      }
+      return byAmt(label, amt);
+    }
+    case T.CONQUEST_PENALTY_REDUCTION: {
+      // positive raw value = conquest penalty goes down = good
+      const raw = eff.percent ?? eff.amount ?? 0;
+      return byAmt(`Conquest penalty: ${spPct(-raw)}`, raw);
+    }
+    case T.OCEAN_MOVEMENT_BONUS:
+      return byAmt(`Ocean movement: ${sp(eff.amount ?? 0)}`, eff.amount ?? 0);
+    case T.RUNE_UPKEEP_REDUCTION: {
+      // positive raw = upkeep goes down = good
+      const raw = eff.amount ?? 0;
+      return byAmt(`Rune upkeep: ${sp(-raw)}`, raw);
+    }
+    case T.LORE_TECH_DISCOUNT: {
+      const raw = eff.percent ?? 0;
+      return byAmt(`Lore tech cost: ${spPct(-raw)}`, raw);
+    }
+    case T.VICTORY_SOUL_BONUS:
+      return ok(`👻 Souls from victory: ${sp(eff.amount ?? 0)}`);
+    case T.SOUL_RESURRECTION_CHANCE:
+      return ok(`💀 Soul resurrection: +${Math.round((eff.amount ?? 0) * 100)}% chance`);
+    case T.FORTIFY_COST_REDUCTION: {
+      const raw = eff.percent ?? 0;
+      return byAmt(`Fortify cost: ${spPct(-raw)}`, raw);
+    }
+    case T.COASTAL_RESOURCE_BONUS: {
+      const r = ALL_RES[eff.resourceId];
+      return byAmt(`Coastal income: ${r ? `${r.emoji} ` : ''}${sp(eff.amount ?? 0)}/turn`, eff.amount ?? 0);
+    }
+    case T.CLEAR_REWARD_MULTIPLIER: {
+      const amt = eff.amount ?? 1;
+      return byCost(`Clear rewards: ×${amt}`, 1 - amt); // <1 would be bad
+    }
+    case T.RESEARCH_MULTIPLIER_REDUCTION: {
+      const raw = eff.amount ?? 0;
+      return byAmt(`Research cost growth: ${sp(-raw)}`, raw);
+    }
+    case T.BIOME_INCOME_BONUS: {
+      const biome = cap(eff.biome ?? eff.target ?? 'biome');
+      const r = ALL_RES[eff.resourceId];
+      return byAmt(`${biome} income: ${r ? `${r.emoji} ` : ''}${sp(eff.amount ?? 0)}/turn`, eff.amount ?? 0);
+    }
+    case T.BIOME_COMBAT_BONUS: {
+      const biome = cap(eff.biome ?? eff.target ?? 'biome');
+      return byAmt(`${biome} combat: ${spPct(eff.amount ?? 0)}`, eff.amount ?? 0);
+    }
+    case T.RUIN_CLEAR_BONUS: {
+      const r = ALL_RES[eff.resourceId];
+      return byAmt(`Ruin/den clear: ${r ? `${r.emoji} ` : ''}${sp(eff.amount ?? 0)}`, eff.amount ?? 0);
+    }
+    case T.CONSCRIPT_COST_REDUCTION: {
+      const raw = eff.percent ?? 0;
+      return byAmt(`Conscript cost: ${spPct(-raw)}`, raw);
+    }
+    case T.STAT_MODIFIER_ARMY: {
+      const s = cap(eff.stat ?? 'stat');
+      return byAmt(`⚔ Army ${s}: ${sp(eff.amount ?? 0)}`, eff.amount ?? 0);
+    }
+    case T.STAT_MODIFIER_UNIT_TYPE: {
+      const s = cap(eff.stat ?? 'stat');
+      const subj = eff.unitId ?? cap(eff.unitType ?? 'Units');
+      return byAmt(`⚔ ${subj} ${s}: ${sp(eff.amount ?? 0)}`, eff.amount ?? 0);
+    }
+    case T.ARMY_MOVEMENT_BONUS:
+      return byAmt(`Army movement: ${sp(eff.amount ?? 0)}`, eff.amount ?? 0);
+    case T.ARMY_ALL_UNITS_MULTI_BONUS: {
+      const s = cap(eff.stat ?? 'stat');
+      return byAmt(`⚔ All units ${s}: ${spPct(eff.amount ?? 0)}`, eff.amount ?? 0);
+    }
+    case T.ARMY_UNIT_TYPE_MULTI_BONUS: {
+      const s = cap(eff.stat ?? 'stat');
+      const subj = cap(eff.unitType ?? 'Units');
+      return byAmt(`⚔ ${subj} ${s}: ${spPct(eff.amount ?? 0)}`, eff.amount ?? 0);
+    }
+    default:
+      return null;
+  }
+}

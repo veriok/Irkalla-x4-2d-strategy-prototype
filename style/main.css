@@ -1338,6 +1338,7 @@ body {
 }
 .btt-row { font-size: 0.71rem; color: var(--text); }
 .btt-bonus { color: var(--success); }
+.btt-penalty { color: var(--danger); }
 .btt-prereq { font-size: 0.71rem; color: var(--text-muted); margin-top: 2px; }
 .btt-den-bar-wrap {
   width: 100%;
