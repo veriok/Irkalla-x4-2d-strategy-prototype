@@ -311,7 +311,6 @@ export const FACTIONS = [
     startingSpellbooks: { [SPELL_SCHOOL_IDS.DEATH]: 3, [SPELL_SCHOOL_IDS.FIRE]: 3 },
     onArmyCasualties: [FACTION_REACTION_IDS.SUTEKH_RA_MUMMY_SPAWN],
   },
-
   {
     id: FACTION_IDS.CLANS_FIRST_SCALE,
     raceId: RACE_IDS.LIZARD,

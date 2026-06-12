@@ -522,11 +522,13 @@ function _buildTechHtml(techDef) {
 
   if ((techDef.unlockBuildings ?? []).length > 0) {
     const pFactionId = state.playerFactionId ?? null;
+    const pRaceId = pFactionId ? (FACTION_MAP[pFactionId]?.raceId ?? null) : null;
     const names = techDef.unlockBuildings
       .filter(id => {
         const b = BUILDING_MAP[id];
         if (!b) return true;
         if (b.factionId && b.factionId !== pFactionId) return false;
+        if (b.raceId && b.raceId !== pRaceId) return false;
         if (pFactionId && (b.disabledFactions ?? []).includes(pFactionId)) return false;
         return true;
       })
@@ -551,6 +553,14 @@ function _buildTechHtml(techDef) {
       const r = eff.resourceId === 'all' ? null : ALL_RES[eff.resourceId];
       const label = eff.resourceId === 'all' ? 'All income' : (r ? `${r.emoji} ${r.name}` : eff.resourceId);
       effectParts.push(`📊 ${label}: +${eff.percent}% income`);
+    }
+    if (eff.type === EFFECT_TYPES.COASTAL_RESOURCE_BONUS) {
+      const r = ALL_RES[eff.resourceId];
+      effectParts.push(`🌊 Coastal income: ${r ? `${r.emoji} ` : ''}+${eff.amount ?? 0}/turn`);
+    }
+    if (eff.type === EFFECT_TYPES.RESEARCH_MULTIPLIER_REDUCTION) {
+      const pct = ((eff.multiplier ?? 0) * 100).toFixed(0);
+      effectParts.push(`📚 Research cost growth: +${pct}% per tech (base +3%)`);
     }
   }
 
@@ -1180,8 +1190,8 @@ function _factionEffectLabel(eff) {
       return byCost(`Clear rewards: ×${amt}`, 1 - amt); // <1 would be bad
     }
     case T.RESEARCH_MULTIPLIER_REDUCTION: {
-      const raw = eff.amount ?? 0;
-      return byAmt(`Research cost growth: ${sp(-raw)}`, raw);
+      const pct = ((eff.multiplier ?? 0) * 100).toFixed(0);
+      return byAmt(`Research cost growth: +${pct}% per tech (base +3%)`, 1);
     }
     case T.BIOME_INCOME_BONUS: {
       const biome = cap(eff.biome ?? eff.target ?? 'biome');

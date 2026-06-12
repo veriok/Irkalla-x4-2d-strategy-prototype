@@ -31,7 +31,8 @@
  *   description   — flavour text
  */
 
-import { BUILDING_CATEGORIES, FACTION_IDS, RESOURCE_IDS, EFFECT_SCOPES, EFFECT_TYPES } from './enums.js';
+import { BUILDING_CATEGORIES, FACTION_IDS, RACE_IDS, RESOURCE_IDS, EFFECT_SCOPES, EFFECT_TYPES } from './enums.js';
+import { FACTION_MAP } from './factions-data.js';
 
 // ─────────────────────────────────────────────────────────
 // GENERIC chains (all factions)
@@ -410,6 +411,7 @@ const GENERIC_CHAINS = [
     id: 'library', name: 'Library', emoji: '📖',
     cardImg: 'assets/cards/buildings/library.png',
     factionId: null,
+    disabledFactions: [FACTION_IDS.POLEIS_AETHERA],
     allowedLocTypes: ['main_settlement'],
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.SCIENTIFIC,
@@ -427,6 +429,7 @@ const GENERIC_CHAINS = [
     id: 'scriptorium', name: 'Scriptorium', emoji: '📜',
     cardImg: 'assets/cards/buildings/scriptorium.png',
     factionId: null,
+    disabledFactions: [FACTION_IDS.POLEIS_AETHERA],
     allowedLocTypes: ['main_settlement'],
     tier: 2, upgradeFromId: 'library',
     category: BUILDING_CATEGORIES.SCIENTIFIC,
@@ -444,6 +447,7 @@ const GENERIC_CHAINS = [
     id: 'research_academy', name: 'Academy', emoji: '🏛️',
     cardImg: 'assets/cards/buildings/research_academy.png',
     factionId: null,
+    disabledFactions: [FACTION_IDS.POLEIS_AETHERA],
     allowedLocTypes: ['main_settlement'],
     tier: 3, upgradeFromId: 'scriptorium',
     category: BUILDING_CATEGORIES.SCIENTIFIC,
@@ -463,6 +467,7 @@ const GENERIC_CHAINS = [
     id: 'fishing_raft', name: 'Fishing Raft', emoji: '🛶',
     cardImg: 'assets/cards/buildings/fishing_raft.png',
     factionId: null,
+    disabledFactions: [FACTION_IDS.POLEIS_AETHERA],
     allowedLocTypes: ['main_settlement', 'village'],
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.TRADE,
@@ -541,7 +546,7 @@ const GENERIC_CHAINS = [
     allowedLocTypes: ['main_settlement', 'fort'],
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.INDUSTRIAL,
-    techRequired: 'bronze_working',
+    techRequired: 'smithing',
     cost: { gold: 60 }, buildTurns: 3,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 2 },
@@ -558,14 +563,14 @@ const GENERIC_CHAINS = [
     allowedLocTypes: ['main_settlement', 'fort'],
     tier: 2, upgradeFromId: 'forge_1',
     category: BUILDING_CATEGORIES.INDUSTRIAL,
-    techRequired: 'steel',
+    techRequired: 'alloying',
     cost: { gold: 130 }, buildTurns: 5,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 4 },
     ],
     prerequisites: ['forge_1'],
     unlocksBuildings: ['forge_3'],
-    description: 'A proper foundry smelting steel at scale. Required for elite armoured units.',
+    description: 'A proper foundry smelting at scale. Required for elite armoured units.',
   },
   {
     id: 'forge_3', name: 'Grand Arsenal', emoji: '🏭',
@@ -575,7 +580,7 @@ const GENERIC_CHAINS = [
     allowedLocTypes: ['main_settlement', 'fort'],
     tier: 3, upgradeFromId: 'forge_2',
     category: BUILDING_CATEGORIES.INDUSTRIAL,
-    techRequired: 'iron_working',
+    techRequired: 'metallurgy',
     cost: { gold: 240 }, buildTurns: 7,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 6 },
@@ -946,13 +951,13 @@ const POLEIS_AETHERA_CHAINS = [
 
   // ── Academy Chain (main_settlement) ─────────────────────
   {
-    id: 'academy_1', name: 'Symposium', emoji: '📜',
+    id: 'poleis_academy_1', name: 'Symposium', emoji: '📜',
     cardImg: 'assets/cards/buildings/academy_1.png',
     factionId: FACTION_IDS.POLEIS_AETHERA,
     allowedLocTypes: ['main_settlement'],
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.SCIENTIFIC,
-    techRequired: null,
+    techRequired: 'writing',
     cost: { gold: 55, philosophy: 5 }, buildTurns: 3,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.PHILOSOPHY, amount: 1 },
@@ -960,41 +965,41 @@ const POLEIS_AETHERA_CHAINS = [
     ],
     prerequisites: [],
     mainBuildingTier: 1,
-    unlocksBuildings: ['academy_2'],
+    unlocksBuildings: ['poleis_academy_2'],
     description: 'A gathering place for thinkers, poets, and philosophers.',
   },
   {
-    id: 'academy_2', name: 'Academy', emoji: '🏛️',
+    id: 'poleis_academy_2', name: 'Academy', emoji: '🏛️',
     cardImg: 'assets/cards/buildings/academy_2.png',
     factionId: FACTION_IDS.POLEIS_AETHERA,
     allowedLocTypes: ['main_settlement'],
-    tier: 2, upgradeFromId: 'academy_1',
+    tier: 2, upgradeFromId: 'poleis_academy_1',
     category: BUILDING_CATEGORIES.SCIENTIFIC,
-    techRequired: null,
+    techRequired: 'philosophical_school',
     cost: { gold: 120, philosophy: 15 }, buildTurns: 5,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.PHILOSOPHY, amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,       amount: 4 },
     ],
-    prerequisites: ['academy_1'],
+    prerequisites: ['poleis_academy_1'],
     mainBuildingTier: 2,
-    unlocksBuildings: ['academy_3'],
+    unlocksBuildings: ['poleis_academy_3'],
     description: 'A renowned school. Attracts scholars and improves all research.',
   },
   {
-    id: 'academy_3', name: 'Great Library', emoji: '📚',
+    id: 'poleis_academy_3', name: 'Great Library', emoji: '📚',
     cardImg: 'assets/cards/buildings/academy_3.png',
     factionId: FACTION_IDS.POLEIS_AETHERA,
     allowedLocTypes: ['main_settlement'],
-    tier: 3, upgradeFromId: 'academy_2',
+    tier: 3, upgradeFromId: 'poleis_academy_2',
     category: BUILDING_CATEGORIES.SCIENTIFIC,
-    techRequired: null,
+    techRequired: 'universities',
     cost: { gold: 240, philosophy: 35 }, buildTurns: 7,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.PHILOSOPHY, amount: 3 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,       amount: 8 },
     ],
-    prerequisites: ['academy_2'],
+    prerequisites: ['poleis_academy_2'],
     mainBuildingTier: 3,
     unlocksBuildings: [],
     description: 'The greatest repository of knowledge in the world.',
@@ -1002,37 +1007,37 @@ const POLEIS_AETHERA_CHAINS = [
 
   // ── Azure Docks Chain (coastal village / main_settlement) ─
   {
-    id: 'azure_docks_1', name: 'Azure Docks', emoji: '⛵',
+    id: 'poleis_azure_docks_1', name: 'Azure Docks', emoji: '⛵',
     cardImg: 'assets/cards/buildings/azure_docks_1.png',
     factionId: FACTION_IDS.POLEIS_AETHERA,
     allowedLocTypes: ['village', 'main_settlement'],
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.EXPLORATION,
-    techRequired: 'sailing',
+    techRequired: 'fishing',
     cost: { gold: 55, aether: 8 }, buildTurns: 3,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.AETHER, amount: 1 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,   amount: 3 },
     ],
     prerequisites: [],
-    unlocksBuildings: ['azure_docks_2'],
+    unlocksBuildings: ['poleis_azure_docks_2'],
     requiresCoastalProvince: true,
     description: 'Azure-sailed elven ships moored at a coastal dock. Aether drifts in from the sea.',
   },
   {
-    id: 'azure_docks_2', name: 'Grand Azure Docks', emoji: '🚢',
+    id: 'poleis_azure_docks_2', name: 'Grand Azure Docks', emoji: '🚢',
     cardImg: 'assets/cards/buildings/azure_docks_2.png',
     factionId: FACTION_IDS.POLEIS_AETHERA,
     allowedLocTypes: ['village', 'main_settlement'],
-    tier: 2, upgradeFromId: 'azure_docks_1',
+    tier: 2, upgradeFromId: 'poleis_azure_docks_1',
     category: BUILDING_CATEGORIES.EXPLORATION,
-    techRequired: null,
+    techRequired: 'wayfarers_guild',
     cost: { gold: 120, aether: 20 }, buildTurns: 5,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.AETHER, amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,   amount: 6 },
     ],
-    prerequisites: ['azure_docks_1'],
+    prerequisites: ['poleis_azure_docks_1'],
     mainBuildingTier: 2,
     unlocksBuildings: [],
     requiresCoastalProvince: true,
@@ -1405,7 +1410,7 @@ const DWARF_CHAINS = [
   {
     id: 'dwarf_forge_1', name: 'Runic Smithy', emoji: '🔨',
     cardImg: 'assets/cards/buildings/dwarf_forge_1.png',
-    factionId: null,
+    factionId: null, raceId: RACE_IDS.DWARF,
     allowedLocTypes: ['main_settlement', 'fort'],
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.INDUSTRIAL,
@@ -1422,7 +1427,7 @@ const DWARF_CHAINS = [
   {
     id: 'dwarf_forge_2', name: 'Rune Foundry', emoji: '⚙️',
     cardImg: 'assets/cards/buildings/dwarf_forge_2.png',
-    factionId: null,
+    factionId: null, raceId: RACE_IDS.DWARF,
     allowedLocTypes: ['main_settlement', 'fort'],
     tier: 2, upgradeFromId: 'dwarf_forge_1',
     category: BUILDING_CATEGORIES.INDUSTRIAL,
@@ -1439,11 +1444,11 @@ const DWARF_CHAINS = [
   {
     id: 'dwarf_forge_3', name: 'Grand Rune Forge', emoji: '🔩',
     cardImg: 'assets/cards/buildings/dwarf_forge_3.png',
-    factionId: null,
+    factionId: null, raceId: RACE_IDS.DWARF,
     allowedLocTypes: ['main_settlement', 'fort'],
     tier: 3, upgradeFromId: 'dwarf_forge_2',
     category: BUILDING_CATEGORIES.INDUSTRIAL,
-    techRequired: 'iron_working',
+    techRequired: 'metallurgy',
     cost: { gold: 280, runes: 20 }, buildTurns: 7,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,  amount: 9 },
@@ -1487,8 +1492,10 @@ export const LOCATION_MAIN_CHAIN = {
 
 /** Get all buildings available to a faction (generic + faction-specific) */
 export function getBuildingsForFaction(factionId) {
+  const raceId = FACTION_MAP[factionId]?.raceId ?? null;
   return BUILDINGS.filter(b =>
     (b.factionId === null || b.factionId === factionId) &&
+    (!b.raceId || b.raceId === raceId) &&
     !b.disabledFactions?.includes(factionId)
   );
 }

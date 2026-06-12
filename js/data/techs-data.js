@@ -66,7 +66,7 @@ const STONE_AGE = [
     baseCost: 10, requires: null,
     quote: '"He who controls the river controls the kingdom\'s stomach."',
     description: 'Allows construction of Fishing Rafts at capital and mercantile locations (+3 gold/turn).',
-    unlockBuildings: ['fishing_raft'],
+    unlockBuildings: ['fishing_raft', 'poleis_azure_docks_1'],
   },
   {
     id: 'mysticism', name: 'Mysticism', emoji: '🌙', img: 'assets/cards/techs/mysticism.png',
@@ -119,7 +119,7 @@ const STONE_AGE = [
     baseCost: 20, requires: 'mysticism',
     quote: '"The spoken word dies with the speaker. The written word lives forever."',
     description: 'Records of knowledge enable formal scholarship. Unlocks Libraries and Monastic Schools.',
-    unlockBuildings: ['library', 'monastic_school'],
+    unlockBuildings: ['library', 'monastic_school', 'poleis_academy_1'],
   },
   {
     id: 'worship', name: 'Worship', emoji: '🙏',
@@ -132,7 +132,7 @@ const STONE_AGE = [
   {
     id: 'warbands', name: 'Warbands', emoji: '🪓',
     era: TECH_ERAS.STONE,
-    baseCost: 20, requires: null,
+    baseCost: 10, requires: null,
     quote: '"A man alone is a man afraid. A warband is something else entirely."',
     description: 'Organised raiding parties formalize into standing warbands. Unlocks the Mustering Field training building.',
     unlockBuildings: ['mustering_field', 'discipline_hall_1'],
@@ -145,6 +145,14 @@ const STONE_AGE = [
     description: 'Shaped stone allows permanent fortifications. Allows upgrade of forts to tier 2.',
     unlockBuildings: ['fortress_1'],
     clearsLocationTypes: ['rocky_ground'],
+  },
+  {
+    id: 'smithing', name: 'Smithing', emoji: '🔨',
+    era: TECH_ERAS.STONE,
+    baseCost: 20, requires: 'mining',
+    quote: '"Shape the metal while it glows. Hesitate, and it hardens against you."',
+    description: 'Basic metalsmithing. Allows construction of a Smithy in settlements and forts.',
+    unlockBuildings: ['forge_1'],
   },
 ];
 
@@ -168,7 +176,8 @@ const BRONZE_AGE = [
     era: TECH_ERAS.BRONZE,
     baseCost: 40, requires: 'boatbuilding',
     quote: '"The sea is not an obstacle — it is a road waiting to be walked."',
-    description: 'Deep-water navigation. All trade and exploration buildings yield +1 gold/turn.',
+    description: 'Deep-water navigation. All trade and exploration buildings yield +1 gold/turn. Unlocks the Azure Sea Raider.',
+    unlockUnits: ['azure_sea_raider'],
     effects: [
       { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.TRADE,       resourceId: RESOURCE_IDS.GOLD, amount: 1 },
       { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.EXPLORATION, resourceId: RESOURCE_IDS.GOLD, amount: 1 },
@@ -198,7 +207,7 @@ const BRONZE_AGE = [
   {
     id: 'bronze_working', name: 'Bronze Working', emoji: '🗡️',
     era: TECH_ERAS.BRONZE,
-    baseCost: 40, requires: 'masonry',
+    baseCost: 40, requires: 'smithing',
     quote: '"Copper bends. Tin yields. Together they forge something neither can be alone."',
     description: 'Superior metal alloy. All infantry units gain +1 attack.',
     effects: [
@@ -239,10 +248,10 @@ const BRONZE_AGE = [
     id: 'navigation', name: 'Navigation', emoji: '🧭',
     era: TECH_ERAS.BRONZE,
     baseCost: 50, requires: 'sailing',
-    quote: '"Stars do not move — they merely wait for us to learn their language."',
-    description: 'Celestial wayfinding. +10% to all faction gold income. Armies can venture into deep ocean provinces.',
+    quote: '"Stars do not move - they merely wait for us to learn their language."',
+    description: 'Celestial wayfinding. +5% to all faction gold income. Armies can venture into deep ocean provinces.',
     effects: [
-      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: RESOURCE_IDS.GOLD, percent: 10 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: RESOURCE_IDS.GOLD, percent: 5 },
     ],
     unlockActions: ['embark_deep'],
   },
@@ -263,18 +272,15 @@ const BRONZE_AGE = [
     quote: '"The castle is not a place of refuge — it is a declaration of permanence."',
     description: 'Massive stone fortresses. Allows upgrade of forts to tier 3 Castle. Militia +2.',
     unlockBuildings: ['fortress_2'],
-    militiaBonus: 2,
+    militiaBonus: 1,
   },
   {
-    id: 'steel', name: 'Steel', emoji: '⚔️',
+    id: 'alloying', name: 'Alloying', emoji: '⚗️',
     era: TECH_ERAS.BRONZE,
     baseCost: 50, requires: 'bronze_working',
-    quote: '"The edge that wins the battle is not the sharpest — it is the last one standing."',
-    description: 'Refined alloy of exceptional strength. Infantry gain +1 attack and +1 defense.',
-    effects: [
-      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.INFANTRY, stat: 'attack',  amount: 1 },
-      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
-    ],
+    quote: '"Heat it, strike it, quench it. Three acts that separate the craftsman from the fool."',
+    description: 'Advanced metal refinement. Allows upgrade of Smithy to Foundry.',
+    unlockBuildings: ['forge_2'],
   },
   {
     id: 'call_to_glory', name: 'Call to Glory', emoji: '🦸',
@@ -327,12 +333,12 @@ const IRON_AGE = [
   {
     id: 'iron_working', name: 'Iron Working', emoji: '⚒️',
     era: TECH_ERAS.IRON,
-    baseCost: 80, requires: 'steel',
+    baseCost: 80, requires: 'alloying',
     quote: '"Iron is patient. It waits in the earth for a thousand years, then rules the age."',
-    description: 'Smelted iron surpasses bronze entirely. Infantry gain +2 attack and +1 defense.',
+    description: 'Smelted iron surpasses bronze entirely. Increase infantry defense by +1 and industry building yield by +2 gold/turn.',
     effects: [
-      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.INFANTRY, stat: 'attack',  amount: 1 },
       { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.INDUSTRIAL, resourceId: RESOURCE_IDS.GOLD, amount: 2 },
     ],
     clearsLocationTypes: ['dense_jungle', 'frozen_wastes'],
   },
@@ -353,7 +359,7 @@ const IRON_AGE = [
     baseCost: 100, requires: 'scholarship',
     quote: '"The university is where knowledge comes to die — and be reborn as wisdom."',
     description: 'Grand institutions of higher learning. Unlocks the Academy (tier 3 science building). +10% research.',
-    unlockBuildings: ['research_academy'],
+    unlockBuildings: ['research_academy', 'poleis_academy_3'],
     effects: [
       { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: RESOURCE_IDS.RESEARCH, percent: 10 },
     ],
@@ -366,7 +372,7 @@ const IRON_AGE = [
     description: 'Centralised rule. Unlocks the Imperial Palace (town hall tier 3). Grand Hall grants +3 gold/turn.',
     unlockBuildings: ['town_hall_3'],
     effects: [
-      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'town_hall_2', resourceId: RESOURCE_IDS.GOLD, amount: 3 },
+    { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.ADMINISTRATION, resourceId: RESOURCE_IDS.GOLD, amount: 2 },
     ],
   },
   {
@@ -381,8 +387,9 @@ const IRON_AGE = [
     id: 'metallurgy', name: 'Metallurgy', emoji: '🔩',
     era: TECH_ERAS.IRON,
     baseCost: 100, requires: 'iron_working',
-    quote: '"The forge reveals the truth of all things — what is strong endures; what is weak, burns."',
-    description: 'Advanced metalworking. All units gain +1 attack and +1 defense.',
+    quote: '"The forge reveals the truth of all things - what is strong endures; what is weak, burns."',
+    description: 'Advanced metalworking. All units gain +1 attack and +1 defense. Allows upgrade to Grand Arsenal and Grand Rune Forge.',
+    unlockBuildings: ['forge_3', 'dwarf_forge_3'],
     effects: [
       { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.ALL, stat: 'attack',  amount: 1 },
       { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.ALL, stat: 'defense', amount: 1 },
@@ -396,7 +403,7 @@ const IRON_AGE = [
 
 // ─────────────────────────────────────────────────────────
 // RACE TECH OVERRIDES
-// Each race replaces: worship (Stone), fortification (Bronze), steel (Bronze)
+// Each race replaces: worship (Stone), fortification (Bronze), alloying (Bronze)
 // ─────────────────────────────────────────────────────────
 
 const DWARF_RACE_TECHS = [
@@ -421,7 +428,7 @@ const DWARF_RACE_TECHS = [
   {
     id: 'runescript', name: 'Runescript', emoji: '📿',
     era: TECH_ERAS.BRONZE,
-    raceId: RACE_IDS.DWARF, replacesId: 'steel',
+    raceId: RACE_IDS.DWARF, replacesId: 'alloying',
     quote: '"A lighter hand on the chisel, yet the same power flows."',
     description: 'Refined runic technique reduces upkeep by 1 Rune per runed unit (minimum 0). Rune assignments become cheaper to maintain.',
     unlockBuildings: ['dwarf_forge_2'],
@@ -464,6 +471,7 @@ const ELF_RACE_TECHS = [
     raceId: RACE_IDS.ELF, replacesId: 'worship',
     quote: '"The sea holds more secrets than any library — and unlike scholars, it never lies."',
     description: 'Elven mastery of oceanic patterns. Coastal provinces generate +1 Aether/turn.',
+    unlockBuildings: ['religious_2'],
     effects: [
       { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.INCOME_PERCENT, resourceId: RESOURCE_IDS.AETHER, percent: 10 },
     ],
@@ -481,7 +489,8 @@ const ELF_RACE_TECHS = [
     era: TECH_ERAS.IRON,
     raceId: RACE_IDS.ELF, replacesId: 'trade_networks',
     quote: '"Every horizon is the beginning of someone\'s home."',
-    description: 'Elven mastery of ocean routes. +15% gold income. Armies starting a turn on ocean provinces gain +1 movement.',
+    description: 'Elven mastery of ocean routes. +15% gold income. Armies starting a turn on ocean provinces gain +1 movement. Unlocks Grand Azure Docks.',
+    unlockBuildings: ['poleis_azure_docks_2'],
     effects: [
       { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.INCOME_PERCENT,       resourceId: RESOURCE_IDS.GOLD, percent: 15 },
       { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.OCEAN_MOVEMENT_BONUS, biomes: ['shallow_ocean', 'deep_ocean'], movementBonus: 1 },
@@ -513,7 +522,7 @@ const LIZARD_RACE_TECHS = [
   {
     id: 'ancestral_rites', name: 'Ancestral Rites', emoji: '🌿',
     era: TECH_ERAS.BRONZE,
-    raceId: RACE_IDS.LIZARD, replacesId: 'steel',
+    raceId: RACE_IDS.LIZARD, replacesId: 'alloying',
     quote: '"The price of knowledge is always paid — sometimes in blood, sometimes in memory."',
     description: 'Deep ritual converts Ancient Lore into research insight. Spend 10 Ancient Lore for -20% on next tech cost.',
     effects: [
@@ -674,34 +683,36 @@ const AURIC_EMPIRE_TECHS = [
 
 const POLEIS_AETHERA_TECHS = [
   {
-    id: 'great_voyage', name: 'Great Voyage', emoji: '🗺️',
-    era: TECH_ERAS.IRON,
-    factionId: FACTION_IDS.POLEIS_AETHERA, replacesId: 'trade_networks',
-    quote: '"The greatest explorer is not she who sees the most — but she who returns to tell about it."',
-    description: 'Clearing ruins or monster dens awards +100% of the base gold/research reward.',
+    id: 'naval_league', name: 'Naval League', emoji: '⛵',
+    era: TECH_ERAS.STONE,
+    factionId: FACTION_IDS.POLEIS_AETHERA, replacesId: 'boatbuilding',
+    quote: '"The sea gives as much as it takes — if you know how to ask."',
+    description: 'Elven sea mastery. Armies can embark on shallow seas. Coastal provinces generate +1 gold/turn. Unlocks Azure Docks.',
+    unlockActions: ['embark_shallow'],
     effects: [
-      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.CLEAR_REWARD_MULTIPLIER, multiplier: 1.0 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.COASTAL_RESOURCE_BONUS, resourceId: RESOURCE_IDS.GOLD, amount: 1 },
     ],
   },
   {
-    id: 'philosophical_school', name: 'Philosophical School', emoji: '📜',
-    era: TECH_ERAS.IRON,
-    factionId: FACTION_IDS.POLEIS_AETHERA, replacesId: 'scholarship',
+    id: 'philosophical_school', name: 'Philosophical Schools', emoji: '📜',
+    era: TECH_ERAS.BRONZE,
+    factionId: FACTION_IDS.POLEIS_AETHERA, replacesId: 'alloying',
     quote: '"A mind that questions is worth more than one that merely obeys."',
-    description: 'The research cost multiplier grows at 1.024× per tech instead of the base 1.03×.',
+    description: 'The research cost multiplier grows at 1.02× per tech instead of the base 1.03×. Unlocks the Academy (tier 2 research building).',
+    unlockBuildings: ['poleis_academy_2', 'forge_2'],
     effects: [
-      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.RESEARCH_MULTIPLIER_REDUCTION, multiplier: 0.024 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.RESEARCH_MULTIPLIER_REDUCTION, multiplier: 0.02 },
     ],
   },
   {
-    id: 'naval_league', name: 'Naval League', emoji: '🌊',
+    id: 'aether_infused_arrows', name: 'Aether-Infused Arrows', emoji: '🏹',
     era: TECH_ERAS.IRON,
     factionId: FACTION_IDS.POLEIS_AETHERA, replacesId: 'guilds',
-    quote: '"The sea gives as much as it takes — if you know how to ask."',
-    description: 'Unlocks the Azure Sea Raider. Coastal provinces generate +0.25 Aether/turn.',
-    unlockUnits: ['azure_sea_raider'],
+    quote: '"A shaft of aether flies truer than any iron bolt."',
+    description: 'Aetheric essence suffuses elven arrows. All ARCHER units gain +1 attack and +1 defense.',
     effects: [
-      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.COASTAL_RESOURCE_BONUS, resourceId: RESOURCE_IDS.AETHER, amount: 0.25 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.ARCHER, stat: 'attack',  amount: 1 },
+      { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.ARCHER, stat: 'defense', amount: 1 },
     ],
   },
 ];
@@ -721,10 +732,11 @@ const ARCHONATE_GREYHAVEN_TECHS = [
   {
     id: 'discipline', name: 'Discipline', emoji: '🏯',
     era: TECH_ERAS.BRONZE,
-    factionId: FACTION_IDS.ARCHONATE_GREYHAVEN, replacesId: 'steel',
+    factionId: FACTION_IDS.ARCHONATE_GREYHAVEN, replacesId: 'alloying',
     quote: '"Pain is weakness leaving the body. We have none of it left."',
     description: 'Unlocks the Phalanx Soldier unit. All INFANTRY units gain +1 defense.',
     unlockUnits: ['phalanx_soldier'],
+    unlockBuildings: ['forge_2'],
     effects: [
       { scope: EFFECT_SCOPES.ARMY, type: EFFECT_TYPES.STAT_MODIFIER_UNIT_TYPE, unitType: UNIT_TYPES.INFANTRY, stat: 'defense', amount: 1 },
     ],

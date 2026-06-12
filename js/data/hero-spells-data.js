@@ -15,7 +15,6 @@
  *   targetType   — default target type for the spell:
  *                  combat:   'all_enemies'|'random_enemy'|'all_allies'|'random_ally'|'lowest_hp_ally'
  *                  province: 'self'|'any_adjacent_enemy_province'|'any_friendly_province'
- *   factionOnly  — FACTION_IDS[] (restrict visibility/research)
  *   description  — shown in spellbook
  *
  *   effects      — [no_skill, novice, expert, master] — index = getHeroSchoolTier()
