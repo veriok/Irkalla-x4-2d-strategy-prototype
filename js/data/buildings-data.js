@@ -51,7 +51,7 @@ const GENERIC_CHAINS = [
     techRequired: null,
     cost: { gold: 60 }, buildTurns: 3,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.GOLD,     amount: 8 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.GOLD,     amount: 6 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: 'faction_primary_adv', amount: 1 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.RESEARCH, amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.PROVINCE_GROWTH_SLOTS,   amount: 1 },
@@ -73,8 +73,8 @@ const GENERIC_CHAINS = [
     techRequired: 'pottery',
     cost: { gold: 120, faction_primary_adv: 5 }, buildTurns: 5,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.GOLD,     amount: 16 },
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: 'faction_primary_adv', amount: 2 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.GOLD,     amount: 12 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: 'faction_primary_adv', amount: 1.5 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.RESEARCH, amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.PROVINCE_GROWTH_SLOTS,   amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.MILITIA_BONUS,           amount: 4 },
@@ -95,7 +95,7 @@ const GENERIC_CHAINS = [
     techRequired: 'monarchy',
     cost: { gold: 240, faction_primary_adv: 15 }, buildTurns: 8,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.GOLD,     amount: 24 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.GOLD,     amount: 18 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: 'faction_primary_adv', amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.RESEARCH, amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.PROVINCE_GROWTH_SLOTS,   amount: 3 },
@@ -298,10 +298,10 @@ const GENERIC_CHAINS = [
     allowedLocTypes: ['village', 'main_settlement'],
     tier: 2, upgradeFromId: 'market_1',
     category: BUILDING_CATEGORIES.TRADE,
-    techRequired: null,
+    techRequired: 'currency',
     cost: { gold: 110 }, buildTurns: 4,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 10 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 7 },
     ],
     prerequisites: ['market_1'],
     mainBuildingTier: 2,
@@ -315,10 +315,10 @@ const GENERIC_CHAINS = [
     allowedLocTypes: ['village', 'main_settlement'],
     tier: 3, upgradeFromId: 'market_2',
     category: BUILDING_CATEGORIES.TRADE,
-    techRequired: null,
+    techRequired: 'trade_networks',
     cost: { gold: 220 }, buildTurns: 6,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 20 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 14 },
     ],
     prerequisites: ['market_2'],
     mainBuildingTier: 3,
@@ -338,12 +338,12 @@ const GENERIC_CHAINS = [
     techRequired: null,
     cost: { gold: 80 }, buildTurns: 3,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: 'faction_secondary_adv', amount: 1 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: 'faction_secondary_adv', amount: 0.75 },
     ],
     prerequisites: [],
     mainBuildingTier: 1,
     unlocksBuildings: [],
-    description: 'A sacred vault housing holy relics. Generates +1 secondary advanced resource.',
+    description: 'A sacred vault housing holy relics. Generates +0.75 secondary advanced resource.',
   },
 
   // ── Military Base Chain (fort only, pre-placed) ─────────
@@ -433,7 +433,8 @@ const GENERIC_CHAINS = [
     allowedLocTypes: ['main_settlement'],
     tier: 2, upgradeFromId: 'library',
     category: BUILDING_CATEGORIES.SCIENTIFIC,
-    techRequired: null,
+    techRequired: 'philosophy',
+    mainBuildingTier: 2,
     cost: { gold: 100 }, buildTurns: 3,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.RESEARCH, amount: 2 },
@@ -475,7 +476,7 @@ const GENERIC_CHAINS = [
     requiresCoastalProvince: true,
     cost: { gold: 30 }, buildTurns: 1,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 3 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 4 },
     ],
     prerequisites: [], unlocksBuildings: [], demolishable: true,
     description: 'A simple fishing platform that yields steady coastal bounty.',
@@ -493,7 +494,7 @@ const GENERIC_CHAINS = [
     requiresBiome: ['mountains', 'hills'],
     cost: { gold: 60 }, buildTurns: 2,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 5 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 4 },
     ],
     prerequisites: [], unlocksBuildings: [], demolishable: true,
     description: 'Open-cast copper extraction generating consistent metal income.',
@@ -512,7 +513,7 @@ const GENERIC_CHAINS = [
     cost: { gold: 60 }, buildTurns: 2,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,     amount: 2 },
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: 'faction_primary_adv', amount: 1 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: 'faction_primary_adv', amount: 0.25 },
     ],
     prerequisites: [], unlocksBuildings: [], demolishable: true,
     description: 'Domesticated herds provide food, hides, and trade goods.',
@@ -549,7 +550,7 @@ const GENERIC_CHAINS = [
     techRequired: 'smithing',
     cost: { gold: 60 }, buildTurns: 3,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 2 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 1 },
     ],
     prerequisites: [],
     unlocksBuildings: ['forge_2'],
@@ -566,7 +567,7 @@ const GENERIC_CHAINS = [
     techRequired: 'alloying',
     cost: { gold: 130 }, buildTurns: 5,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 4 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 2 },
     ],
     prerequisites: ['forge_1'],
     unlocksBuildings: ['forge_3'],
@@ -583,7 +584,7 @@ const GENERIC_CHAINS = [
     techRequired: 'metallurgy',
     cost: { gold: 240 }, buildTurns: 7,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 6 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD, amount: 4 },
     ],
     prerequisites: ['forge_2'],
     unlocksBuildings: [],
@@ -1081,7 +1082,7 @@ const ARCHONATE_GREYHAVEN_CHAINS = [
     techRequired: null,
     cost: { gold: 45 }, buildTurns: 2,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.TRIBUTE, amount: 1 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.TRIBUTE, amount: 0.75 },
     ],
     prerequisites: [],
     unlocksBuildings: [],
@@ -1417,7 +1418,7 @@ const DWARF_CHAINS = [
     techRequired: 'runeforging',
     cost: { gold: 70 }, buildTurns: 3,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,  amount: 3 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,  amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.RUNES, amount: 0.5 },
     ],
     prerequisites: [],
@@ -1434,8 +1435,8 @@ const DWARF_CHAINS = [
     techRequired: 'runescript',
     cost: { gold: 150, runes: 10 }, buildTurns: 5,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,  amount: 6 },
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.RUNES, amount: 1 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,  amount: 4 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.RUNES, amount: 0.75 },
     ],
     prerequisites: ['dwarf_forge_1'],
     unlocksBuildings: ['dwarf_forge_3'],
@@ -1451,8 +1452,8 @@ const DWARF_CHAINS = [
     techRequired: 'metallurgy',
     cost: { gold: 280, runes: 20 }, buildTurns: 7,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,  amount: 9 },
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.RUNES, amount: 1.5 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,  amount: 6 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.RUNES, amount: 1.25 },
     ],
     prerequisites: ['dwarf_forge_2'],
     unlocksBuildings: [],

@@ -160,6 +160,16 @@ const BRONZE_AGE = [
     ],
   },
   {
+    id: 'currency', name: 'Currency', emoji: '🪙',
+    era: TECH_ERAS.BRONZE,
+    baseCost: 40, requires: 'crop_rotation',
+    quote: '"A coin is just metal. The idea behind it is what moves armies."',
+    description: 'Standardised coinage formalises trade. All trade buildings yield +1 gold/turn.',
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.TRADE, resourceId: RESOURCE_IDS.GOLD, amount: 1 },
+    ],
+  },
+  {
     id: 'sailing', name: 'Sailing', emoji: '⛵',
     era: TECH_ERAS.BRONZE,
     baseCost: 40, requires: 'boatbuilding',
@@ -694,7 +704,6 @@ const ARCHONATE_GREYHAVEN_TECHS = [
     description: 'Tribute Hall buildings generate +0.25 additional Tribute/turn, and training category buildings yield +0.5 gold/turn.',
     effects: [
       { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, buildingId: 'tribute_hall',            resourceId: RESOURCE_IDS.TRIBUTE, amount: 0.25 },
-      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.BUILDING_INCOME_BONUS, category: BUILDING_CATEGORIES.TRAINING, resourceId: RESOURCE_IDS.GOLD,    amount: 0.5 },
     ],
   },
   {
