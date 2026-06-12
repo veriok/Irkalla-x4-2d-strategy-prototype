@@ -1510,24 +1510,30 @@ function _getChainRoot(buildingId) {
  *
  * @param {Array} factionEffects — factionState.factionEffects (flat, pre-tagged with source)
  */
-export function accumulateBuildCostModifiers(factionEffects = []) {
-  let locationMult = 1;
-  let buildingMult = 1;
-  let timePenalty  = 0;
+export function accumulateBuildCostModifiers(factionEffects = [], { locationType = null, buildingId = null } = {}) {
+  let costMult    = 1;
+  let timePenalty = 0;
 
   for (const eff of factionEffects) {
     if (eff.scope !== EFFECT_SCOPES.FACTION) continue;
-    if (eff.type === EFFECT_TYPES.BUILD_COST_PERCENT) {
-      const mult = 1 + (eff.percent ?? 0) / 100;
-      if (eff.target === 'location') locationMult *= mult;
-      else if (eff.target === 'building') buildingMult *= mult;
-      else if (eff.target === 'all') { locationMult *= mult; buildingMult *= mult; }
+    if (eff.type === EFFECT_TYPES.LOCATION_COST_PERCENT) {
+      if (locationType !== null && (eff.target === 'all' || eff.target === locationType)) {
+        costMult *= 1 + (eff.percent ?? 0) / 100;
+      }
+    } else if (eff.type === EFFECT_TYPES.BUILDING_IN_LOCATION_COST_PERCENT) {
+      if (buildingId !== null && locationType !== null && (eff.target === 'all' || eff.target === locationType)) {
+        costMult *= 1 + (eff.percent ?? 0) / 100;
+      }
+    } else if (eff.type === EFFECT_TYPES.BUILDING_COST_PERCENT) {
+      if (eff.target === 'all' || eff.target === buildingId) {
+        costMult *= 1 + (eff.percent ?? 0) / 100;
+      }
     } else if (eff.type === EFFECT_TYPES.BUILD_TIME_BONUS) {
       timePenalty += (eff.amount ?? 0);
     }
   }
 
-  return { locationMultiplier: locationMult, buildingMultiplier: buildingMult, timePenalty };
+  return { costMultiplier: costMult, timePenalty };
 }
 
 /**

@@ -511,7 +511,7 @@ export function getHeroProvinceBonuses(hero) {
         case EFFECT_TYPES.INCOME_PERCENT:      incomePercent           += eff.percent; break;
         case EFFECT_TYPES.INCOME_FLAT:         flatGold                += eff.amount;  break;
         case EFFECT_TYPES.BUILD_TIME_BONUS:    buildSpeedBonus         += eff.amount;  break;
-        case EFFECT_TYPES.BUILD_COST_PERCENT:  buildDiscountPercent    += eff.percent; break;
+        case EFFECT_TYPES.BUILDING_COST_PERCENT: buildDiscountPercent   += eff.percent; break;
         case EFFECT_TYPES.RESEARCH_PERCENT:    researchPercent         += eff.percent; break;
         case EFFECT_TYPES.FORTIFICATION_BONUS:
           if (eff.scope === EFFECT_SCOPES.PROVINCE) defensePercent += eff.amount;

@@ -40,6 +40,7 @@
     <button id="minimap-btn" class="btn-secondary">🗺 Map</button>
     <button id="research-btn" class="btn-secondary">📚 Research</button>
     <button id="diplomacy-btn" class="btn-secondary">🏛 Diplomacy</button>
+    <button id="settings-btn" class="btn-secondary">⚙ Settings</button>
     <button id="end-turn-btn" class="btn-primary">End Turn ⏭</button>
   </header>
 
@@ -334,6 +335,22 @@
   <!-- Hero Assignment Modal (small overlay, shared by army panel + province modal) -->
   <div id="hero-assign-modal-overlay" hidden>
     <div id="ham-box"><!-- filled by hero-assign-modal.js --></div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal-overlay" class="modal-overlay" hidden>
+    <div id="settings-modal" class="modal-box settings-modal">
+      <h2>Settings</h2>
+      <div class="settings-section">
+        <div class="settings-label">Font Size</div>
+        <div class="settings-font-btns">
+          <button class="settings-font-btn btn-secondary" data-size="14">Normal</button>
+          <button class="settings-font-btn btn-secondary" data-size="16">Large</button>
+          <button class="settings-font-btn btn-secondary" data-size="18">Extra Large</button>
+        </div>
+      </div>
+      <button id="settings-close" class="btn-secondary" style="margin-top:16px">Close</button>
+    </div>
   </div>
 
   <!-- Entry point -->

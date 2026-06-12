@@ -335,19 +335,19 @@ export const HERO_SKILLS = [
     tiers: [
       {
         tier: 'novice',
-        effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILD_COST_PERCENT, percent: 5 }],
+        effects: [{ scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILDING_COST_PERCENT, percent: 5 }],
       },
       {
         tier: 'expert',
         effects: [
-          { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILD_COST_PERCENT, percent: 10 },
+          { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILDING_COST_PERCENT, percent: 10 },
           { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILD_TIME_BONUS, amount: 1 },
         ],
       },
       {
         tier: 'master',
         effects: [
-          { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILD_COST_PERCENT, percent: 20 },
+          { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILDING_COST_PERCENT, percent: 20 },
           { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.BUILD_TIME_BONUS, amount: 2 },
         ],
       },
@@ -588,7 +588,7 @@ export function skillEffectsToText(effects) {
         return `+${eff.percent}% province income`;
       case EFFECT_TYPES.INCOME_FLAT:
         return `+${eff.amount} gold/turn`;
-      case EFFECT_TYPES.BUILD_COST_PERCENT:
+      case EFFECT_TYPES.BUILDING_COST_PERCENT:
         return `-${eff.percent}% build cost`;
       case EFFECT_TYPES.BUILD_TIME_BONUS:
         return `-${eff.amount} build turn${eff.amount !== 1 ? 's' : ''}`;

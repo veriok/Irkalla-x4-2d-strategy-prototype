@@ -103,11 +103,14 @@ function _getProvinceRecruitSpeed(prov) {
 
 // ─── Build cost modifier helper ───────────────────────────
 /** Apply faction build cost modifiers + governor discount. Returns { cost, buildTurns } */
-function _effectiveBuildingCost(bDef, prov = null) {
+function _effectiveBuildingCost(bDef, prov = null, locationType = null) {
   const factionId = state.playerFactionId;
   const faction   = FACTION_MAP[factionId];
   const fs        = getFaction(factionId);
-  const { buildingMultiplier, timePenalty } = accumulateBuildCostModifiers(fs?.factionEffects ?? []);
+  const { costMultiplier, timePenalty } = accumulateBuildCostModifiers(
+    fs?.factionEffects ?? [],
+    { buildingId: bDef.id, locationType }
+  );
   const govDiscount = prov ? _getGovernorBuildDiscountPercent(prov) : 0;
   const advResId0 = faction?.resources?.advanced?.[0]?.id;
   const advResId1 = faction?.resources?.advanced?.[1]?.id;
@@ -116,19 +119,19 @@ function _effectiveBuildingCost(bDef, prov = null) {
     let resolvedRes = res;
     if (res === 'faction_primary_adv')   resolvedRes = advResId0 ?? res;
     if (res === 'faction_secondary_adv') resolvedRes = advResId1 ?? res;
-    const base = Math.ceil(amt * buildingMultiplier);
+    const base = Math.ceil(amt * costMultiplier);
     cost[resolvedRes] = govDiscount > 0 ? Math.max(0, Math.ceil(base * (1 - govDiscount / 100))) : base;
   }
   return { cost, buildTurns: bDef.buildTurns + timePenalty };
 }
 
-/** Apply faction location build cost modifiers. */
-function _effectiveLocationCost(baseCost, baseTurns) {
+/** Apply faction location build cost modifiers. Returns { cost, buildTurns } */
+function _effectiveLocationCost(baseCost, baseTurns, locationType) {
   const fs = getFaction(state.playerFactionId);
-  const { locationMultiplier, timePenalty } = accumulateBuildCostModifiers(fs?.factionEffects ?? []);
+  const { costMultiplier, timePenalty } = accumulateBuildCostModifiers(fs?.factionEffects ?? [], { locationType });
   const cost = {};
   for (const [res, amt] of Object.entries(baseCost)) {
-    cost[res] = Math.ceil(amt * locationMultiplier);
+    cost[res] = Math.ceil(amt * costMultiplier);
   }
   return { cost, buildTurns: baseTurns + timePenalty };
 }
@@ -674,7 +677,7 @@ function _renderSlotActions(prov, loc, buildingId) {
     const alreadyQueued = prov.productionQueue?.some(
       item => item.type === 'building' && item.id === upgradeDef.id
     );
-    const { cost: effCost, buildTurns: effTurns } = _effectiveBuildingCost(upgradeDef, prov);
+    const { cost: effCost, buildTurns: effTurns } = _effectiveBuildingCost(upgradeDef, prov, loc.type);
     const costStr = _costStr(effCost, allRes);
     const affordable = canAfford(state.playerFactionId, effCost);
 
@@ -804,7 +807,7 @@ function _renderEmptySlotBuildMenu(prov, loc) {
   for (const bDef of [...available, ...blocked]) {
     const isBlocked    = !availableIds.has(bDef.id);
     const blockedByDef = isBlocked ? _mainBuildingBlocker(bDef, loc.type, installedIds) : null;
-    const { cost: effCost, buildTurns: effTurns } = _effectiveBuildingCost(bDef, prov);
+    const { cost: effCost, buildTurns: effTurns } = _effectiveBuildingCost(bDef, prov, loc.type);
     const affordable = canAfford(state.playerFactionId, effCost);
     const costStr    = _costStr(effCost, allRes);
     const alreadyQ   = prov.productionQueue?.some(i => i.type === 'building' && i.id === bDef.id);
@@ -888,9 +891,10 @@ function _renderBuildLocationMenu(prov, loc) {
   header.textContent = 'Build Location';
   sidebarActEl.appendChild(header);
 
-  for (const [locType, cost] of Object.entries(LOCATION_BUILD_COSTS)) {
+  for (const [locType, baseCost] of Object.entries(LOCATION_BUILD_COSTS)) {
     const typeMeta   = LOCATION_TYPES[locType];
-    const turns      = LOCATION_BUILD_TURNS[locType] ?? 2;
+    const baseTurns  = LOCATION_BUILD_TURNS[locType] ?? 2;
+    const { cost, buildTurns: turns } = _effectiveLocationCost(baseCost, baseTurns, locType);
     const affordable = canAfford(state.playerFactionId, cost);
     const alreadyQ   = prov.productionQueue?.some(i => i.type === 'build_location' && i.locationId === loc.id);
 
@@ -930,10 +934,11 @@ function _renderConvertMenu(prov, loc) {
   note.textContent = 'Converting clears all existing buildings.';
   sidebarActEl.appendChild(note);
 
-  for (const [locType, cost] of Object.entries(LOCATION_BUILD_COSTS)) {
+  for (const [locType, baseCost] of Object.entries(LOCATION_BUILD_COSTS)) {
     if (locType === currentType) continue;
     const typeMeta   = LOCATION_TYPES[locType];
-    const turns      = LOCATION_BUILD_TURNS[locType] ?? 2;
+    const baseTurns  = LOCATION_BUILD_TURNS[locType] ?? 2;
+    const { cost, buildTurns: turns } = _effectiveLocationCost(baseCost, baseTurns, locType);
     const affordable = canAfford(state.playerFactionId, cost);
     const alreadyQ   = prov.productionQueue?.some(i => i.type === 'build_location' && i.locationId === loc.id);
 

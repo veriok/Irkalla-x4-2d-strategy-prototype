@@ -368,7 +368,9 @@ export const EFFECT_TYPES = Object.freeze({
 
   // --- Research & build ---
   RESEARCH_PERCENT:               'research_percent',
-  BUILD_COST_PERCENT:             'build_cost_percent',
+  BUILDING_COST_PERCENT:             'building_cost_percent',              // target: building id | 'all'
+  BUILDING_IN_LOCATION_COST_PERCENT: 'building_in_location_cost_percent',  // target: location type id | 'all'
+  LOCATION_COST_PERCENT:             'location_cost_percent',              // target: location type id | 'all'
   BUILD_TIME_BONUS:               'build_time_bonus',        // flat turn reduction to build time
 
   // --- Recruitment ---

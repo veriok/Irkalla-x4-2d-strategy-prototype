@@ -833,18 +833,18 @@ function _castHeroCombatSpells(army, enemyArmy, enemyMilitia, ownUnits, enemyUni
   return { lines, casualties };
 }
 
-function _heroXpForCombat(winnerHero, loserHero, enemyArmy, ownArmy) {
-  // Approximate enemy power: (atk + def) × count per unit type
-  const power = (enemyArmy?.units ?? []).reduce((sum, { typeId, count }) => {
-    const u = UNIT_MAP[typeId];
-    return sum + ((u?.attack ?? 0) + (u?.defense ?? 0)) * count;
-  }, 0);
-  if (winnerHero && isHeroActive(winnerHero)) {
-    addHeroExperience(winnerHero, 20 + Math.floor(power / 10));
+function _unitBaseValue(typeId) {
+  const u = UNIT_MAP[typeId];
+  return (u?.attack ?? 0) + (u?.defense ?? 0);
+}
+
+function _xpFromCards(cards, isWinner) {
+  let xp = 0;
+  for (const c of cards) {
+    if (c.status === 'killed')  xp += _unitBaseValue(c.typeId);
+    if (c.status === 'wounded') xp += _unitBaseValue(c.typeId) * (isWinner ? 1 : 0.5);
   }
-  if (loserHero && isHeroActive(loserHero)) {
-    addHeroExperience(loserHero, 5);
-  }
+  return xp;
 }
 
 function _woundHeroOnArmyDestroyed(army, factionId) {
@@ -1197,30 +1197,19 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     const attHero = attFs?.heroes?.find(h => h.id === attArmy.heroId) ?? null;
     const defHero = defFs?.heroes?.find(h => h.id === enemyDefArmy?.heroId) ?? null;
 
-    // Compute XP amounts before applying so we can record them in the report
-    const _power = (army) => (army?.units ?? []).reduce((s, { typeId, count }) => {
-      const u = UNIT_MAP[typeId];
-      return s + ((u?.attack ?? 0) + (u?.defense ?? 0)) * count;
-    }, 0);
-    const _milPow = (pool) => {
-      const n = _militiaCount(pool);
-      const u = pool?.unitDef;
-      return n > 0 && u ? ((u.attack ?? 0) + (u.defense ?? 0)) * n : 0;
-    };
-    const _randXp = (base) => Math.round(base * (0.9 + Math.random() * 0.3));
+    // Compute XP: killed units = full base (atk+def), wounded = full if winner else half, +8 win / +4 lose bonus
+    const _randXp = (base) => Math.round(base * (0.85 + Math.random() * 0.30));
+
+    const attWon = outcome === 'attacker';
+    const defWon = outcome === 'defender';
+    const allDefCards = [...defUnitCards, ...militiaCards];
 
     let attHeroXp = 0, defHeroXp = 0;
-    if (outcome === 'attacker') {
-      const pow = _power(enemyDefArmy) + (enemyDefArmy?._isMilitia ? 0 : _milPow(militiaPool));
-      attHeroXp = attHero && isHeroActive(attHero) ? _randXp(25 + Math.floor(pow / 8)) : 0;
-      defHeroXp = defHero && isHeroActive(defHero) ? _randXp(8) : 0;
-    } else if (outcome === 'defender') {
-      const pow = _power(attArmy);
-      defHeroXp = defHero && isHeroActive(defHero) ? _randXp(25 + Math.floor(pow / 8)) : 0;
-      attHeroXp = attHero && isHeroActive(attHero) ? _randXp(8) : 0;
-    } else {
-      attHeroXp = attHero && isHeroActive(attHero) ? _randXp(8) : 0;
-      defHeroXp = defHero && isHeroActive(defHero) ? _randXp(8) : 0;
+    if (attHero && isHeroActive(attHero)) {
+      attHeroXp = _randXp(_xpFromCards(allDefCards, attWon) + (attWon ? 8 : 4));
+    }
+    if (defHero && isHeroActive(defHero)) {
+      defHeroXp = _randXp(_xpFromCards(attUnitCards, defWon) + (defWon ? 8 : 4));
     }
 
     // Stamp XP onto result so the battle report can display it

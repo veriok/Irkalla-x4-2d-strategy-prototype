@@ -32,6 +32,7 @@ import { initHeroAssignModal } from './ui/hero-assign-modal.js';
 import { initSpellbook, initSpellbookListeners } from './ui/spellbook-modal.js';
 import { grantStartingHero } from './engine/hero-engine.js';
 import { initDiplomacyModal } from './ui/diplomacy-modal.js';
+import './ui/settings-panel.js';
 
 // ─── World gen picker ─────────────────────────────────────
 
@@ -152,98 +153,134 @@ function _getFcTooltip() {
 }
 
 function buildFactionPickerEl(onPick) {
-  const container = document.createElement('div');
-  container.className = 'faction-picker-container';
-
-  // Collect factions grouped by race, preserving insertion order
   const raceOrder = [];
   const raceGroups = {};
   for (const f of FACTIONS) {
     if (!raceGroups[f.raceId]) { raceGroups[f.raceId] = []; raceOrder.push(f.raceId); }
     raceGroups[f.raceId].push(f);
   }
-
   const raceNames = { dwarf: 'Dwarves', elf: 'Elves', lizard: 'Lizardmen', human: 'Humans' };
 
-  // Emit in row-major order so CSS Grid auto-placement fills correctly:
-  // Row 1: all race headers (4 columns)
-  // Row 2: first faction of each race (4 columns, equal height)
-  // Row 3: second faction of each race (4 columns, equal height)
+  const layout = document.createElement('div');
+  layout.className = 'fp-layout';
+
+  // ── Left: flag browser ──────────────────────────────────
+  const browser = document.createElement('div');
+  browser.className = 'fp-flag-browser';
+
   for (const raceId of raceOrder) {
-    const header = document.createElement('div');
-    header.className = 'faction-race-header';
-    header.textContent = raceNames[raceId] ?? raceId;
-    container.appendChild(header);
-  }
+    const section = document.createElement('div');
+    section.className = 'fp-race-section';
 
-  const maxPerRace = Math.max(...raceOrder.map(r => raceGroups[r].length));
-  for (let i = 0; i < maxPerRace; i++) {
-    for (const raceId of raceOrder) {
-      const f = raceGroups[raceId][i];
-      if (!f) { container.appendChild(document.createElement('div')); continue; }
+    const label = document.createElement('div');
+    label.className = 'fp-race-label';
+    label.textContent = raceNames[raceId] ?? raceId;
+    section.appendChild(label);
 
-      const card = document.createElement('div');
-      card.className = 'faction-card';
-      card.style.setProperty('--fc', f.color);
-      const sbooksEntries = Object.entries(f.startingSpellbooks ?? {});
-      const sbooksTooltip = sbooksEntries
-        .map(([schoolId, count]) => {
-          const school = SPELL_SCHOOL_MAP[schoolId];
-          return `${school?.name ?? schoolId}: ${count}`;
-        })
-        .join(' · ');
-      const sbooksHtml = sbooksEntries
-        .flatMap(([schoolId, count]) => {
-          const school = SPELL_SCHOOL_MAP[schoolId];
-          return Array.from({ length: count }, () =>
-            `<span class="fc-spellbook-cover" style="background:${school?.color ?? '#555'}">${school?.icon ?? '📖'}</span>`
-          );
-        })
-        .join('');
-      const sbooksRow = sbooksHtml
-        ? `<div class="fc-spellbooks" title="${sbooksTooltip}">${sbooksHtml}</div>`
-        : '';
+    const flagsRow = document.createElement('div');
+    flagsRow.className = 'fp-flags-row';
 
-      card.innerHTML = `
-        <div class="faction-card-flag-wrap">
-          <img class="faction-card-flag" src="${f.flagImg ?? ''}" alt="${f.name} flag" />
-        </div>
-        <div class="faction-card-name">${f.name}</div>
-        <div class="faction-card-full">${f.fullName}</div>
-        <div class="faction-card-desc">${f.description}</div>
-        ${sbooksRow}
-      `;
-
-      // Playstyle tag — tooltip on hover
-      const playstyleTag = document.createElement('div');
-      playstyleTag.className = 'fc-playstyle-tag';
-      playstyleTag.textContent = '📖 Playstyle';
-      playstyleTag.addEventListener('mouseenter', () => {
-        const tt = _getFcTooltip();
-        const lines = f.playstyle.split(' · ');
-        tt.innerHTML = lines.map((l, i) =>
-          i === 0
-            ? `<div class="fc-tt-type">${l}</div>`
-            : `<div class="fc-tt-line">${l}</div>`
-        ).join('');
-        tt.hidden = false;
-        const rect = playstyleTag.getBoundingClientRect();
-        tt.style.left = `${rect.left + rect.width / 2}px`;
-        tt.style.top  = `${rect.bottom + 6}px`;
-      });
-      playstyleTag.addEventListener('mouseleave', () => { _getFcTooltip().hidden = true; });
-      card.appendChild(playstyleTag);
-
+    for (const f of raceGroups[raceId]) {
       const btn = document.createElement('button');
-      btn.className = 'btn-primary faction-card-btn';
-      btn.textContent = `Play as ${f.shortName ?? f.name}`;
-      btn.addEventListener('click', () => onPick(f.id));
-      card.appendChild(btn);
-      container.appendChild(card);
+      btn.className = 'fp-flag-btn';
+      btn.title = f.name;
+      btn.dataset.factionId = f.id;
+
+      const img = document.createElement('img');
+      img.src = f.flagImg ?? '';
+      img.alt = f.name;
+      img.className = 'fp-flag-img';
+      btn.appendChild(img);
+
+      btn.addEventListener('click', () => selectFaction(f.id));
+      flagsRow.appendChild(btn);
     }
+
+    section.appendChild(flagsRow);
+    browser.appendChild(section);
+  }
+  layout.appendChild(browser);
+
+  // ── Separator ───────────────────────────────────────────
+  const sep = document.createElement('div');
+  sep.className = 'fp-separator';
+  layout.appendChild(sep);
+
+  // ── Right: detail panel ─────────────────────────────────
+  const detail = document.createElement('div');
+  detail.className = 'fp-detail';
+  layout.appendChild(detail);
+
+  function selectFaction(factionId) {
+    layout.querySelectorAll('.fp-flag-btn').forEach(b => {
+      b.classList.toggle('selected', b.dataset.factionId === factionId);
+    });
+
+    const f = FACTIONS.find(x => x.id === factionId);
+    if (!f) return;
+
+    detail.innerHTML = '';
+    detail.style.setProperty('--fc', f.color);
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'fp-detail-title';
+    titleEl.textContent = 'Choose Your Faction';
+    detail.appendChild(titleEl);
+
+    // Leader image + name block
+    const inner = document.createElement('div');
+    inner.className = 'fp-detail-inner';
+    inner.innerHTML = `
+      <div class="fp-detail-leader-wrap">
+        <img class="fp-detail-leader" src="${f.factionImg ?? ''}" alt="${f.name}" />
+      </div>
+      <div class="fp-detail-name">${f.name}</div>
+      <div class="fp-detail-full">${f.fullName}</div>
+      <div class="fp-detail-desc">${f.description}</div>
+    `;
+    detail.appendChild(inner);
+
+    // Magic + Playstyle row
+    const infoRow = document.createElement('div');
+    infoRow.className = 'fp-info-row';
+
+    // Left: spellbooks
+    const sbooksEntries = Object.entries(f.startingSpellbooks ?? {});
+    const sbooksHtml = sbooksEntries
+      .flatMap(([sid, n]) => {
+        const s = SPELL_SCHOOL_MAP[sid];
+        return Array.from({ length: n }, () =>
+          `<span class="fc-spellbook-cover" style="background:${s?.color ?? '#555'}">${s?.icon ?? '📖'}</span>`
+        );
+      }).join('');
+    infoRow.innerHTML = `
+      <div class="fp-magic-col">
+        <div class="fp-col-label">Magic</div>
+        <div class="fc-spellbooks fp-spellbooks">${sbooksHtml}</div>
+      </div>
+      <div class="fp-playstyle-col">
+        <div class="fp-col-label">Playstyle</div>
+        <ul class="fp-playstyle-list">
+          ${(f.playstyle ?? []).map(e =>
+            `<li class="fp-playstyle-entry fp-playstyle-${e.type}">${e.text}</li>`
+          ).join('')}
+        </ul>
+      </div>
+    `;
+    detail.appendChild(infoRow);
+
+    // Play button
+    const playBtn = document.createElement('button');
+    playBtn.className = 'btn-primary fp-play-btn';
+    playBtn.textContent = `Play as ${f.shortName ?? f.name}`;
+    playBtn.addEventListener('click', () => onPick(f.id));
+    detail.appendChild(playBtn);
   }
 
-  return container;
+  // Default to first faction
+  selectFaction(FACTIONS[0]?.id);
+
+  return layout;
 }
 
 function showFactionPicker() {
@@ -254,7 +291,7 @@ function showFactionPicker() {
     const buttonsEl = document.getElementById('modal-buttons');
     const boxEl     = document.getElementById('modal-box');
 
-    titleEl.textContent = 'Choose Your Faction';
+    titleEl.textContent = '';
     bodyEl.innerHTML    = '';
     buttonsEl.innerHTML = '';
     boxEl.classList.add('modal-wide');

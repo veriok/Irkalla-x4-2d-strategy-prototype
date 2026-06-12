@@ -39,7 +39,7 @@
 }
 #province-modal .card-action-btn {
   width: var(--modal-card-w);
-  font-size: 9px;
+  font-size: 0.64rem;
   padding: 3px 0;
 }
 
@@ -80,7 +80,7 @@
   object-fit: cover;
 }
 #pmod-flag-emoji {
-  font-size: 40px;
+  font-size: 2.86rem;
   line-height: 1;
 }
 
@@ -99,7 +99,7 @@
 }
 
 .pmod-nav-arrow {
-  font-size: 22px;
+  font-size: 1.57rem;
   color: var(--text-muted);
   cursor: pointer;
   user-select: none;
@@ -112,14 +112,14 @@
 
 #pmod-province-name {
   font-family: var(--font-title);
-  font-size: 20px;
+  font-size: 1.43rem;
   color: var(--text-bright);
   margin: 0;
   line-height: 1.1;
 }
 
 #pmod-province-sub {
-  font-size: 11px;
+  font-size: 0.79rem;
   color: var(--text-muted);
 }
 #pmod-province-sub .pmod-biome-btn {
@@ -135,7 +135,7 @@
 }
 
 .pmod-res-chip {
-  font-size: 11px;
+  font-size: 0.79rem;
   color: var(--text);
   background: var(--bg-dark);
   border: 1px solid var(--border);
@@ -152,7 +152,7 @@
   position: absolute;
   top: 2px;
   right: 2px;
-  font-size: 9px;
+  font-size: 0.64rem;
   line-height: 1;
   background: var(--accent);
   color: #000;
@@ -167,7 +167,7 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  font-size: 11px;
+  font-size: 0.79rem;
   color: var(--text-muted);
 }
 .pmod-stat-chip {
@@ -186,7 +186,7 @@
 }
 
 .pmod-effect-icon {
-  font-size: 18px;
+  font-size: 1.29rem;
   opacity: 0.75;
 }
 
@@ -200,18 +200,18 @@
 }
 
 .pmod-effect-chip .pmod-effect-icon {
-  font-size: 16px;
+  font-size: 1.14rem;
   opacity: 1;
 }
 
 .pmod-effect-turns {
-  font-size: 9px;
+  font-size: 0.64rem;
   color: var(--text-muted);
   font-weight: bold;
 }
 
 .pmod-effect-stacks {
-  font-size: 9px;
+  font-size: 0.64rem;
   color: var(--accent);
   font-weight: bold;
 }
@@ -219,7 +219,7 @@
 #pmod-close {
   flex-shrink: 0;
   align-self: center;
-  font-size: 13px;
+  font-size: 0.93rem;
   padding: 4px 12px;
 }
 
@@ -304,7 +304,7 @@
 }
 
 #pmod-sidebar-title {
-  font-size: 10px;
+  font-size: 0.71rem;
   text-transform: uppercase;
   color: var(--text-muted);
   letter-spacing: 0.05em;
@@ -358,7 +358,7 @@
   min-width: 0;
 }
 .pmod-action-name {
-  font-size: 12px;
+  font-size: 0.86rem;
   color: var(--text-bright);
   font-weight: 600;
   white-space: nowrap;
@@ -366,11 +366,11 @@
   text-overflow: ellipsis;
 }
 .pmod-action-cost {
-  font-size: 11px;
+  font-size: 0.79rem;
   color: var(--text-muted);
 }
 .pmod-action-hint {
-  font-size: 10px;
+  font-size: 0.71rem;
   color: var(--danger);
   font-style: italic;
 }
@@ -386,7 +386,7 @@
 
 /* Sidebar section headers */
 .pmod-section-header {
-  font-size: 10px;
+  font-size: 0.71rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
@@ -397,7 +397,7 @@
 
 /* Monster den army list */
 .pmod-den-header {
-  font-size: 12px;
+  font-size: 0.86rem;
   color: var(--text);
   margin-bottom: 8px;
   display: flex;
@@ -414,17 +414,17 @@
   border-radius: 3px;
   background: var(--bg-dark);
   margin-bottom: 4px;
-  font-size: 12px;
+  font-size: 0.86rem;
   color: var(--text);
 }
 
 .pmod-army-row button {
-  font-size: 11px;
+  font-size: 0.79rem;
   padding: 2px 8px;
 }
 
 .pmod-no-armies {
-  font-size: 11px;
+  font-size: 0.79rem;
   color: var(--text-muted);
   font-style: italic;
   padding: 8px 0;
@@ -439,7 +439,7 @@
   border: 1px solid var(--border);
   border-radius: 3px;
   background: var(--bg-dark);
-  font-size: 11px;
+  font-size: 0.79rem;
   color: var(--text);
 }
 .pmod-recruit-row + .pmod-recruit-row {
@@ -452,12 +452,12 @@
   gap: 2px;
 }
 .pmod-recruit-name {
-  font-size: 12px;
+  font-size: 0.86rem;
   color: var(--text-bright);
   font-weight: 600;
 }
 .pmod-recruit-stats {
-  font-size: 10px;
+  font-size: 0.71rem;
   color: var(--text-muted);
 }
 
@@ -475,7 +475,7 @@
 }
 
 .pmod-queue-label {
-  font-size: 10px;
+  font-size: 0.71rem;
   text-transform: uppercase;
   color: var(--text-muted);
   letter-spacing: 0.05em;
@@ -498,7 +498,7 @@
 
 /* Sidebar empty state */
 .pmod-empty-hint {
-  font-size: 11px;
+  font-size: 0.79rem;
   color: var(--text-muted);
   font-style: italic;
   padding: 12px 0;
