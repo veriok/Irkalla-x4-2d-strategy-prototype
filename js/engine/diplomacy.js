@@ -24,17 +24,17 @@ import { LEADER_MAP } from '../data/diplomacy-data.js';
 const MEMORY_DEFS = {
   [MEMORY_TYPES.WAR_DECLARED_BY_US]: {
     label: 'We declared war',
-    opinionDelta: -5,
-    driftModifier: -3,
-    gainMultiplier: 0.8,
-    totalTurns: 15,
+    opinionDelta: -15,
+    driftModifier: -5,
+    gainMultiplier: 0.7,
+    totalTurns: 30,
   },
   [MEMORY_TYPES.WAR_DECLARED_ON_US]: {
     label: 'They declared war on us',
-    opinionDelta: -30,
-    driftModifier: -8,
-    gainMultiplier: 0.5,
-    totalTurns: 20,
+    opinionDelta: -40,
+    driftModifier: -12,
+    gainMultiplier: 0.4,
+    totalTurns: 35,
   },
   [MEMORY_TYPES.SURPRISE_WAR_BY_US]: {
     label: 'We launched a surprise attack',
@@ -157,6 +157,7 @@ export function initDiplomacy() {
         },
         pendingProposal: null,
         recentlySentProposals: [],
+        proposalSentOnTurn: {},
       });
     }
     // Initialise opinion/memory maps on each faction state
@@ -412,7 +413,9 @@ function _spreadSurpriseWarOpinion(attackerId, victimId) {
 export function createProposal(fromId, toId, type, goldAmount = null) {
   const rel = getRelationship(fromId, toId);
   if (!rel) return;
-  // Check cooldown — don't spam
+  // One proposal per turn per sender
+  if ((rel.proposalSentOnTurn?.[fromId] ?? -1) >= state.turn) return;
+  // Check cooldown — don't spam after a denial
   const onCooldown = rel.recentlySentProposals.some(
     p => p.fromFactionId === fromId && p.type === type && p.cooldownUntilTurn > state.turn
   );
@@ -425,6 +428,8 @@ export function createProposal(fromId, toId, type, goldAmount = null) {
     goldAmount,
     expiresOnTurn: state.turn + 5,
   };
+  if (!rel.proposalSentOnTurn) rel.proposalSentOnTurn = {};
+  rel.proposalSentOnTurn[fromId] = state.turn;
 
   if (toId === state.playerFactionId) {
     emit(GAME_EVENTS.DIPLOMATIC_PROPOSAL_RECEIVED, {
@@ -529,6 +534,8 @@ export function recordProvinceCapture(attackerId, defenderId) {
   if (!rel || rel.state !== DIPLOMATIC_STATES.WAR) return;
   if (!rel.warScore[attackerId]) rel.warScore[attackerId] = { provincesGained: 0, unitLossesInflicted: 0 };
   rel.warScore[attackerId].provincesGained++;
+  // Direct opinion hit: defender sees each lost province as a grievance (-6 per province)
+  _nudgeOpinion(defenderId, attackerId, -6);
 }
 
 export function recordUnitLoss(victimId, inflictorId, unitCount) {

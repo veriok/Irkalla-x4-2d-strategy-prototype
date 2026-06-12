@@ -43,7 +43,7 @@ const STONE_AGE = [
   {
     id: 'agriculture', name: 'Agriculture', emoji: '🌾', img: 'assets/cards/techs/agriculture.png',
     era: TECH_ERAS.STONE,
-    baseCost: 20, requires: null,
+    baseCost: 10, requires: null,
     quote: '"Only those who toil in the soil understand that from the earth, all things flow."',
     description: 'Organised farming grants +1 gold/turn to all mercantile settlement buildings.',
     effects: [
@@ -55,7 +55,7 @@ const STONE_AGE = [
   {
     id: 'hunting', name: 'Hunting', emoji: '🏹', img: 'assets/cards/techs/hunting.png',
     era: TECH_ERAS.STONE,
-    baseCost: 20, requires: null,
+    baseCost: 10, requires: null,
     quote: '"The greatest weapon is patience. The hunt teaches what armies cannot."',
     description: 'Mastery of ranged combat. Each faction may now recruit their tier-1 archer unit.',
     unlockUnits: ['dwarf_bone_shot', 'elf_ranger', 'lizard_skink', 'draig_bowman'],
@@ -63,7 +63,7 @@ const STONE_AGE = [
   {
     id: 'fishing', name: 'Fishing', emoji: '🎣', img: 'assets/cards/techs/fishing.png',
     era: TECH_ERAS.STONE,
-    baseCost: 20, requires: null,
+    baseCost: 10, requires: null,
     quote: '"He who controls the river controls the kingdom\'s stomach."',
     description: 'Allows construction of Fishing Rafts at capital and mercantile locations (+3 gold/turn).',
     unlockBuildings: ['fishing_raft'],
@@ -71,7 +71,7 @@ const STONE_AGE = [
   {
     id: 'mysticism', name: 'Mysticism', emoji: '🌙', img: 'assets/cards/techs/mysticism.png',
     era: TECH_ERAS.STONE,
-    baseCost: 20, requires: null,
+    baseCost: 10, requires: null,
     quote: '"In the silence between heartbeats, the divine whispers its secrets."',
     description: 'Sacred knowledge grants +0.5 research/turn to all religious main buildings.',
     effects: [
@@ -83,7 +83,7 @@ const STONE_AGE = [
   {
     id: 'mining', name: 'Mining', emoji: '⛏️', img: 'assets/cards/techs/mining.png',
     era: TECH_ERAS.STONE,
-    baseCost: 20, requires: null,
+    baseCost: 10, requires: null,
     quote: '"Beneath every mountain sleeps a kingdom waiting to be unearthed."',
     description: 'Organised quarrying. Allows construction of Copper Mines in mercantile locations (+5 gold/turn).',
     unlockBuildings: ['copper_mine'],
@@ -92,7 +92,7 @@ const STONE_AGE = [
   {
     id: 'pottery', name: 'Pottery', emoji: '🏺',
     era: TECH_ERAS.STONE,
-    baseCost: 30, requires: 'agriculture',
+    baseCost: 20, requires: 'agriculture',
     quote: '"The clay remembers the hands that shaped it long after they have turned to dust."',
     description: 'Fired clay vessels allow food storage and trade. Hamlets can grow into Villages; Settlements can build the Grand Hall.',
     unlockBuildings: ['mercantile_2', 'town_hall_2'],
@@ -100,7 +100,7 @@ const STONE_AGE = [
   {
     id: 'animal_husbandry', name: 'Animal Husbandry', emoji: '🐄',
     era: TECH_ERAS.STONE,
-    baseCost: 30, requires: 'hunting',
+    baseCost: 20, requires: 'hunting',
     quote: '"The tamed beast is worth ten wild ones — in labour, in milk, and in leather."',
     description: 'Domesticated livestock. Allows construction of Ranches (+2 gold, +1 primary resource/turn).',
     unlockBuildings: ['ranch'],
@@ -108,7 +108,7 @@ const STONE_AGE = [
   {
     id: 'boatbuilding', name: 'Boatbuilding', emoji: '🛶',
     era: TECH_ERAS.STONE,
-    baseCost: 30, requires: 'fishing',
+    baseCost: 20, requires: 'fishing',
     quote: '"A plank, a rope, and a dream — all a man needs to cross any river."',
     description: 'Construction of simple river craft. Armies can embark and move through shallow coastal seas.',
     unlockActions: ['embark_shallow'],
@@ -116,7 +116,7 @@ const STONE_AGE = [
   {
     id: 'writing', name: 'Writing', emoji: '✍️',
     era: TECH_ERAS.STONE,
-    baseCost: 30, requires: 'mysticism',
+    baseCost: 20, requires: 'mysticism',
     quote: '"The spoken word dies with the speaker. The written word lives forever."',
     description: 'Records of knowledge enable formal scholarship. Unlocks Libraries and Monastic Schools.',
     unlockBuildings: ['library', 'monastic_school'],
@@ -124,7 +124,7 @@ const STONE_AGE = [
   {
     id: 'worship', name: 'Worship', emoji: '🙏',
     era: TECH_ERAS.STONE,
-    baseCost: 30, requires: 'mysticism',
+    baseCost: 20, requires: 'mysticism',
     quote: '"Faith does not move mountains — it convinces others to move them for you."',
     description: 'Organised religious practice. Allows upgrade of shrines to tier 2 Temple.',
     unlockBuildings: ['religious_2'],
@@ -140,7 +140,7 @@ const STONE_AGE = [
   {
     id: 'masonry', name: 'Masonry', emoji: '🪨',
     era: TECH_ERAS.STONE,
-    baseCost: 30, requires: 'mining',
+    baseCost: 20, requires: 'mining',
     quote: '"Stone endures. Stone remembers. Build in stone, and your name shall outlast your flesh."',
     description: 'Shaped stone allows permanent fortifications. Allows upgrade of forts to tier 2.',
     unlockBuildings: ['fortress_1'],
@@ -156,7 +156,7 @@ const BRONZE_AGE = [
   {
     id: 'crop_rotation', name: 'Crop Rotation', emoji: '🌱',
     era: TECH_ERAS.BRONZE,
-    baseCost: 45, requires: 'pottery',
+    baseCost: 40, requires: 'pottery',
     quote: '"Let the field rest, and it will feed you twice as well come spring."',
     description: 'Improved farming technique. +10% to all faction gold income.',
     effects: [
@@ -166,7 +166,7 @@ const BRONZE_AGE = [
   {
     id: 'sailing', name: 'Sailing', emoji: '⛵',
     era: TECH_ERAS.BRONZE,
-    baseCost: 45, requires: 'boatbuilding',
+    baseCost: 40, requires: 'boatbuilding',
     quote: '"The sea is not an obstacle — it is a road waiting to be walked."',
     description: 'Deep-water navigation. All trade and exploration buildings yield +1 gold/turn.',
     effects: [
@@ -177,7 +177,7 @@ const BRONZE_AGE = [
   {
     id: 'philosophy', name: 'Philosophy', emoji: '💡',
     era: TECH_ERAS.BRONZE,
-    baseCost: 45, requires: 'writing',
+    baseCost: 40, requires: 'writing',
     quote: '"I know that I know nothing — and that knowledge is the beginning of wisdom."',
     description: 'Formal inquiry into nature and reason. All scientific buildings yield +1 research/turn.',
     effects: [
@@ -187,7 +187,7 @@ const BRONZE_AGE = [
   {
     id: 'fortification', name: 'Fortification', emoji: '🏰',
     era: TECH_ERAS.BRONZE,
-    baseCost: 45, requires: 'masonry',
+    baseCost: 40, requires: 'masonry',
     quote: '"A wall is not just stone - it is the will of a people made solid."',
     description: 'Advanced defensive architecture. Defensive buildings yield +1 gold/turn. Militia +1.',
     effects: [
@@ -198,7 +198,7 @@ const BRONZE_AGE = [
   {
     id: 'bronze_working', name: 'Bronze Working', emoji: '🗡️',
     era: TECH_ERAS.BRONZE,
-    baseCost: 45, requires: 'masonry',
+    baseCost: 40, requires: 'masonry',
     quote: '"Copper bends. Tin yields. Together they forge something neither can be alone."',
     description: 'Superior metal alloy. All infantry units gain +1 attack.',
     effects: [
@@ -206,11 +206,29 @@ const BRONZE_AGE = [
     ],
     clearsLocationTypes: ['dense_forest', 'dry_wastes'],
   },
-
+  {
+    id: 'clan_warfare', name: 'Clan Warfare', emoji: '⚔️',
+    era: TECH_ERAS.BRONZE,
+    baseCost: 40, requires: 'warbands',
+    quote: '"War is the crucible of nations. Only those who master it earn the right to call themselves one."',
+    description: 'Formalised battle doctrine and inter-clan rivalry sharpen warfare. Unlocks the Warrior Lodge. Armies can support +1 additional unit.',
+    unlockBuildings: ['warrior_lodge', 'discipline_hall_2'],
+    effects: [
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.ARMY_SUPPORT_LIMIT, amount: 1 },
+    ],
+  },
+  {
+    id: 'road_building', name: 'Road Building', emoji: '🛣️',
+    era: TECH_ERAS.BRONZE,
+    baseCost: 40, requires: 'masonry',
+    quote: '"A road is a promise made to the future — that we intend to return."',
+    description: 'Allows construction of Road Networks. Armies starting a turn in a province with roads gain +1 movement that turn.',
+    unlockBuildings: ['roads'],
+  },
   {
     id: 'taxation', name: 'Taxation', emoji: '📋',
     era: TECH_ERAS.BRONZE,
-    baseCost: 60, requires: 'crop_rotation',
+    baseCost: 50, requires: 'crop_rotation',
     quote: '"The empire is built not on conquest, but on the reliable collection of grain."',
     description: 'Organised record-keeping. Administration buildings yield +2 gold/turn.',
     effects: [
@@ -220,7 +238,7 @@ const BRONZE_AGE = [
   {
     id: 'navigation', name: 'Navigation', emoji: '🧭',
     era: TECH_ERAS.BRONZE,
-    baseCost: 60, requires: 'sailing',
+    baseCost: 50, requires: 'sailing',
     quote: '"Stars do not move — they merely wait for us to learn their language."',
     description: 'Celestial wayfinding. +10% to all faction gold income. Armies can venture into deep ocean provinces.',
     effects: [
@@ -231,7 +249,7 @@ const BRONZE_AGE = [
   {
     id: 'mathematics', name: 'Mathematics', emoji: '📐',
     era: TECH_ERAS.BRONZE,
-    baseCost: 60, requires: 'philosophy',
+    baseCost: 50, requires: 'philosophy',
     quote: '"Numbers do not lie. It is only those who wield them that are capable of deception."',
     description: 'Geometry, accounting, and engineering. +10% to all faction research income.',
     effects: [
@@ -239,20 +257,9 @@ const BRONZE_AGE = [
     ],
   },
   {
-    id: 'clan_warfare', name: 'Clan Warfare', emoji: '⚔️',
-    era: TECH_ERAS.BRONZE,
-    baseCost: 45, requires: 'warbands',
-    quote: '"War is the crucible of nations. Only those who master it earn the right to call themselves one."',
-    description: 'Formalised battle doctrine and inter-clan rivalry sharpen warfare. Unlocks the Warrior Lodge. Armies can support +1 additional unit.',
-    unlockBuildings: ['warrior_lodge', 'discipline_hall_2'],
-    effects: [
-      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.ARMY_SUPPORT_LIMIT, amount: 1 },
-    ],
-  },
-  {
     id: 'castle_construction', name: 'Castle Construction', emoji: '🏯',
     era: TECH_ERAS.BRONZE,
-    baseCost: 60, requires: 'fortification',
+    baseCost: 50, requires: 'fortification',
     quote: '"The castle is not a place of refuge — it is a declaration of permanence."',
     description: 'Massive stone fortresses. Allows upgrade of forts to tier 3 Castle. Militia +2.',
     unlockBuildings: ['fortress_2'],
@@ -261,7 +268,7 @@ const BRONZE_AGE = [
   {
     id: 'steel', name: 'Steel', emoji: '⚔️',
     era: TECH_ERAS.BRONZE,
-    baseCost: 60, requires: 'bronze_working',
+    baseCost: 50, requires: 'bronze_working',
     quote: '"The edge that wins the battle is not the sharpest — it is the last one standing."',
     description: 'Refined alloy of exceptional strength. Infantry gain +1 attack and +1 defense.',
     effects: [
@@ -270,16 +277,9 @@ const BRONZE_AGE = [
     ],
   },
   {
-    id: 'road_building', name: 'Road Building', emoji: '🛣️',
-    era: TECH_ERAS.BRONZE,
-    baseCost: 50, requires: 'masonry',
-    quote: '"A road is a promise made to the future — that we intend to return."',
-    description: 'Allows construction of Road Networks. Armies starting a turn in a province with roads gain +1 movement that turn.',
-  },
-  {
     id: 'call_to_glory', name: 'Call to Glory', emoji: '🦸',
     era: TECH_ERAS.BRONZE,
-    baseCost: 60, requires: 'worship',
+    baseCost: 50, requires: 'worship',
     quote: '"Come forward, champion. The realm has need of you."',
     description: 'Legends spread of great champions willing to serve for coin and glory. Allows recruitment of 1 additional hero.',
     effects: [

@@ -50,7 +50,7 @@ const GENERIC_CHAINS = [
     techRequired: null,
     cost: { gold: 60 }, buildTurns: 3,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.GOLD,     amount: 5 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.GOLD,     amount: 8 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: 'faction_primary_adv', amount: 1 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.RESEARCH, amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.PROVINCE_GROWTH_SLOTS,   amount: 1 },
@@ -72,7 +72,7 @@ const GENERIC_CHAINS = [
     techRequired: 'pottery',
     cost: { gold: 120, faction_primary_adv: 5 }, buildTurns: 5,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.GOLD,     amount: 10 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.GOLD,     amount: 16 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: 'faction_primary_adv', amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.RESEARCH, amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.PROVINCE_GROWTH_SLOTS,   amount: 2 },
@@ -94,7 +94,7 @@ const GENERIC_CHAINS = [
     techRequired: 'monarchy',
     cost: { gold: 240, faction_primary_adv: 15 }, buildTurns: 8,
     effects: [
-      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.GOLD,     amount: 20 },
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.GOLD,     amount: 24 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: 'faction_primary_adv', amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT,             resourceId: RESOURCE_IDS.RESEARCH, amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.PROVINCE_GROWTH_SLOTS,   amount: 3 },
@@ -594,7 +594,7 @@ const GENERIC_CHAINS = [
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.INFRASTRUCTURE,
     techRequired: 'road_building',
-    cost: { gold: 80 }, buildTurns: 3,
+    cost: { gold: 50 }, buildTurns: 5,
     effects: [],
     maxPerProvince: 1,
     prerequisites: [],

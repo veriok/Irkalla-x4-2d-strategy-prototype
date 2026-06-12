@@ -20,6 +20,7 @@ import {
   breakAlliance, getTruceCost, getOpinionLabel, declareWar,
 } from '../engine/diplomacy.js';
 import { on } from '../engine/game-events.js';
+import { confirmModal } from './modal.js';
 
 // ─── State ────────────────────────────────────────────────
 let _selectedFactionId = null;
@@ -289,7 +290,7 @@ function _renderLeaderPanel() {
   const leader     = LEADER_MAP[targetId];
   const factionDef = FACTION_MAP[targetId];
   const dipState   = getDiplomaticState(player, targetId);
-  const opinion    = getOpinion(player, targetId);
+  const opinion    = getOpinion(targetId, player); // AI's opinion of us
 
   if (leaderName) leaderName.textContent = leader?.name ?? factionDef?.name ?? '';
   if (facName)    facName.textContent    = factionDef?.name ?? '';
@@ -315,7 +316,7 @@ function _renderLeaderPanel() {
   }
 
   if (opWrap) {
-    opWrap.onmouseenter = () => _showMemoryTooltip(player, targetId);
+    opWrap.onmouseenter = () => _showMemoryTooltip(targetId, player); // AI's memories about us
     opWrap.onmouseleave = () => _hideMemoryTooltip();
   }
 }
@@ -477,11 +478,15 @@ function _buildActionButtons(player, targetId, dipState) {
 
   if (dipState === DIPLOMATIC_STATES.ALLIANCE) {
     buttons.push(_makeBtn(`💔 Break Alliance with ${targetName}`, 'danger', () => {
-      if (confirm(`Breaking the alliance with ${targetName} will cause a significant opinion penalty.`)) {
-        breakAlliance(player, targetId);
-        _triggerFlavorLine(targetId, 'response.alliance_broken');
-        _refresh();
-      }
+      confirmModal(
+        `💔 Break Alliance with ${targetName}`,
+        `Ending this alliance will deal a significant opinion penalty and may lead to war.`,
+        () => {
+          breakAlliance(player, targetId);
+          _triggerFlavorLine(targetId, 'response.alliance_broken');
+          _refresh();
+        }
+      );
     }));
   }
 
@@ -541,15 +546,22 @@ function _sendProposalWithDelay(player, targetId, type, costData = null) {
 
   createProposal(player, targetId, type, costData);
 
-  // Show "..." briefly in flavor text while AI "thinks"
+  // Cancel any running typewriter and start hourglass animation
   if (_cancelTypewriter) { _cancelTypewriter(); _cancelTypewriter = null; }
   const flavEl = _flavorText();
-  if (flavEl) flavEl.textContent = '...';
+  const hourglasses = ['⏳', '⌛'];
+  let hIdx = 0;
+  if (flavEl) flavEl.textContent = `${hourglasses[hIdx]} Considering...`;
+  const hInterval = setInterval(() => {
+    hIdx = (hIdx + 1) % 2;
+    if (flavEl) flavEl.textContent = `${hourglasses[hIdx]} Considering...`;
+  }, 500);
 
   _renderActionsPanel();
 
-  const delay = 100 + Math.random() * 100;
+  const delay = 1800 + Math.random() * 400;
   setTimeout(() => {
+    clearInterval(hInterval);
     _isWaiting = false;
     const decision = _evaluateProposalDecision(targetId, player, type);
 

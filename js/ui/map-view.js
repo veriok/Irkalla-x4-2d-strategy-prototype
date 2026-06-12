@@ -111,16 +111,32 @@ function handleProvinceClick(provinceId) {
         if (dipState === DIPLOMATIC_STATES.PEACE || dipState === DIPLOMATIC_STATES.TRUCE) {
           const targetName = FACTION_MAP[targetProv.ownerId]?.name ?? targetProv.ownerId;
           const truceNote  = dipState === DIPLOMATIC_STATES.TRUCE
-            ? ' This also betrays the active truce — a severe diplomatic offence.' : '';
-          const confirmed  = confirm(
-            `Attacking ${targetName} without a formal war declaration is a surprise attack.${truceNote}\n\nWar will begin immediately. Continue?`
+            ? ' This betrays the active truce — a severe diplomatic offence.' : '';
+          const _armyId    = state.movingArmyId;
+          const _provId    = provinceId;
+          confirmModal(
+            `⚔ Surprise Attack on ${targetName}`,
+            `Attacking without a formal declaration is a surprise attack.${truceNote} War begins immediately.`,
+            () => {
+              declareWar(army.factionId, targetProv.ownerId, { surprise: true });
+              import('../engine/combat.js').then(({ resolveCombat }) => {
+                const combatResult = resolveCombat(_armyId, _provId);
+                const postMoveProvinceId = getArmy(_armyId)?.provinceId ?? _provId;
+                _afterMove(postMoveProvinceId);
+                if (combatResult) {
+                  import('../ui/event-log.js').then(({ logCombat }) => logCombat(combatResult));
+                  if (combatResult.reportId) {
+                    import('../ui/modal.js').then(({ showCombatReportModal }) => showCombatReportModal(combatResult.reportId));
+                  }
+                }
+              });
+            },
+            () => {
+              cancelArmyMove();
+              clearReachableHighlights();
+            }
           );
-          if (!confirmed) {
-            cancelArmyMove();
-            clearReachableHighlights();
-            return;
-          }
-          declareWar(army.factionId, targetProv.ownerId, { surprise: true });
+          return;
         }
         // WAR / WAR_PENDING: proceed normally
       }
