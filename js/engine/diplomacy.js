@@ -445,11 +445,12 @@ export function acceptProposal(fromId, toId) {
   const rel = getRelationship(fromId, toId);
   if (!rel?.pendingProposal) return;
   const proposal = rel.pendingProposal;
-  rel.pendingProposal = null;
-
+  // Clear AFTER applying the transition, not before
   if (proposal.type === 'propose_truce') {
+    rel.pendingProposal = null;
     _signTruce(fromId, toId, proposal.goldAmount);
   } else if (proposal.type === 'propose_alliance') {
+    rel.pendingProposal = null;
     _formAlliance(fromId, toId);
   }
 }
@@ -469,8 +470,7 @@ export function denyProposal(fromId, toId) {
 }
 
 function _signTruce(a, b, goldAmount) {
-  const rel = getRelationship(a, b);
-  if (!rel) return;
+  const rel = getRelationship(a, b); // always valid — caller already confirmed it exists
   rel.state = DIPLOMATIC_STATES.TRUCE;
   rel.truceTurnsRemaining = 10;
   // Gold transfer: loser pays winner
@@ -493,8 +493,7 @@ function _signTruce(a, b, goldAmount) {
 }
 
 function _formAlliance(a, b) {
-  const rel = getRelationship(a, b);
-  if (!rel) return;
+  const rel = getRelationship(a, b); // always valid — caller already confirmed it exists
   rel.state = DIPLOMATIC_STATES.ALLIANCE;
   addMemory(a, b, MEMORY_TYPES.ALLIANCE_FORMED);
   addMemory(b, a, MEMORY_TYPES.ALLIANCE_FORMED);

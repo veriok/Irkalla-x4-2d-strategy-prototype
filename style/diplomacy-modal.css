@@ -98,6 +98,32 @@
 }
 .dmod-flag-slot:hover { border-color: var(--accent); }
 .dmod-flag-slot.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+.dmod-flag-slot.has-proposal {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 2px var(--danger-dim, #7a2020);
+  animation: dmod-pulse 1.6s ease-in-out infinite;
+}
+@keyframes dmod-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--danger-dim, #7a2020); }
+  50%       { box-shadow: 0 0 0 4px var(--danger-dim, #7a2020); }
+}
+.dmod-proposal-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--danger);
+  color: #fff;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  font-size: .62rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  line-height: 1;
+}
 .dmod-flag-slot.unmet {
   cursor: default;
   pointer-events: none;

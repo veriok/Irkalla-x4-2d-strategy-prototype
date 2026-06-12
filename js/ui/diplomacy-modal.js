@@ -252,6 +252,15 @@ function _renderFlagsRow() {
 
     if (!isEliminated && isMet) {
       slot.addEventListener('click', () => _selectFaction(factionId));
+      // Pending incoming proposal — red border + badge
+      const rel = getRelationship(player, factionId);
+      if (rel?.pendingProposal && rel.pendingProposal.fromFactionId === factionId) {
+        slot.classList.add('has-proposal');
+        const badge = document.createElement('span');
+        badge.className = 'dmod-proposal-badge';
+        badge.textContent = '!';
+        slot.appendChild(badge);
+      }
     }
 
     container.appendChild(slot);
