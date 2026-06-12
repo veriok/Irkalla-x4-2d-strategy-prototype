@@ -1,0 +1,325 @@
+/* ─── Diplomacy Modal ──────────────────────────────────────── */
+
+#diplomacy-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 215;
+  background: rgba(0,0,0,0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#diplomacy-modal-overlay[hidden] { display: none; }
+
+#diplomacy-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(1100px, 96vw);
+  max-height: 88vh;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+#dmod-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-dark);
+  flex-shrink: 0;
+}
+#dmod-title-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--text-primary);
+}
+#dmod-close {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: .85rem;
+}
+#dmod-close:hover { color: var(--text-primary); border-color: var(--text-muted); }
+
+/* ── Notification badge on diplomacy button ── */
+#diplomacy-btn {
+  position: relative;
+}
+#diplomacy-btn .dmod-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--danger);
+  color: #fff;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  font-size: .6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* ── Flags row ── */
+#dmod-flags-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-dark);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.dmod-flag-slot {
+  position: relative;
+  width: 64px;
+  height: 44px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .15s;
+}
+.dmod-flag-slot:hover { border-color: var(--accent); }
+.dmod-flag-slot.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+.dmod-flag-slot.unmet,
+.dmod-flag-slot.eliminated {
+  opacity: .4;
+  cursor: default;
+  pointer-events: none;
+}
+
+.dmod-flag-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dmod-flag-slot .dmod-flag-emoji {
+  font-size: 1.4rem;
+}
+
+.dmod-state-icon {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  font-size: .75rem;
+  line-height: 1;
+  text-shadow: 0 0 3px #000;
+}
+
+/* ── Main body ── */
+#dmod-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+}
+
+/* ── Leader panel ── */
+#dmod-leader-area {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px 16px;
+  border-right: 1px solid var(--border);
+  background: var(--bg-dark);
+  gap: 10px;
+}
+
+#dmod-leader-img {
+  width: 180px;
+  height: 240px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  display: block;
+}
+#dmod-leader-img[src=""] {
+  /* Placeholder when no image */
+  background: linear-gradient(135deg, #2a2a3a 0%, #1a1a2e 100%);
+}
+
+#dmod-leader-name {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+#dmod-faction-name {
+  font-size: .8rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+#dmod-opinion-wrap {
+  width: 100%;
+  cursor: default;
+  position: relative;
+}
+
+#dmod-opinion-bar-bg {
+  height: 8px;
+  background: var(--bg-surface);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+#dmod-opinion-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .3s, background .3s;
+}
+
+#dmod-opinion-label {
+  font-size: .78rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ── Opinion tooltip (memories) ── */
+#dmod-memory-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  z-index: 10;
+  font-size: .78rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,.6);
+  pointer-events: none;
+}
+#dmod-memory-tooltip[hidden] { display: none; }
+
+.dmod-memory-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+  color: var(--text-secondary);
+}
+.dmod-memory-row .dmod-mem-delta {
+  white-space: nowrap;
+  font-weight: 600;
+}
+.dmod-memory-row .dmod-mem-delta.pos { color: var(--success); }
+.dmod-memory-row .dmod-mem-delta.neg { color: var(--danger); }
+
+/* ── Diplomatic state badge ── */
+#dmod-dipstate-badge {
+  font-size: .82rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  text-align: center;
+  width: fit-content;
+  align-self: center;
+}
+#dmod-dipstate-badge.war     { border-color: var(--danger); color: var(--danger); }
+#dmod-dipstate-badge.truce   { border-color: #f0a000; color: #f0a000; }
+#dmod-dipstate-badge.alliance{ border-color: var(--success); color: var(--success); }
+#dmod-dipstate-badge.war_pending { border-color: #f06000; color: #f06000; }
+
+/* ── Actions area ── */
+#dmod-actions-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+#dmod-pending-proposal {
+  background: var(--bg-surface);
+  border: 1px solid var(--accent-dim);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#dmod-pending-proposal[hidden] { display: none; }
+
+.dmod-proposal-text {
+  font-size: .88rem;
+  color: var(--text-primary);
+}
+
+.dmod-proposal-btns {
+  display: flex;
+  gap: 8px;
+}
+
+#dmod-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dmod-action-btn {
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: .88rem;
+  transition: background .15s, border-color .15s;
+}
+.dmod-action-btn:hover { background: var(--bg-hover); border-color: var(--accent); }
+.dmod-action-btn.danger { border-color: var(--danger-dim, #7a2020); color: var(--danger); }
+.dmod-action-btn.danger:hover { background: var(--danger-dim, #3a1010); border-color: var(--danger); }
+
+#dmod-gift-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#dmod-gift-row[hidden] { display: none; }
+
+.dmod-gift-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: .82rem;
+}
+.dmod-gift-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+
+#dmod-empty-state {
+  color: var(--text-muted);
+  font-size: .88rem;
+  text-align: center;
+  margin-top: 24px;
+}
+#dmod-empty-state[hidden] { display: none; }

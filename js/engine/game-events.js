@@ -20,11 +20,13 @@ const _listeners = new Map();
 // Only events listed here are forwarded to the DOM. Add an entry when a UI layer
 // needs to react to a game event without importing engine modules.
 const DOM_FORWARD = {
-  [GAME_EVENTS.TECH_RESEARCHED]:   { domName: 'technology-researched',  playerOnly: true },
-  [GAME_EVENTS.HERO_WOUNDED]:      { domName: 'hero-wounded',           playerOnly: true },
-  [GAME_EVENTS.ARTIFACT_ACQUIRED]: { domName: 'artifact-acquired',      playerOnly: true },
-  [GAME_EVENTS.HERO_CAN_LEVEL]:    { domName: 'hero-can-level',         playerOnly: true },
-  [GAME_EVENTS.HERO_LEVELED]:      { domName: 'hero-leveled',           playerOnly: true },
+  [GAME_EVENTS.TECH_RESEARCHED]:   { domName: 'technology-researched',        playerOnly: true },
+  [GAME_EVENTS.HERO_WOUNDED]:      { domName: 'hero-wounded',                 playerOnly: true },
+  [GAME_EVENTS.ARTIFACT_ACQUIRED]: { domName: 'artifact-acquired',            playerOnly: true },
+  [GAME_EVENTS.HERO_CAN_LEVEL]:    { domName: 'hero-can-level',               playerOnly: true },
+  [GAME_EVENTS.HERO_LEVELED]:      { domName: 'hero-leveled',                 playerOnly: true },
+  [GAME_EVENTS.DIPLOMATIC_PROPOSAL_RECEIVED]: { domName: 'diplomatic-proposal-received', playerOnly: true },
+  [GAME_EVENTS.ALLIANCE_BROKEN]:              { domName: 'alliance-broken' },
 };
 
 export function on(event, fn) {

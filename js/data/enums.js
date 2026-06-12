@@ -110,6 +110,32 @@ export const GAME_EVENTS = Object.freeze({
   ARTIFACT_ACQUIRED: 'artifact_acquired',
   HERO_CAN_LEVEL:    'hero_can_level',
   HERO_LEVELED:      'hero_leveled',
+  // Diplomacy events
+  FACTION_MET:                  'faction_met',
+  WAR_DECLARED:                 'war_declared',
+  PEACE_SIGNED:                 'peace_signed',
+  DIPLOMATIC_PROPOSAL_RECEIVED: 'diplomatic_proposal_received',
+  ALLIANCE_BROKEN:              'alliance_broken',
+});
+
+export const DIPLOMATIC_STATES = Object.freeze({
+  PEACE:       'peace',
+  TRUCE:       'truce',
+  ALLIANCE:    'alliance',
+  WAR_PENDING: 'war_pending',
+  WAR:         'war',
+});
+
+export const MEMORY_TYPES = Object.freeze({
+  WAR_DECLARED_BY_US:  'war_declared_by_us',
+  WAR_DECLARED_ON_US:  'war_declared_on_us',
+  SURPRISE_WAR_BY_US:  'surprise_war_by_us',
+  SURPRISE_WAR_ON_US:  'surprise_war_on_us',
+  TRUCE_BETRAYAL:      'truce_betrayal',
+  ALLIANCE_FORMED:     'alliance_formed',
+  ALLIANCE_BROKEN:     'alliance_broken',
+  GOLD_GIFT:           'gold_gift',
+  PEACE_SIGNED:        'peace_signed',
 });
 
 export const FACTION_REACTION_IDS = Object.freeze({
@@ -352,6 +378,7 @@ export const EFFECT_TYPES = Object.freeze({
 
   // --- Province utility ---
   MILITIA_BONUS:                  'militia_bonus',
+  DISABLE_MILITIA_REGEN:          'disable_militia_regen',   // province status: suppresses militia regeneration this turn
   PROVINCE_GROWTH_SLOTS:          'province_growth_slots',           // extra building slots
   FORTIFICATION_FIRST_STRIKE_CHANCE: 'fortification_first_strike_chance', // garrison fires first probability
 

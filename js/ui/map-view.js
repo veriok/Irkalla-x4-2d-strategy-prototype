@@ -10,6 +10,8 @@ import { state, getProvince, getArmy, selectProvince, selectArmy,
          startArmyMove, cancelArmyMove, moveArmy, computeMilitiaMax,
          getArmiesInProvince, mergeArmies } from '../engine/game-state.js';
 import { FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
+import { DIPLOMATIC_STATES } from '../data/enums.js';
+import { getDiplomaticState, declareWar } from '../engine/diplomacy.js';
 import { isFactionActionUnlocked } from '../engine/faction-actions.js';
 import { getBiome } from '../data/biomes-data.js';
 import { armySize } from '../models/army.js';
@@ -40,6 +42,13 @@ export function registerMapCallbacks({ onProvinceSelect, onArmySelect }) {
 
 // ─── Province event delegation ────────────────────────────
 export function initMapEvents() {
+  // Re-render map + army icons when an alliance breaks (armies may have teleported)
+  document.addEventListener('alliance-broken', () => {
+    updateFogOfWar();
+    renderAllProvinces();
+    renderArmyIcons();
+  });
+
   provincesG.addEventListener('click', e => {
     const path = e.target.closest('path[data-province]');
     if (!path) return;
@@ -86,6 +95,35 @@ function handleProvinceClick(provinceId) {
     if (army && targetProv && army.movesLeft > 0 &&
         army.provinceId !== provinceId &&
         getProvince(army.provinceId).adjacentIds.includes(provinceId)) {
+
+      // ── Diplomatic gate: check state before allowing attack on owned province ──
+      if (targetProv.ownerId !== 'neutral' && targetProv.ownerId !== army.factionId) {
+        const dipState = getDiplomaticState(army.factionId, targetProv.ownerId);
+
+        if (dipState === DIPLOMATIC_STATES.ALLIANCE) {
+          // Move freely through allied territory — no combat
+          const movingArmyId = state.movingArmyId;
+          moveArmy(movingArmyId, provinceId);
+          _afterMove(provinceId);
+          return;
+        }
+
+        if (dipState === DIPLOMATIC_STATES.PEACE || dipState === DIPLOMATIC_STATES.TRUCE) {
+          const targetName = FACTION_MAP[targetProv.ownerId]?.name ?? targetProv.ownerId;
+          const truceNote  = dipState === DIPLOMATIC_STATES.TRUCE
+            ? ' This also betrays the active truce — a severe diplomatic offence.' : '';
+          const confirmed  = confirm(
+            `Attacking ${targetName} without a formal war declaration is a surprise attack.${truceNote}\n\nWar will begin immediately. Continue?`
+          );
+          if (!confirmed) {
+            cancelArmyMove();
+            clearReachableHighlights();
+            return;
+          }
+          declareWar(army.factionId, targetProv.ownerId, { surprise: true });
+        }
+        // WAR / WAR_PENDING: proceed normally
+      }
 
       const targetIsHostile = targetProv.ownerId !== army.factionId && targetProv.ownerId !== 'neutral';
       const hasMilitia      = (targetProv.militia?.current ?? 0) > 0;

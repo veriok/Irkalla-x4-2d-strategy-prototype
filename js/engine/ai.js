@@ -29,6 +29,12 @@ import { getInstalledBuildingIds } from '../models/location.js';
 import { enqueueProduction } from '../models/province.js';
 import { computeIncome } from './turn-engine.js';
 import { buildFactionTechTree, TECH_MAP } from '../data/techs-data.js';
+import { DIPLOMATIC_STATES } from '../data/enums.js';
+import { LEADER_MAP } from '../data/diplomacy-data.js';
+import {
+  getDiplomaticState, areMet, getOpinion,
+  declareWar, createProposal, giftGold, isAtWar,
+} from './diplomacy.js';
 
 const AI_DELAY_MS = 40;
 
@@ -146,7 +152,9 @@ export async function runAI(factionId) {
       .map(id => getProvince(id))
       .filter(Boolean)
       .filter(p => p.ownerId !== factionId)
-      .filter(p => !p.isOcean);
+      .filter(p => !p.isOcean)
+      // Only attack non-neutral provinces if at WAR with that faction
+      .filter(p => p.ownerId === 'neutral' || isAtWar(factionId, p.ownerId));
 
     candidates.sort((a, b) => {
       const aNeutral = a.ownerId === 'neutral' ? 0 : 1;
@@ -436,7 +444,9 @@ export async function runAI(factionId) {
         break;
       }
 
-      if (!prov.armyId || armySize(state.armies.get(prov.armyId) ?? { units: [] }) < 4) {
+      const leader2 = LEADER_MAP[factionId];
+      const recruitThreshold = Math.round(4 * (leader2?.militaryBias ?? 0.5) * 1.5);
+      if (!prov.armyId || armySize(state.armies.get(prov.armyId) ?? { units: [] }) < recruitThreshold) {
         const unitTypes = getRecruitableUnits(factionId, installedIds, loc.type, unlockedTechs)
           .filter(u => Object.entries(u.cost).every(([res, amt]) => (fs2.resources[res] ?? 0) >= amt));
 
@@ -458,6 +468,116 @@ export async function runAI(factionId) {
           await delay(AI_DELAY_MS);
           break;
         }
+      }
+    }
+  }
+}
+
+/** True if factionId has at least one neutral non-ocean province adjacent to its territory. */
+function _hasNeutralAdjacent(factionId) {
+  for (const prov of getProvincesByFaction(factionId)) {
+    for (const adjId of prov.adjacentIds) {
+      const adj = getProvince(adjId);
+      if (adj && !adj.isOcean && adj.ownerId === 'neutral') return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * AI diplomatic decisions: war declarations, peace/alliance proposals, gold gifts.
+ * Called once per AI faction before movement each turn.
+ */
+export async function runAIDiplomacy(factionId) {
+  const fs = state.factions.get(factionId);
+  if (!fs || fs.isEliminated) return;
+
+  const leader = LEADER_MAP[factionId];
+  if (!leader) return;
+
+  const allFactionIds = [...state.factions.keys()].filter(id => id !== factionId);
+
+  for (const targetId of allFactionIds) {
+    if (state.eliminated.has(targetId)) continue;
+    if (!areMet(factionId, targetId)) continue;
+
+    const dipState = getDiplomaticState(factionId, targetId);
+    const opinion  = getOpinion(factionId, targetId);
+
+    // ── War declaration ──
+    if (dipState === DIPLOMATIC_STATES.PEACE || dipState === DIPLOMATIC_STATES.TRUCE) {
+      const allOthersMet = allFactionIds.filter(id => !state.eliminated.has(id) && areMet(factionId, id));
+      const allAtWar = allOthersMet.length > 0 && allOthersMet.every(id => isAtWar(factionId, id));
+
+      // Factions with no neutral land to expand into become more aggressive
+      const noExpansion = !_hasNeutralAdjacent(factionId);
+      const effectiveThreshold = noExpansion
+        ? leader.aggressionThreshold + 20
+        : leader.aggressionThreshold;
+      const effectiveWarChance = noExpansion
+        ? Math.min(1, leader.warDeclarationChance * 1.5)
+        : leader.warDeclarationChance;
+
+      const opinionBelowThreshold = opinion < effectiveThreshold;
+
+      if (opinionBelowThreshold || allAtWar) {
+        // Surprise war: if prefersSupriseWar OR allAtWar OR during TRUCE (formal war blocked)
+        const goSurprise = leader.prefersSupriseWar || allAtWar ||
+          (dipState === DIPLOMATIC_STATES.TRUCE);
+        if (goSurprise && Math.random() < effectiveWarChance) {
+          declareWar(factionId, targetId, { surprise: true });
+          continue;
+        } else if (!goSurprise && dipState === DIPLOMATIC_STATES.PEACE &&
+                   Math.random() < effectiveWarChance) {
+          declareWar(factionId, targetId, { surprise: false });
+          continue;
+        }
+      }
+    }
+
+    // ── Ask for peace (truce) ──
+    if (dipState === DIPLOMATIC_STATES.WAR) {
+      const warScore   = state.diplomacy.get([factionId, targetId].sort().join(':'))?.warScore;
+      const myScore    = warScore?.[factionId]?.provincesGained ?? 0;
+      const theirScore = warScore?.[targetId]?.provincesGained ?? 0;
+      const losing     = myScore < theirScore;
+      if (opinion > -10 || losing) {
+        if (Math.random() < 0.25) {
+          createProposal(factionId, targetId, 'propose_truce');
+        }
+      }
+    }
+
+    // ── Propose alliance ──
+    if (dipState === DIPLOMATIC_STATES.PEACE && opinion >= leader.allianceThreshold) {
+      const anyActiveWar = allFactionIds.some(id => !state.eliminated.has(id) && isAtWar(factionId, id));
+      if (!anyActiveWar && Math.random() < 0.15) {
+        createProposal(factionId, targetId, 'propose_alliance');
+      }
+    }
+
+    // ── Gold gift ──
+    if ((dipState === DIPLOMATIC_STATES.PEACE || dipState === DIPLOMATIC_STATES.TRUCE) &&
+        opinion > -30 && opinion < 40) {
+      const myGold = fs.resources.gold ?? 0;
+      if (myGold > 200 && Math.random() < 0.08) {
+        const giftAmount = Math.min(100, Math.floor(myGold * 0.1));
+        giftGold(factionId, targetId, giftAmount);
+      }
+    }
+
+    // ── Auto-evaluate incoming proposals (AI-to-AI) ──
+    const rel = state.diplomacy.get([factionId, targetId].sort().join(':'));
+    if (rel?.pendingProposal && rel.pendingProposal.fromFactionId === targetId) {
+      const proposal = rel.pendingProposal;
+      // AI accepts if opinion is positive enough
+      const acceptThreshold = proposal.type === 'propose_alliance' ? 45 : 0;
+      if (opinion >= acceptThreshold && Math.random() < 0.7) {
+        const { acceptProposal } = await import('./diplomacy.js');
+        acceptProposal(targetId, factionId);
+      } else {
+        const { denyProposal } = await import('./diplomacy.js');
+        denyProposal(targetId, factionId);
       }
     }
   }

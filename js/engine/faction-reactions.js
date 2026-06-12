@@ -23,10 +23,12 @@
  *     Read-only — tech effects are applied by unlockTech() before this event fires.
  */
 
-import { FACTION_IDS, RACE_IDS, GAME_EVENTS, FACTION_REACTION_IDS } from '../data/enums.js';
+import { FACTION_IDS, RACE_IDS, GAME_EVENTS, FACTION_REACTION_IDS, DIPLOMATIC_STATES } from '../data/enums.js';
 import { FACTIONS } from '../data/factions-data.js';
 import { on } from './game-events.js';
 import { logMessage } from '../ui/event-log.js';
+import { recordProvinceCapture, getDiplomaticState } from './diplomacy.js';
+import { getProvince, getArmiesByFaction, teleportArmy } from './game-state.js';
 
 function _isPlayer(factionId) {
   return factionId === document.body.dataset.playerFactionId;
@@ -132,6 +134,40 @@ const REACTION_HANDLERS = {
   },
 };
 
+// ─── Alliance evacuation helpers ─────────────────────────
+
+/** BFS to find the nearest province safe for armyFactionId (own or allied territory). */
+function _findNearestSafeProvince(armyFactionId, fromProvId) {
+  const visited = new Set([fromProvId]);
+  const queue = [fromProvId];
+  while (queue.length > 0) {
+    const cur = queue.shift();
+    const prov = getProvince(cur);
+    if (!prov) continue;
+    for (const adjId of prov.adjacentIds) {
+      if (visited.has(adjId)) continue;
+      visited.add(adjId);
+      const adj = getProvince(adjId);
+      if (!adj || adj.isOcean) continue;
+      if (adj.ownerId === armyFactionId) return adjId;
+      if (adj.ownerId !== 'neutral' &&
+          getDiplomaticState(armyFactionId, adj.ownerId) === DIPLOMATIC_STATES.ALLIANCE) return adjId;
+      queue.push(adjId);
+    }
+  }
+  return null;
+}
+
+/** Move all armies of armyFactionId that are stranded on hostileFactionId territory. */
+function _evacuateStrandedArmies(armyFactionId, hostileFactionId) {
+  for (const army of getArmiesByFaction(armyFactionId)) {
+    const prov = getProvince(army.provinceId);
+    if (!prov || prov.ownerId !== hostileFactionId) continue;
+    const safe = _findNearestSafeProvince(armyFactionId, army.provinceId);
+    if (safe) teleportArmy(army.id, safe);
+  }
+}
+
 // Maps faction data keys to their corresponding GAME_EVENTS value.
 const REACTION_KEY_TO_EVENT = {
   onProvinceCapture: GAME_EVENTS.PROVINCE_CAPTURED,
@@ -178,4 +214,18 @@ export function registerFactionReactions() {
       _registerReaction(factionId, reactionId, event);
     }
   });
+
+  // ── War score tracking ────────────────────────────────────
+  on(GAME_EVENTS.PROVINCE_CAPTURED, ({ factionId, previousOwnerId }) => {
+    if (!previousOwnerId || previousOwnerId === 'neutral' || previousOwnerId === 'ocean' || previousOwnerId === factionId) return;
+    if (getDiplomaticState(factionId, previousOwnerId) !== DIPLOMATIC_STATES.WAR) return;
+    recordProvinceCapture(factionId, previousOwnerId);
+  });
+
+  // ── Alliance evacuation: teleport stranded armies when alliance breaks ──
+  on(GAME_EVENTS.ALLIANCE_BROKEN, ({ factionAId, factionBId }) => {
+    _evacuateStrandedArmies(factionAId, factionBId);
+    _evacuateStrandedArmies(factionBId, factionAId);
+  });
+
 }

@@ -487,6 +487,18 @@ export async function endTurn(onComplete) {
   // ── Player turn resolution ──
   tickProductionQueues(state.playerFactionId);
 
+  // ── AI diplomatic decisions (before movement) ──
+  {
+    const { runAIDiplomacy } = await import('./ai.js');
+    for (const factionId of state.factions.keys()) {
+      if (factionId === state.playerFactionId) continue;
+      if (state.eliminated.has(factionId)) continue;
+      const fs = getFaction(factionId);
+      if (!fs?.isAI) continue;
+      await runAIDiplomacy(factionId);
+    }
+  }
+
   // ── AI phases ──
   for (const factionId of state.factions.keys()) {
     if (factionId === state.playerFactionId) continue;
@@ -512,18 +524,27 @@ export async function endTurn(onComplete) {
   state.turn++;
   logTurn(state.turn);
 
-  // ── Tick province status effects
-  tickProvinceStatuses();
+  // ── Tick diplomacy (memory decay, opinion drift, countdowns) ──
+  {
+    const { tickDiplomacy } = await import('./diplomacy.js');
+    tickDiplomacy();
+  }
 
-  // ── Replenish militia (+1 per province per turn, starting the turn after combat) ──
+  // ── Replenish militia — runs BEFORE status tick so recently_fought blocks regen this turn ──
   for (const province of state.provinces.values()) {
     if (!province.militia) continue;
-    const { current, lastCombatTurn } = province.militia;
-    if (lastCombatTurn !== null && state.turn > lastCombatTurn) {
-      const max = computeMilitiaMax(province);
-      if (current < max) province.militia.current = current + 1;
-    }
+    const { current } = province.militia;
+    const max = computeMilitiaMax(province);
+    if (current >= max) continue;
+    const hasRegenBlock = (province.statusEffects ?? []).some(se => {
+      const def = PROVINCE_STATUS_MAP[se.type];
+      return (def?.effects ?? []).some(eff => eff.type === EFFECT_TYPES.DISABLE_MILITIA_REGEN);
+    });
+    if (!hasRegenBlock) province.militia.current = current + 1;
   }
+
+  // ── Tick province status effects (removes recently_fought after regen check) ──
+  tickProvinceStatuses();
 
   // ── Regenerate monster den enemies (heal wounded, respawn 1 killed/turn) ──
   for (const province of state.provinces.values()) {

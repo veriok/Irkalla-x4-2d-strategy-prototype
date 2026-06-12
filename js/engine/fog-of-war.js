@@ -11,6 +11,7 @@
  */
 
 import { state, getProvincesByFaction, getArmiesByFaction } from './game-state.js';
+import { markMet, areMet } from './diplomacy.js';
 
 /**
  * Recompute visibility for the player faction and update SVG fog layer.
@@ -42,15 +43,19 @@ export function updateFogOfWar() {
     }
   }
 
+  const playerFactionId2 = state.playerFactionId;
+
   // Update province visibility states
   for (const prov of state.provinces.values()) {
-    // // Ocean provinces are always fully visible
-    // if (prov.isOcean) {
-    //   prov.visibility = 'visible';
-    //   continue;
-    // }
     if (visibleIds.has(prov.id)) {
       prov.visibility = 'visible';
+      // Check faction meeting: when we first see a province owned by another faction
+      if (playerFactionId2 && prov.ownerId && prov.ownerId !== 'neutral' &&
+          prov.ownerId !== 'ocean' && prov.ownerId !== playerFactionId2) {
+        if (state.diplomacy?.size > 0 && !areMet(playerFactionId2, prov.ownerId)) {
+          markMet(playerFactionId2, prov.ownerId);
+        }
+      }
     } else if (prov.visibility === 'visible') {
       // Was visible last check → now explored (greyed)
       prov.visibility = 'explored';

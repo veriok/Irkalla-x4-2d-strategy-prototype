@@ -53,6 +53,7 @@ export const state = {
   provinces:    new Map(),    // provinceId → province
   armies:       new Map(),    // armyId → army
   combatReports: [],          // recent combat reports (newest first, capped at 50)
+  diplomacy:    new Map(),    // pairKey → relationship (initialised by initDiplomacy)
 };
 
 // ─── Faction state factory ────────────────────────────────
@@ -216,6 +217,9 @@ export function initWorld(provinceDataArr, playerFactionId) {
       province.coreOf = province.ownerId;
     }
   }
+
+  // Initialise diplomacy state (lazy import to avoid circular deps)
+  import('./diplomacy.js').then(({ initDiplomacy }) => initDiplomacy());
 }
 
 /** Export for AI module to know which factions are in play */
@@ -436,6 +440,7 @@ export function captureProvince(provinceId, newOwnerId, battleResult = {}) {
   if (!province) return;
   if (province.isOcean) return;
 
+  const previousOwnerId = province.ownerId;
   province.ownerId = newOwnerId;
   province.productionQueue = [];
   province.statusEffects = [];
@@ -455,7 +460,7 @@ export function captureProvince(provinceId, newOwnerId, battleResult = {}) {
     def?.onApply?.(province, state);
   }
 
-  emit(GAME_EVENTS.PROVINCE_CAPTURED, { factionId: newOwnerId, province, battleResult, gameState: state });
+  emit(GAME_EVENTS.PROVINCE_CAPTURED, { factionId: newOwnerId, province, previousOwnerId, battleResult, gameState: state });
 
   // Apply raid destruction flags set by Clans onProvinceCapture
   _applyRaidDestruction(province);
@@ -498,6 +503,20 @@ export function removeArmy(armyId) {
   state.armies.delete(armyId);
   if (state.selectedArmyId === armyId) state.selectedArmyId = null;
   if (state.movingArmyId  === armyId) state.movingArmyId   = null;
+}
+
+/**
+ * Teleport army to any province (no combat, no moves spent).
+ * Used for forced relocation — e.g. stranded armies after alliance breaks.
+ */
+export function teleportArmy(armyId, targetProvinceId) {
+  const army = state.armies.get(armyId);
+  if (!army) return;
+  const oldProv = getProvince(army.provinceId);
+  if (oldProv) oldProv.armyIds = oldProv.armyIds.filter(id => id !== armyId);
+  army.provinceId = targetProvinceId;
+  const newProv = getProvince(targetProvinceId);
+  if (newProv && !newProv.armyIds.includes(armyId)) newProv.armyIds.push(armyId);
 }
 
 /** Move army to a new province (no combat — pure relocation). */

@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="style/province-modal.css" />
   <link rel="stylesheet" href="style/research-modal.css" />
   <link rel="stylesheet" href="style/hero-panel.css" />
+  <link rel="stylesheet" href="style/diplomacy-modal.css" />
 
   <!-- ES module import map: d3-delaunay from CDN -->
   <script type="importmap">
@@ -38,6 +39,7 @@
     <div id="heroes-top-area"></div>
     <button id="minimap-btn" class="btn-secondary">🗺 Map</button>
     <button id="research-btn" class="btn-secondary">📚 Research</button>
+    <button id="diplomacy-btn" class="btn-secondary">🏛 Diplomacy</button>
     <button id="end-turn-btn" class="btn-primary">End Turn ⏭</button>
   </header>
 
@@ -205,6 +207,41 @@
           <div id="rmod-tree-grid"><!-- era columns injected by JS --></div>
         </div>
         <div id="rmod-magic-panel" hidden><!-- filled by research-modal.js when magic tab is active --></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diplomacy Modal -->
+  <div id="diplomacy-modal-overlay" hidden>
+    <div id="diplomacy-modal">
+      <div id="dmod-header">
+        <span id="dmod-title-text">Diplomacy</span>
+        <button id="dmod-close">✕ Close</button>
+      </div>
+      <div id="dmod-flags-row"><!-- faction flag slots injected by JS --></div>
+      <div id="dmod-body">
+        <div id="dmod-leader-area">
+          <img id="dmod-leader-img" src="" alt="" />
+          <div id="dmod-leader-name"></div>
+          <div id="dmod-faction-name"></div>
+          <div id="dmod-dipstate-badge"></div>
+          <div id="dmod-opinion-wrap">
+            <div id="dmod-opinion-bar-bg">
+              <div id="dmod-opinion-bar-fill"></div>
+            </div>
+            <div id="dmod-opinion-label"></div>
+            <div id="dmod-memory-tooltip" hidden></div>
+          </div>
+        </div>
+        <div id="dmod-actions-area">
+          <div id="dmod-pending-proposal" hidden>
+            <div class="dmod-proposal-text" id="dmod-pending-text"></div>
+            <div class="dmod-proposal-btns" id="dmod-proposal-btns"></div>
+          </div>
+          <div id="dmod-actions-list"></div>
+          <div id="dmod-gift-row" hidden></div>
+          <div id="dmod-empty-state" hidden>Select a faction to open diplomacy.</div>
+        </div>
       </div>
     </div>
   </div>

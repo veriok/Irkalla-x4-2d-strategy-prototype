@@ -774,6 +774,9 @@ export function renderEffectLines(effects = [], multiplier = 1) {
       const total = (eff.amount ?? 0) * multiplier;
       return `🛡 Defense: +${total}%`;
     }
+    if (eff.type === EFFECT_TYPES.DISABLE_MILITIA_REGEN) {
+      return `⚔️ Militia regen: blocked this turn`;
+    }
     return null;
   }).filter(Boolean);
 }

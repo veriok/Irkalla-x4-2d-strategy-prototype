@@ -93,6 +93,20 @@ const PROVINCE_STATUSES = [
     onApply:  null,
     onRemove: null,
   },
+
+  {
+    id:          'recently_fought',
+    icon:        '⚔️',
+    label:       'Recent Battle',
+    description: 'Combat has disrupted the province. Militia cannot reorganize this turn.',
+    effects: [
+      { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.DISABLE_MILITIA_REGEN },
+    ],
+    maxStacks: 1,
+    onApply:   null,
+    onRemove:  null,
+    _defaults: { turnsRemaining: 1 },
+  },
 ];
 
 export const PROVINCE_STATUS_MAP = Object.fromEntries(

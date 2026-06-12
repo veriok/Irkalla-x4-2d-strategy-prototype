@@ -31,6 +31,7 @@ import { openHeroPanel, initHeroPanel } from './ui/hero-panel.js';
 import { initHeroAssignModal } from './ui/hero-assign-modal.js';
 import { initSpellbook, initSpellbookListeners } from './ui/spellbook-modal.js';
 import { grantStartingHero } from './engine/hero-engine.js';
+import { initDiplomacyModal } from './ui/diplomacy-modal.js';
 
 // ─── World gen picker ─────────────────────────────────────
 
@@ -342,6 +343,9 @@ async function init() {
   // 13. Research button + open-research-modal event (fired by resource chip click)
   document.getElementById('research-btn')?.addEventListener('click', showResearchModal);
   document.addEventListener('open-research-modal', showResearchModal);
+
+  // Diplomacy
+  initDiplomacyModal();
 
   // Heroes button
   initHeroPanel();

@@ -1146,6 +1146,12 @@ export function resolveCombat(attackerArmyId, targetProvinceId) {
     targetP.militia.lastCombatTurn = state.turn;
   }
 
+  // Flag province so militia regen is blocked for this turn
+  if (!targetP.statusEffects) targetP.statusEffects = [];
+  if (!targetP.statusEffects.some(se => se.type === 'recently_fought')) {
+    targetP.statusEffects.push({ type: 'recently_fought', turnsRemaining: 1 });
+  }
+
   const attSizeAfter = armySize(attArmy);
   const defSizeAfter = (enemyDefArmy ? armySize(enemyDefArmy) : 0) + (enemyDefArmy?._isMilitia ? 0 : _militiaCount(militiaPool));
   const attLostTotal = Math.max(0, attSizeBefore - attSizeAfter);
