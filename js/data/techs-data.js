@@ -721,9 +721,9 @@ const ARCHONATE_GREYHAVEN_TECHS = [
     era: TECH_ERAS.IRON,
     factionId: FACTION_IDS.ARCHONATE_GREYHAVEN, replacesId: 'guilds',
     quote: '"We have held this line for a thousand years. We will hold it for a thousand more."',
-    description: 'Unlocks the Iron Phalanx and Archonate Sentinel units. Reduces Conscript Levy cost from 10 to 7 tribute.',
+    description: 'Unlocks the Iron Phalanx and Archonate Sentinel units. Reduces Conscript Levy cost from 20 to 15 tribute.',
     effects: [
-      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.CONSCRIPT_COST_REDUCTION, costReduction: 3 },
+      { scope: EFFECT_SCOPES.FACTION, type: EFFECT_TYPES.CONSCRIPT_COST_REDUCTION, costReduction: 5 },
     ],
   },
 ];

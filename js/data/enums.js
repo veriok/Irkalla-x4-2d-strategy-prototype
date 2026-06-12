@@ -110,6 +110,7 @@ export const GAME_EVENTS = Object.freeze({
   ARTIFACT_ACQUIRED: 'artifact_acquired',
   HERO_CAN_LEVEL:    'hero_can_level',
   HERO_LEVELED:      'hero_leveled',
+  FACTION_ELIMINATED: 'faction_eliminated',
   // Diplomacy events
   FACTION_MET:                  'faction_met',
   WAR_DECLARED:                 'war_declared',

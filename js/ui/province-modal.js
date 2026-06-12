@@ -763,6 +763,22 @@ function _renderSlotActions(prov, loc, buildingId) {
 
 // ── Sidebar: empty slot (build menu) ─────────────────────
 function _renderEmptySlotBuildMenu(prov, loc) {
+  // Block if a new building is already queued for this location
+  const slotPending = prov.productionQueue?.find(
+    i => i.type === 'building' && i.locationId === loc.id && !BUILDING_MAP[i.id]?.upgradeFromId
+  );
+  if (slotPending) {
+    const header = document.createElement('div');
+    header.className = 'pmod-section-header';
+    header.textContent = 'Build';
+    sidebarActEl.appendChild(header);
+    const hint = document.createElement('div');
+    hint.className = 'pmod-empty-hint';
+    hint.textContent = `Already building: ${BUILDING_MAP[slotPending.id]?.name ?? slotPending.id}`;
+    sidebarActEl.appendChild(hint);
+    return;
+  }
+
   const installedIds      = getInstalledBuildingIds(loc);
   const provInstalledIds  = prov.locations.flatMap(l => getInstalledBuildingIds(l));
   const unlockedTechs     = getFaction(state.playerFactionId)?.unlockedTechs ?? [];
@@ -1143,6 +1159,9 @@ function _renderRecruit(prov) {
     `;
     row.appendChild(info);
 
+    const btnWrap = document.createElement('div');
+    btnWrap.className = 'pmod-recruit-btn-wrap';
+
     const btn = document.createElement('button');
     btn.className   = 'card-action-btn';
     btn.textContent = 'Recruit';
@@ -1154,8 +1173,16 @@ function _renderRecruit(prov) {
       renderResourceBar();
       _render();
     });
-    row.appendChild(btn);
+    btnWrap.appendChild(btn);
 
+    if (!affordable) {
+      const reason = document.createElement('div');
+      reason.className = 'pmod-recruit-reason';
+      reason.textContent = queueFull ? 'Queue full' : "Can't afford";
+      btnWrap.appendChild(reason);
+    }
+
+    row.appendChild(btnWrap);
     sidebarActEl.appendChild(row);
   }
 
@@ -1190,13 +1217,22 @@ function _renderRecruit(prov) {
     `;
     row.appendChild(info);
 
+    const btnWrap = document.createElement('div');
+    btnWrap.className = 'pmod-recruit-btn-wrap';
+
     const btn = document.createElement('button');
     btn.className   = 'card-action-btn';
     btn.textContent = 'Recruit';
     btn.disabled    = true;
     btn.title       = needsHint ? `Needs: ${needsHint}` : 'Missing required building';
-    row.appendChild(btn);
+    btnWrap.appendChild(btn);
 
+    const reason = document.createElement('div');
+    reason.className = 'pmod-recruit-reason';
+    reason.textContent = needsHint ? `Needs: ${needsHint}` : 'Missing required building';
+    btnWrap.appendChild(reason);
+
+    row.appendChild(btnWrap);
     sidebarActEl.appendChild(row);
   }
 }
@@ -1331,7 +1367,7 @@ function collectProvinceActions(prov, onRefresh) {
 
   if (isFactionActionUnlocked(factionId, 'conscript_levies')) {
     const conscriptEff = (fs?.factionEffects ?? []).find(e => e.type === 'conscript_cost_reduction');
-    const CONSCRIPT_COST = 10 - (conscriptEff?.costReduction ?? 0);
+    const CONSCRIPT_COST = 20 - (conscriptEff?.costReduction ?? 0);
     const CONSCRIPT_COUNT = 2;
     const tribute = fs?.resources?.tribute ?? 0;
     const conscriptDef = PROVINCE_STATUS_MAP['conscript_strain'];

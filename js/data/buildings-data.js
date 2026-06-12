@@ -959,7 +959,7 @@ const POLEIS_AETHERA_CHAINS = [
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.SCIENTIFIC,
     techRequired: 'writing',
-    cost: { gold: 55, philosophy: 5 }, buildTurns: 3,
+    cost: { gold: 55, philosophy: 15 }, buildTurns: 3,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.PHILOSOPHY, amount: 1 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,       amount: 2 },
@@ -977,7 +977,7 @@ const POLEIS_AETHERA_CHAINS = [
     tier: 2, upgradeFromId: 'poleis_academy_1',
     category: BUILDING_CATEGORIES.SCIENTIFIC,
     techRequired: 'philosophical_school',
-    cost: { gold: 120, philosophy: 15 }, buildTurns: 5,
+    cost: { gold: 120, philosophy: 25 }, buildTurns: 5,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.PHILOSOPHY, amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,       amount: 4 },
@@ -1015,7 +1015,7 @@ const POLEIS_AETHERA_CHAINS = [
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.EXPLORATION,
     techRequired: 'fishing',
-    cost: { gold: 55, aether: 8 }, buildTurns: 3,
+    cost: { gold: 55, aether: 15 }, buildTurns: 3,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.AETHER, amount: 1 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,   amount: 3 },
@@ -1033,7 +1033,7 @@ const POLEIS_AETHERA_CHAINS = [
     tier: 2, upgradeFromId: 'poleis_azure_docks_1',
     category: BUILDING_CATEGORIES.EXPLORATION,
     techRequired: 'wayfarers_guild',
-    cost: { gold: 120, aether: 20 }, buildTurns: 5,
+    cost: { gold: 120, aether: 50 }, buildTurns: 5,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.AETHER, amount: 2 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,   amount: 6 },
@@ -1054,7 +1054,7 @@ const POLEIS_AETHERA_CHAINS = [
     tier: 1, upgradeFromId: null,
     category: BUILDING_CATEGORIES.SCIENTIFIC,
     techRequired: 'aetheric_arts',
-    cost: { gold: 75, aether: 20 }, buildTurns: 3,
+    cost: { gold: 75, aether: 35 }, buildTurns: 3,
     effects: [
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.RESEARCH, amount: 1 },
       { scope: EFFECT_SCOPES.PROVINCE, type: EFFECT_TYPES.INCOME_FLAT, resourceId: RESOURCE_IDS.GOLD,     amount: 1 },

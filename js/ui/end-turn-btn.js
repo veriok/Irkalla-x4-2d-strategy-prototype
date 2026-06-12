@@ -55,17 +55,25 @@ export async function handleEndTurn() {
       const isPlayer = state.winner === state.playerFactionId;
       const winner   = state.winner ? FACTION_MAP[state.winner] : null;
       btn.disabled = true;
-      showModal(
-        (isPlayer || !playerEliminated) ? '🏆 Victory!' : '💀 Defeat',
-        isPlayer
-          ? `${winner?.name ?? state.winner} has conquered Irkallia!`
-          : playerEliminated
-            ? winner
-              ? `${winner.name} has conquered Irkallia. Your faction has fallen.`
-              : `Your last capital has fallen. The war wages on without you.`
-            : `${winner?.name ?? state.winner} has conquered Irkallia. Your faction has fallen.`,
-        [{ label: 'New Game', onClick: () => location.reload() }]
-      );
+      let title, body;
+      if (state.alliedVictory && isPlayer) {
+        title = '🤝 Allied Victory!';
+        body  = 'All surviving factions are allied. Peace reigns across Irkallia!';
+      } else if (isPlayer) {
+        title = '🏆 Victory!';
+        body  = `${winner?.name ?? state.winner} has conquered Irkallia!`;
+      } else if (playerEliminated) {
+        title = '💀 Defeat';
+        body  = winner
+          ? state.alliedVictory
+            ? `The allied factions have prevailed. Your faction has fallen.`
+            : `${winner.name} has conquered Irkallia. Your faction has fallen.`
+          : `Your last capital has fallen. The war wages on without you.`;
+      } else {
+        title = '💀 Defeat';
+        body  = `${winner?.name ?? state.winner} has conquered Irkallia. Your faction has fallen.`;
+      }
+      showModal(title, body, [{ label: 'New Game', onClick: () => location.reload() }]);
     }
   });
 }

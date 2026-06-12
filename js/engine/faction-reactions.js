@@ -28,7 +28,7 @@ import { FACTIONS } from '../data/factions-data.js';
 import { on } from './game-events.js';
 import { logMessage } from '../ui/event-log.js';
 import { recordProvinceCapture, getDiplomaticState } from './diplomacy.js';
-import { getProvince, getArmiesByFaction, teleportArmy } from './game-state.js';
+import { state, getProvince, getArmiesByFaction, teleportArmy } from './game-state.js';
 
 function _isPlayer(factionId) {
   return factionId === document.body.dataset.playerFactionId;
@@ -226,6 +226,21 @@ export function registerFactionReactions() {
   on(GAME_EVENTS.ALLIANCE_BROKEN, ({ factionAId, factionBId }) => {
     _evacuateStrandedArmies(factionAId, factionBId);
     _evacuateStrandedArmies(factionBId, factionAId);
+  });
+
+  // ── Allied victory: all survivors allied ─────────────────
+  on(GAME_EVENTS.FACTION_ELIMINATED, () => {
+    if (state.winner) return;
+    const surviving = [...state.factions.keys()].filter(id => !state.eliminated.has(id));
+    if (surviving.length < 2) return;
+    const allAllied = surviving.every((a, i) =>
+      surviving.slice(i + 1).every(b => getDiplomaticState(a, b) === DIPLOMATIC_STATES.ALLIANCE)
+    );
+    if (!allAllied) return;
+    state.alliedVictory = true;
+    state.winner = surviving.includes(state.playerFactionId)
+      ? state.playerFactionId
+      : surviving[0];
   });
 
 }

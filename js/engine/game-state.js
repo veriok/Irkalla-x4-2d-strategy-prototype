@@ -48,6 +48,7 @@ export const state = {
   movingArmyId:       null,
   eliminated:         new Set(),
   winner:             null,
+  alliedVictory:      false,
 
   factions:     new Map(),    // factionId → factionState
   provinces:    new Map(),    // provinceId → province
@@ -141,6 +142,7 @@ export function initWorld(provinceDataArr, playerFactionId) {
   state.movingArmyId = null;
   state.eliminated.clear();
   state.winner = null;
+  state.alliedVictory = false;
   state.playerFactionId = playerFactionId;
 
   const playingFactionIds = getPlayingFactions(playerFactionId);
@@ -723,6 +725,7 @@ export function checkElimination() {
         p.productionQueue = [];
         p.statusEffects = [];
       }
+      emit(GAME_EVENTS.FACTION_ELIMINATED, { factionId });
       newlyEliminated.push(factionId);
     }
   }
