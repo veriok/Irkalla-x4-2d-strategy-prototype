@@ -98,9 +98,13 @@
 }
 .dmod-flag-slot:hover { border-color: var(--accent); }
 .dmod-flag-slot.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
-.dmod-flag-slot.unmet,
+.dmod-flag-slot.unmet {
+  cursor: default;
+  pointer-events: none;
+}
 .dmod-flag-slot.eliminated {
-  opacity: .4;
+  filter: grayscale(1);
+  opacity: 0.45;
   cursor: default;
   pointer-events: none;
 }
@@ -126,36 +130,54 @@
 /* ── Main body ── */
 #dmod-body {
   display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
-  gap: 0;
 }
 
-/* ── Leader panel ── */
+/* ── Landscape scene image ── */
+#dmod-leader-img {
+  display: block;
+  width: min(675px, calc(100% - 40px)); /* 75% of 900px natural width */
+  height: auto;
+  aspect-ratio: 3 / 2;                  /* 675×450 — holds shape for placeholder too */
+  margin: 12px auto 0;                  /* centered */
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #2a2a3a 0%, #1a1a2e 100%);
+}
+
+/* ── Flavor text strip ── */
+#dmod-flavor-text {
+  padding: 10px 20px;
+  font-size: .88rem;
+  font-style: italic;
+  color: var(--text-secondary);
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border);
+  min-height: 3.2em;
+  flex-shrink: 0;
+  line-height: 1.55;
+}
+
+/* ── Lower split: leader info + actions ── */
+#dmod-lower {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Leader info panel ── */
 #dmod-leader-area {
-  width: 300px;
+  width: 220px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 16px 16px;
+  padding: 14px 16px;
   border-right: 1px solid var(--border);
   background: var(--bg-dark);
   gap: 10px;
-}
-
-#dmod-leader-img {
-  width: 180px;
-  height: 240px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
-  display: block;
-}
-#dmod-leader-img[src=""] {
-  /* Placeholder when no image */
-  background: linear-gradient(135deg, #2a2a3a 0%, #1a1a2e 100%);
 }
 
 #dmod-leader-name {

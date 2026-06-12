@@ -2,22 +2,23 @@
  * diplomacy-data.js
  *
  * Static AI leader definitions for the diplomacy system.
- * One entry per faction — defines personality, budget bias, and memory modifiers.
  *
- * Fields:
- *   militaryBias    — shifts recruit/army-size thresholds (0–1)
- *   expansionBias   — shifts aggression toward neutral provinces (0–1)
- *   prefersSupriseWar   — if true, always skips formal war declaration
- *   aggressionThreshold — opinion below this → consider declaring war
- *   allianceThreshold   — opinion above this → consider proposing alliance
- *   warDeclarationChance — per-turn probability once threshold crossed
- *   memoryDuration       — global multiplier on all memory durations (1.0 = baseline)
- *   goldGiftEffectiveness — multiplies opinionDelta for GOLD_GIFT memories
- *   betrayalSensitivity   — multiplies opinionDelta for SURPRISE_WAR / TRUCE_BETRAYAL / ALLIANCE_BROKEN
- *   memoryDurationByType  — per-type duration multiplier (overrides global for that type)
- *   memoryOpinionMultiplierByType — per-type opinion delta multiplier
- *   racialDrift  — additive drift target modifier per race id
- *   factionDrift — additive drift target modifier per faction id
+ * lines.greeting.*   — shown when player opens/selects this faction
+ *   alliance / high / positive / neutral / negative / hostile / truce / war / war_pending
+ * lines.incoming.*   — shown when AI has proposed to the player
+ *   truce / alliance
+ * lines.response.*   — shown after an action resolves
+ *   ai_truce_accept / ai_truce_deny         — AI responded to player's truce proposal
+ *   ai_alliance_accept / ai_alliance_deny   — AI responded to player's alliance proposal
+ *   player_truce_accept / player_truce_deny — player responded to AI's truce proposal
+ *   player_alliance_accept / player_alliance_deny — player responded to AI's alliance proposal
+ *   war_declared / alliance_broken / gift_received
+ *
+ * Template variables in line strings (AI is speaking):
+ *   {leader_name}            — player's leader name
+ *   {faction_short_name}     — player's faction short name
+ *   {self_faction_short_name} — AI's own faction short name
+ *   {self_leader_name}       — AI leader's own name
  */
 
 import { FACTION_IDS, RACE_IDS, MEMORY_TYPES } from './enums.js';
@@ -25,8 +26,8 @@ import { FACTION_IDS, RACE_IDS, MEMORY_TYPES } from './enums.js';
 const LEADER_DATA = [
   {
     factionId: FACTION_IDS.KUR_MARGAL,
-    name: 'High Necromancer Valdris',
-    leaderImg: 'assets/leaders/kur-margal.png',
+    name: 'Sorcerer-King Ashkharad',
+    leaderImg: 'assets/diplomacy/kur_margal_diplo.png',
     militaryBias: 0.7,
     expansionBias: 0.5,
     prefersSupriseWar: false,
@@ -40,11 +41,41 @@ const LEADER_DATA = [
     memoryOpinionMultiplierByType: {},
     racialDrift: {},
     factionDrift: { [FACTION_IDS.IRON_FREEHOLDS]: -8 },
+    lines: {
+      greeting: {
+        alliance:   ['The bond between {self_faction_short_name} and {faction_short_name} grows stronger with each passing age, {leader_name}.', 'Your arrival is anticipated. The dead whisper of you often.'],
+        high:       ['The living rarely earn the respect of {self_faction_short_name}. You are an exception, {leader_name}.', 'I have watched many rulers fade to dust. You endure. I respect that.'],
+        positive:   ['You have my attention. Speak.', '{faction_short_name} has proven... tolerable. What brings you here?'],
+        neutral:    ['What business does {faction_short_name} have in the halls of {self_faction_short_name}?', 'Your presence is neither welcome nor unwelcome. State your purpose.'],
+        negative:   ['I grant you audience only because slaying messengers is wasteful.', 'The dead remember every slight, {leader_name}. Choose your words with care.'],
+        hostile:    ['You have the audacity to seek diplomacy after what {faction_short_name} has done?', 'Speak quickly. My patience ended with my mortality.'],
+        truce:      ['The bones are weary of war. For now.', 'A pause in the killing. Do not mistake it for mercy.'],
+        war:        ['Your armies march to their graves. Literally.', '{faction_short_name} will feed the ranks of {self_faction_short_name} before this is over.'],
+        war_pending:['The death knell has sounded. Your people will know the meaning of eternity.', 'War was inevitable. The dead already know who wins.'],
+      },
+      incoming: {
+        truce:    ['My armies tire of slaughtering the same soldiers. A truce... has merit.', 'I offer respite from the dying, {leader_name}. Consider it.'],
+        alliance: ['An alliance between life and unlife. The world will shudder.', '{self_faction_short_name} does not forge bonds lightly. But you have earned consideration.'],
+      },
+      response: {
+        ai_truce_accept:        ['Acceptable. The war-dead shall rest. For a time.', 'A pause, then. Do not waste it.'],
+        ai_truce_deny:          ['Then your people will continue to join my ranks — involuntarily.', 'The harvesting continues.'],
+        ai_alliance_accept:     ['Bound in shadow and purpose. Do not give me reason to regret this.', '{self_faction_short_name} does not forget its allies.'],
+        ai_alliance_deny:       ['Foolish. You choose isolation over strength.', 'The offer shall not come again.'],
+        player_truce_accept:    ['Good. The killing was becoming routine.', 'Very well. {self_faction_short_name} grants you this reprieve.'],
+        player_truce_deny:      ['Then we continue. I had hoped for reason.', 'No matter. The harvesting continues.'],
+        player_alliance_accept: ['Then we stand united. An alliance etched in bone and shadow.', 'Chosen wisely. The dead will march beside you.'],
+        player_alliance_deny:   ['You refuse our pact. A mistake you will not soon forget.', 'Declined. Remember this moment when the tide turns.'],
+        war_declared:           ['You declare war on {self_faction_short_name}? How delightfully suicidal.', 'Your armies march toward eternity. I welcome them.'],
+        alliance_broken:        ['Betrayal. The dead remember. Every. Single. Slight.', 'You have made an enemy of one who does not forget.'],
+        gift_received:          ['Gold. The currency of the living. It... softens my disposition slightly.', 'Unexpected. {self_faction_short_name} is not ungrateful.'],
+      },
+    },
   },
   {
     factionId: FACTION_IDS.IRON_FREEHOLDS,
     name: 'High Forgemaster Bram',
-    leaderImg: 'assets/leaders/iron-freeholds.png',
+    leaderImg: 'assets/diplomacy/unknown_diplo.png',
     militaryBias: 0.55,
     expansionBias: 0.6,
     prefersSupriseWar: false,
@@ -58,11 +89,41 @@ const LEADER_DATA = [
     memoryOpinionMultiplierByType: {},
     racialDrift: {},
     factionDrift: { [FACTION_IDS.DRAIG_GOCH]: -6 },
+    lines: {
+      greeting: {
+        alliance:   ['Good to see ye, {leader_name}. The forges of {self_faction_short_name} burn bright in your honour.', 'A true ally. Sit down, share an ale. We\'ve business to discuss.'],
+        high:       ['Aye, {leader_name}. Ye\'ve proven yerself a fair-dealing sort. What can {self_faction_short_name} do for ye?', 'Not many earn honest respect from the {self_faction_short_name}. Ye have. Speak yer mind.'],
+        positive:   ['Decent enough folk, {faction_short_name}. What brings ye to our gates?', 'Come in, then. We\'re not ones for idle chat.'],
+        neutral:    ['State yer business, {leader_name}. We\'re not ones for idle chat.', 'Right then. What do {faction_short_name} want from the Freeholds?'],
+        negative:   ['I\'ll give ye a moment. Don\'t waste it.', 'We\'ve our differences, {leader_name}. Say what ye came to say.'],
+        hostile:    ['Yer standing on thin rock. Make it quick.', 'The forges cool when {faction_short_name} shows up. Not a good sign.'],
+        truce:      ['We\'re on pause, aye. Don\'t push yer luck.', 'A truce stands between us. Best we keep it that way.'],
+        war:        ['Ye made yer choice. The Freeholds will grind ye to dust.', '{faction_short_name} came to the wrong mountain.'],
+        war_pending:['War\'s coming. The forges are already making weapons with yer name on them.', 'The hammers of {self_faction_short_name} will not rest till this is settled.'],
+      },
+      incoming: {
+        truce:    ['Neither of us can keep this up forever. I\'m proposing we stop the bleeding.', 'A truce. Practical. That\'s what the Freeholds offers.'],
+        alliance: ['We could do good work together, {leader_name}. Solid alliance, honest terms.', 'The Freeholds doesn\'t ally lightly. But we\'re making an offer.'],
+      },
+      response: {
+        ai_truce_accept:        ['Good. Now both sides can get back to building instead of burning.', 'Sensible. The Freeholds respects practicality.'],
+        ai_truce_deny:          ['Fine. Then we see it through to the end.', 'Yer loss. Don\'t expect another offer.'],
+        ai_alliance_accept:     ['Sealed with a handshake. Don\'t make us regret it.', 'An alliance forged in good faith. We\'ll hold our end.'],
+        ai_alliance_deny:       ['Suit yerself. The Freeholds survives alone just fine.', 'Won\'t be asking again.'],
+        player_truce_accept:    ['Aye, that\'s the sensible path. No more bloodshed for now.', 'Right, truce it is. Glad ye came to yer senses.'],
+        player_truce_deny:      ['Ye really want to keep fighting, then. Alright.', 'Fine by us. Don\'t complain when it gets expensive.'],
+        player_alliance_accept: ['Good. The {self_faction_short_name} fights hard for its allies.', 'Now we\'re talking. Strongest forge wins.'],
+        player_alliance_deny:   ['Yer loss, {leader_name}. We\'ll be fine without ye.', 'Declined. The Freeholds remembers.'],
+        war_declared:           ['Ye picked the fight. We\'ll finish it.', 'Right then. The forges will answer this.'],
+        alliance_broken:        ['That\'s a black mark on ye, {leader_name}. The dwarves remember.', 'Betrayal. Don\'t expect us to forget this quickly.'],
+        gift_received:          ['Gold\'s always useful. I won\'t pretend otherwise. Appreciated.', 'Aye, that\'s fair coin. The Freeholds takes note.'],
+      },
+    },
   },
   {
     factionId: FACTION_IDS.DRAIG_GOCH,
     name: 'Dragon-Queen Ceridwen',
-    leaderImg: 'assets/leaders/draig-goch.png',
+    leaderImg: 'assets/diplomacy/unknown_diplo.png',
     militaryBias: 0.65,
     expansionBias: 0.55,
     prefersSupriseWar: false,
@@ -78,11 +139,41 @@ const LEADER_DATA = [
     },
     racialDrift: {},
     factionDrift: {},
+    lines: {
+      greeting: {
+        alliance:   ['My dearest {leader_name}. The bond between our peoples is a flame that shall not be extinguished.', 'You honour us with your presence, ally of {self_faction_short_name}.'],
+        high:       ['Your deeds speak well of you, {leader_name}. {self_faction_short_name} recognises a worthy sovereign.', 'You stand before the Dragon Throne with honour earned. Speak freely.'],
+        positive:   ['A cordial visit. What brings {faction_short_name} before the Dragon Throne?', '{leader_name}. You have our attention.'],
+        neutral:    ['State your purpose, {leader_name}. We have little patience for preamble.', '{faction_short_name} seeks audience. Proceed.'],
+        negative:   ['Your presence is noted. Speak, and make it worthwhile.', 'There is tension between our peoples. Choose your words with honour.'],
+        hostile:    ['You come before us despite what {faction_short_name} has done. Audacious.', 'Know that the dragons have long memories.'],
+        truce:      ['The swords are sheathed for now. That does not mean trust is restored.', 'We observe the truce. Do not mistake restraint for weakness.'],
+        war:        ['{self_faction_short_name} does not lose wars, {leader_name}.', 'The dragons are awake and wrathful. There will be no retreat.'],
+        war_pending:['The die is cast. We shall meet on the field of honour.', 'War approaches. {self_faction_short_name} has never fled from one.'],
+      },
+      incoming: {
+        truce:    ['Enough blood has been shed on both sides. We extend a truce, without shame.', 'An honourable cease to hostilities. {self_faction_short_name} proposes peace of arms.'],
+        alliance: ['Few earn the right to stand beside {self_faction_short_name}. We believe you are one of them.', 'An alliance forged in honour and trust. We offer it to you, {leader_name}.'],
+      },
+      response: {
+        ai_truce_accept:        ['{self_faction_short_name} keeps its word. Expect no less from us.', 'The truce is honoured. We do not take this lightly.'],
+        ai_truce_deny:          ['Then the war continues. We will not flinch.', 'So be it. The dragons do not beg.'],
+        ai_alliance_accept:     ['You have chosen with wisdom and honour. {self_faction_short_name} will not forget.', 'Then we stand as one. This bond is not easily broken — we trust you know that.'],
+        ai_alliance_deny:       ['A pity. You have refused an alliance with dragons. That is your loss.', 'Declined. It will not be offered again.'],
+        player_truce_accept:    ['It is done. The Dragon Throne is satisfied. Let no slight follow this peace.', 'Good. {self_faction_short_name} expected no less from an honourable sovereign.'],
+        player_truce_deny:      ['Then we continue. The dragons do not tire.', 'A poor choice. You will come to regret it.'],
+        player_alliance_accept: ['You accept with wisdom. This pact carries the weight of the Dragon Throne.', 'The alliance is forged. We are bound in honour now.'],
+        player_alliance_deny:   ['Foolish. Do not seek our aid when the storms come.', 'You refuse the dragons. Remember that choice.'],
+        war_declared:           ['You dare declare war on {self_faction_short_name}? Then face the fire.', 'The dragons wake. You have made a grave error, {leader_name}.'],
+        alliance_broken:        ['Betrayal. Of all the dishonour... this will not be forgotten. Nor forgiven.', 'You have shattered an oath. The price for that is higher than you know.'],
+        gift_received:          ['Gold does not purchase the respect of dragons. But the gesture is acknowledged.', 'Your coin is noted, though our regard is not so easily bought.'],
+      },
+    },
   },
   {
     factionId: FACTION_IDS.AURIC_EMPIRE,
     name: 'Emperor Varanthos III',
-    leaderImg: 'assets/leaders/auric-empire.png',
+    leaderImg: 'assets/diplomacy/unknown_diplo.png',
     militaryBias: 0.45,
     expansionBias: 0.65,
     prefersSupriseWar: false,
@@ -99,11 +190,41 @@ const LEADER_DATA = [
     memoryOpinionMultiplierByType: {},
     racialDrift: { [RACE_IDS.HUMAN]: 5, [RACE_IDS.ELF]: 3 },
     factionDrift: {},
+    lines: {
+      greeting: {
+        alliance:   ['Ah, my dear {leader_name}! The Empire prospers all the more for your friendship.', 'A pleasure, as always. The courts of {self_faction_short_name} are enriched by your presence.'],
+        high:       ['Welcome! {faction_short_name} has been a most agreeable partner of late.', 'Ah, {leader_name}. Relations between us have never been more favourable. What brings you?'],
+        positive:   ['Good of you to come. The Empire always has time for cordial visitors.', '{leader_name}. You find me in good spirits. How may {self_faction_short_name} be of service?'],
+        neutral:    ['Greetings. The Empire is open to dialogue — within reason.', 'Ah. {faction_short_name}. Let us see what arrangement we might reach today.'],
+        negative:   ['The Empire receives all parties, even those with outstanding differences. Speak.', 'The accounts between {self_faction_short_name} and {faction_short_name} are imbalanced. Let us discuss.'],
+        hostile:    ['You come with considerable nerve, I will grant you that.', 'The Empire is listening, but our patience has limits — much like credit.'],
+        truce:      ['A cessation of hostilities is worth more than pride. The Empire knows this.', 'Let us maintain this arrangement. Wars are expensive for everyone.'],
+        war:        ['A most unfortunate state of affairs. The Empire\'s coffers would prefer otherwise.', '{faction_short_name} has forced our hand. The legions march.'],
+        war_pending:['The declaration has been made. We move to war — reluctantly, but decisively.', 'Unfortunate. Trade would have been so much more profitable.'],
+      },
+      incoming: {
+        truce:    ['Continued conflict serves neither treasury well. The Empire proposes a truce.', 'Let us cease this bleeding and return to the table, {leader_name}.'],
+        alliance: ['An alliance between {self_faction_short_name} and {faction_short_name} would be mutually... lucrative.', 'The Empire extends its hand in formal alliance. The benefits are considerable.'],
+      },
+      response: {
+        ai_truce_accept:        ['Excellent! A most sensible arrangement. The trade routes shall breathe again.', 'The Empire is pleased. Let prosperity resume.'],
+        ai_truce_deny:          ['A pity. The costs of this war will be tallied in the history books.', 'So the war continues. The Empire is prepared, if not enthused.'],
+        ai_alliance_accept:     ['Splendid! Our combined influence shall reshape the political landscape.', 'A most beneficial agreement. {self_faction_short_name} does not disappoint.'],
+        ai_alliance_deny:       ['Declined. A miscalculation on your part, I fear.', 'The opportunity was considerable. A shame.'],
+        player_truce_accept:    ['Wonderful. Commerce can resume its natural course.', 'The Empire is satisfied. Let the swords rest — and the trade begin.'],
+        player_truce_deny:      ['Then the war continues. A costly decision.', 'So you choose prolonged conflict. Very well.'],
+        player_alliance_accept: ['The Empire welcomes {faction_short_name} into its circle of trust. A profitable arrangement.', 'Excellent! The courts shall celebrate this occasion.'],
+        player_alliance_deny:   ['You decline? A miscalculation.', 'The offer had considerable merit. A pity.'],
+        war_declared:           ['You have chosen war over commerce. A very costly choice.', 'The Empire will respond in kind, and then some.'],
+        alliance_broken:        ['You break our alliance? That is a transaction with severe penalties.', 'A betrayal of trust. The Empire has a long memory for bad debts.'],
+        gift_received:          ['Gold! Now we are speaking a language the Empire understands perfectly.', 'Most generous. Your standing at court improves considerably.'],
+      },
+    },
   },
   {
     factionId: FACTION_IDS.POLEIS_AETHERA,
     name: 'Thalassarch Elysia',
-    leaderImg: 'assets/leaders/poleis-aethera.png',
+    leaderImg: 'assets/diplomacy/unknown_diplo.png',
     militaryBias: 0.5,
     expansionBias: 0.6,
     prefersSupriseWar: false,
@@ -117,11 +238,41 @@ const LEADER_DATA = [
     memoryOpinionMultiplierByType: {},
     racialDrift: {},
     factionDrift: {},
+    lines: {
+      greeting: {
+        alliance:   ['The tides bring you to our shores again, dear {leader_name}. You are always welcome.', 'Our alliance sails true. What word from {faction_short_name}?'],
+        high:       ['The wind speaks well of you, {leader_name}. {self_faction_short_name} is glad of your arrival.', 'Favourable currents have guided your path to us. What brings you?'],
+        positive:   ['You come in fair weather, {leader_name}. The Poleis receives you.', 'A welcome sight. What brings {faction_short_name} to our harbour?'],
+        neutral:    ['The tide is neither with you nor against you today. What is your errand?', '{faction_short_name} seeks audience. We are listening.'],
+        negative:   ['The waters between our peoples are not calm. Still, we listen.', 'You arrive under difficult skies, {leader_name}. Speak plainly.'],
+        hostile:    ['The sea grows cold when {faction_short_name} approaches. Be brief.', 'Our patience is as deep as the ocean — but this storm tests it.'],
+        truce:      ['The seas are calmer in a ceasefire. Let us keep this peace, however fragile.', 'A truce is a harbour in a storm. We observe it.'],
+        war:        ['The {self_faction_short_name} fleet does not tire, {leader_name}.', 'Your {faction_short_name} sails into contested waters.'],
+        war_pending:['The storm approaches. {self_faction_short_name} stands ready.', 'We did not wish for this war. But we will not shy from it.'],
+      },
+      incoming: {
+        truce:    ['The sea wears down even the hardest stone. Let us pause this conflict.', '{self_faction_short_name} offers a ceasefire, freely and without condition.'],
+        alliance: ['Our fleets would sail as one. {self_faction_short_name} extends the hand of alliance.', 'Let our peoples be bound by shared waters and shared purpose.'],
+      },
+      response: {
+        ai_truce_accept:        ['The storm passes. Let calmer seas prevail between us.', 'A welcome agreement. The Poleis sails in peace — for now.'],
+        ai_truce_deny:          ['Then the tempest continues. We sail on.', 'So be it. The tides are indifferent to the outcome.'],
+        ai_alliance_accept:     ['Our sails fly together now. {self_faction_short_name} does not forget those who stand with us.', 'Beautifully decided. The seas are wider when shared with allies.'],
+        ai_alliance_deny:       ['Then you sail alone. That is your right.', 'The harbour was open. You chose the open sea. So be it.'],
+        player_truce_accept:    ['Good. The waters calm. May this peace hold long.', 'The ceasefire is welcomed. Let us use this time well.'],
+        player_truce_deny:      ['Then you choose the tempest. We sail to meet you.', 'A pity. The tides were in your favour today.'],
+        player_alliance_accept: ['Your harbour is now ours, and ours is yours. Sail well, {leader_name}.', 'The alliance is sealed. Calmer seas ahead for both our peoples.'],
+        player_alliance_deny:   ['Then you sail alone. We will watch from the shore.', 'A missed tide. One does not come twice.'],
+        war_declared:           ['You raise war against the Poleis? The ocean will remember this.', 'Your challenge is accepted. {self_faction_short_name} answers it in kind.'],
+        alliance_broken:        ['You cut the mooring lines. Do not expect us to forgive this tide.', 'Our alliance, cast adrift. The consequences will follow you like a storm.'],
+        gift_received:          ['A generous offering. The currents shift in your favour.', 'Your gift is received with gratitude. Goodwill is a worthy investment.'],
+      },
+    },
   },
   {
     factionId: FACTION_IDS.ARCHONATE_GREYHAVEN,
     name: 'Grand Archon Vetharis',
-    leaderImg: 'assets/leaders/archonate-greyhaven.png',
+    leaderImg: 'assets/diplomacy/unknown_diplo.png',
     militaryBias: 0.7,
     expansionBias: 0.6,
     prefersSupriseWar: false,
@@ -135,11 +286,41 @@ const LEADER_DATA = [
     memoryOpinionMultiplierByType: {},
     racialDrift: {},
     factionDrift: {},
+    lines: {
+      greeting: {
+        alliance:   ['An Archonate ally. There are few higher titles we grant. Welcome, {leader_name}.', '{self_faction_short_name} stands with {faction_short_name}. Your strength and ours — formidable.'],
+        high:       ['You have earned the Archonate\'s respect, {leader_name}. That is not easily done.', 'I see potential in {faction_short_name}. What brings you before the Archonate?'],
+        positive:   ['You carry yourself with purpose. Good. What do you want?', '{faction_short_name}. We have had no cause for conflict. Let us keep it that way.'],
+        neutral:    ['State your business quickly, {leader_name}. The Archonate\'s schedule is not flexible.', 'You have an audience. Use it well.'],
+        negative:   ['Tensions have mounted between our peoples. I expect you know why.', 'We allow this audience. Do not waste it on platitudes.'],
+        hostile:    ['You stand on the precipice, {leader_name}. Mind where you step.', 'The Archonate watches {faction_short_name} very carefully.'],
+        truce:      ['A tactical pause. We use it to reassess — as should you.', 'The Archonate does not rest even in truces. Merely... redirects.'],
+        war:        ['{self_faction_short_name} has fought greater powers than {faction_short_name} and prevailed.', 'Your forces fight well. It will not be enough.'],
+        war_pending:['The declaration is made. {self_faction_short_name} does not hesitate once war begins.', 'Prepare yourself. The Archonate fights to win.'],
+      },
+      incoming: {
+        truce:    ['Continued war yields diminishing returns. The Archonate proposes a ceasefire.', 'A truce is a tactical choice, not a surrender. We offer it as such.'],
+        alliance: ['An alliance between {self_faction_short_name} and {faction_short_name} would dominate this region.', 'We do not ally with the weak. We ally with you. Think on what that means.'],
+      },
+      response: {
+        ai_truce_accept:        ['Good. The Archonate will honour it to the letter.', 'A sound decision. Let us both use this time wisely.'],
+        ai_truce_deny:          ['Then we continue until one of us cannot.', 'Your choice. {self_faction_short_name} adapts.'],
+        ai_alliance_accept:     ['The Archonate does not take this lightly. Nor should you.', 'Bound in strategy and purpose. Do not mistake this for sentiment.'],
+        ai_alliance_deny:       ['You decline an alliance with the Archonate. Bold. Perhaps foolish.', 'Noted. We remember who stands with us — and who does not.'],
+        player_truce_accept:    ['Rational. Both sides can redirect their resources.', 'The ceasefire is acknowledged. Do not squander the breathing room.'],
+        player_truce_deny:      ['Then we continue. The Archonate is already moving.', 'A poor choice, but your prerogative.'],
+        player_alliance_accept: ['The pact is made. The Archonate holds what it agrees to.', 'Good. Your forces and ours make for a formidable combination.'],
+        player_alliance_deny:   ['You decline? Noted. The Archonate will not forget.', 'Your loss. We had plans that included you.'],
+        war_declared:           ['You declare war on {self_faction_short_name}? We accept. Without hesitation.', 'The challenge is noted. The Archonate is already moving.'],
+        alliance_broken:        ['Treachery. {self_faction_short_name} will remember this when the time comes.', 'You broke the pact. The consequences will be proportionate.'],
+        gift_received:          ['Resources are always useful. The Archonate takes note.', 'A goodwill gesture. It will be factored into our assessment of you.'],
+      },
+    },
   },
   {
     factionId: FACTION_IDS.SUTEKH_RA,
     name: 'God-Pharaoh Amenkharis',
-    leaderImg: 'assets/leaders/sutekh-ra.png',
+    leaderImg: 'assets/diplomacy/unknown_diplo.png',
     militaryBias: 0.6,
     expansionBias: 0.55,
     prefersSupriseWar: false,
@@ -153,11 +334,41 @@ const LEADER_DATA = [
     memoryOpinionMultiplierByType: {},
     racialDrift: {},
     factionDrift: {},
+    lines: {
+      greeting: {
+        alliance:   ['We are pleased by your continued devotion, {leader_name}. The sun shines upon {faction_short_name}.', 'Our divine bond endures. What boon does the Eternal Court grant you today?'],
+        high:       ['You have earned a place in the light of {self_faction_short_name}, {leader_name}.', 'We look favourably upon you. Ask, and we shall consider.'],
+        positive:   ['You present yourself before the Eternal Court. We acknowledge you.', '{faction_short_name} walks in the light today. State your petition.'],
+        neutral:    ['We receive all who approach with appropriate humility. Speak.', 'What petition does {faction_short_name} bring before the Eternal Court?'],
+        negative:   ['Your actions have cast a shadow over {self_faction_short_name}\'s regard. Tread carefully.', 'We grant audience. Whether we grant anything more depends on your words.'],
+        hostile:    ['The eternal sun looks unfavourably upon you at this moment, {leader_name}.', 'You stand in shadow. Choose your words as if they were your last.'],
+        truce:      ['Even the sun pauses at dusk. A truce serves the order of things.', 'The war is stilled by divine will. Do not disturb the peace we keep.'],
+        war:        ['{self_faction_short_name} endures. All else passes. Including {faction_short_name}.', 'The eternal armies march, {leader_name}. They have marched before. They will march again.'],
+        war_pending:['The gods have spoken. The war drum echoes through eternity.', 'We have declared it. What the {self_faction_short_name} declares, comes to pass.'],
+      },
+      incoming: {
+        truce:    ['The Eternal Court decrees: a truce. Honour it as you would divine law.', 'We tire of this conflict. A truce is extended — a gift of the sun\'s mercy.'],
+        alliance: ['We extend the light of {self_faction_short_name} to encompass {faction_short_name}. Accept our alliance.', 'An alliance with the eternal is no small thing. We offer it nonetheless.'],
+      },
+      response: {
+        ai_truce_accept:        ['It is done. The sun witnesses. Let no one disturb this peace.', 'The Eternal Court is satisfied. Let the conflict cease.'],
+        ai_truce_deny:          ['Then we continue until the sun\'s justice is served.', 'You refuse our mercy. The war endures by your will.'],
+        ai_alliance_accept:     ['You walk now in eternal light. Do not squander it.', 'The pact is divine. {self_faction_short_name} does not break what is divinely bound.'],
+        ai_alliance_deny:       ['To refuse {self_faction_short_name}\'s alliance is to refuse the sun itself. A grave decision.', 'The light is withdrawn. You stand in shadow by your own choosing.'],
+        player_truce_accept:    ['Good. The Eternal Court approves of your reason.', 'The sun smiles on those who choose peace. For now.'],
+        player_truce_deny:      ['Then the eternal armies continue their work.', 'You refuse the sun\'s mercy. It will not be offered lightly again.'],
+        player_alliance_accept: ['Your wisdom honours the Eternal Court. We are now bound.', 'The alliance is sacred. {self_faction_short_name} holds it so.'],
+        player_alliance_deny:   ['You decline the eternal\'s outstretched hand. A most unwise choice.', 'Then you walk in shadow. The Eternal Court remembers.'],
+        war_declared:           ['You declare war against eternity? Let us see how that serves you.', 'The eternal armies stir. {faction_short_name} has chosen poorly.'],
+        alliance_broken:        ['You sever the divine pact. The sun shall not look kindly on this.', 'Betrayal of the eternal. Your name shall be carved in the Hall of the Faithless.'],
+        gift_received:          ['An offering to the Eternal Court. We acknowledge it with favour.', 'Gold, freely given. The sun smiles upon the generous.'],
+      },
+    },
   },
   {
     factionId: FACTION_IDS.CLANS_FIRST_SCALE,
     name: 'Great Khan Skrath',
-    leaderImg: 'assets/leaders/clans-first-scale.png',
+    leaderImg: 'assets/diplomacy/unknown_diplo.png',
     militaryBias: 0.75,
     expansionBias: 0.7,
     prefersSupriseWar: true,
@@ -171,6 +382,36 @@ const LEADER_DATA = [
     memoryOpinionMultiplierByType: {},
     racialDrift: {},
     factionDrift: {},
+    lines: {
+      greeting: {
+        alliance:   ['Skrath calls you pack-brother, {leader_name}. Few earn that.', '{faction_short_name} runs with the Clans now. Good. We hunt together.'],
+        high:       ['Heh. You again. Skrath likes you, {leader_name}. Don\'t ruin it.', 'You come in peace. Good. Last time didn\'t go so well for the one who didn\'t.'],
+        positive:   ['Speak your piece. Skrath is in a decent mood — for now.', '{faction_short_name}. We\'ve had no quarrel of late. What do you want?'],
+        neutral:    ['What. Say it fast.', 'Skrath has better things to do. You\'ve got until I get bored.'],
+        negative:   ['You\'re lucky the Clans haven\'t marched on you already.', 'Don\'t push your luck, {leader_name}.'],
+        hostile:    ['Skrath is THIS close to ending the talking.', 'You smell like trouble. Start talking before I decide that\'s better.'],
+        truce:      ['We\'re not killing each other. Yet. Say what you want.', 'Truce stands. Don\'t test it.'],
+        war:        ['The Clans are coming. You should run.', 'Skrath will enjoy this personally.'],
+        war_pending:['WAR. Finally. The waiting was the worst part.', 'The Clans have been ready. The waiting ends now.'],
+      },
+      incoming: {
+        truce:    ['Skrath is bored of this war. Truce. Take it or don\'t.', 'Fighting you is getting tedious. A truce — unless you\'d rather keep losing.'],
+        alliance: ['You\'re strong enough to run with the Clans. Alliance. Simple.', 'Skrath doesn\'t often offer this. Don\'t make us regret it.'],
+      },
+      response: {
+        ai_truce_accept:        ['Fine. Clans will stop killing your people. For now.', 'Good choice. Skrath was getting tired anyway.'],
+        ai_truce_deny:          ['HA. Good. Skrath prefers it this way.', 'More fun for us then.'],
+        ai_alliance_accept:     ['You\'re in the pack now. Don\'t slow us down.', 'Good. The Clans fight harder alongside strong allies.'],
+        ai_alliance_deny:       ['Your loss. Literally.', 'Hm. Skrath will remember that.'],
+        player_truce_accept:    ['Good. Skrath gets bored of easy kills anyway.', 'Truce holds. Both sides keep their teeth.'],
+        player_truce_deny:      ['GOOD. Skrath was hoping you\'d do that.', 'Fine. More blood, then. Skrath doesn\'t mind.'],
+        player_alliance_accept: ['Pack grows stronger. Welcome.', 'Now we hunt together. Don\'t make Skrath regret this.'],
+        player_alliance_deny:   ['You say no to the Clans. Bold. Foolish.', 'Rejected? Skrath won\'t forget that.'],
+        war_declared:           ['FINALLY. Skrath was hoping you\'d do something stupid.', 'Oh, we\'ve been waiting for this.'],
+        alliance_broken:        ['Traitor. The Clans remember betrayal in blood.', 'You broke it. Skrath will break you.'],
+        gift_received:          ['Heh. Gold. Skrath accepts. Don\'t think it buys too much.', 'Taking it. Appreciate the gesture. Maybe.'],
+      },
+    },
   },
 ];
 

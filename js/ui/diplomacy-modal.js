@@ -1,14 +1,13 @@
 /**
  * diplomacy-modal.js
  *
- * Diplomacy UI: flags row, leader portrait, opinion display, diplomatic actions.
+ * Diplomacy UI: flags row, landscape scene image, flavor text strip,
+ * leader info panel, diplomatic actions.
  *
- * Layout:
- *   - Header: title + close
- *   - Flags row: one slot per met faction (state icon overlay)
- *   - Body:
- *     - Left: leader portrait, name, faction name, opinion bar + tooltip
- *     - Right: pending AI proposal (accept/deny) + action buttons
+ * Layout (top to bottom inside #dmod-body):
+ *   - Landscape scene image (full width, 200px tall)
+ *   - Flavor text strip (italic, typewriter animated)
+ *   - #dmod-lower (left: leader info | right: actions)
  */
 
 import { state } from '../engine/game-state.js';
@@ -18,31 +17,33 @@ import { DIPLOMATIC_STATES, GAME_EVENTS } from '../data/enums.js';
 import {
   getRelationship, getDiplomaticState, getOpinion, getMemories,
   areMet, createProposal, giftGold, acceptProposal, denyProposal,
-  breakAlliance, getTruceCost, getOpinionLabel,
+  breakAlliance, getTruceCost, getOpinionLabel, declareWar,
 } from '../engine/diplomacy.js';
 import { on } from '../engine/game-events.js';
 
 // ─── State ────────────────────────────────────────────────
 let _selectedFactionId = null;
-let _memoryTooltipVisible = false;
+let _cancelTypewriter  = null;
+let _isWaiting         = false;
 
 // ─── DOM references ───────────────────────────────────────
-const _overlay  = () => document.getElementById('diplomacy-modal-overlay');
-const _flagsRow = () => document.getElementById('dmod-flags-row');
-const _leaderImg    = () => document.getElementById('dmod-leader-img');
-const _leaderName   = () => document.getElementById('dmod-leader-name');
-const _factionName  = () => document.getElementById('dmod-faction-name');
-const _opinionWrap  = () => document.getElementById('dmod-opinion-wrap');
-const _opinionFill  = () => document.getElementById('dmod-opinion-bar-fill');
-const _opinionLabel = () => document.getElementById('dmod-opinion-label');
-const _memTooltip   = () => document.getElementById('dmod-memory-tooltip');
-const _dipBadge     = () => document.getElementById('dmod-dipstate-badge');
-const _pendingBox   = () => document.getElementById('dmod-pending-proposal');
-const _pendingText  = () => document.getElementById('dmod-pending-text');
-const _pendingBtns  = () => document.getElementById('dmod-proposal-btns');
-const _actionsList  = () => document.getElementById('dmod-actions-list');
-const _giftRow      = () => document.getElementById('dmod-gift-row');
-const _emptyState   = () => document.getElementById('dmod-empty-state');
+const _overlay     = () => document.getElementById('diplomacy-modal-overlay');
+const _flagsRow    = () => document.getElementById('dmod-flags-row');
+const _leaderImg   = () => document.getElementById('dmod-leader-img');
+const _flavorText  = () => document.getElementById('dmod-flavor-text');
+const _leaderName  = () => document.getElementById('dmod-leader-name');
+const _factionName = () => document.getElementById('dmod-faction-name');
+const _opinionWrap = () => document.getElementById('dmod-opinion-wrap');
+const _opinionFill = () => document.getElementById('dmod-opinion-bar-fill');
+const _opinionLabel= () => document.getElementById('dmod-opinion-label');
+const _memTooltip  = () => document.getElementById('dmod-memory-tooltip');
+const _dipBadge    = () => document.getElementById('dmod-dipstate-badge');
+const _pendingBox  = () => document.getElementById('dmod-pending-proposal');
+const _pendingText = () => document.getElementById('dmod-pending-text');
+const _pendingBtns = () => document.getElementById('dmod-proposal-btns');
+const _actionsList = () => document.getElementById('dmod-actions-list');
+const _giftRow     = () => document.getElementById('dmod-gift-row');
+const _emptyState  = () => document.getElementById('dmod-empty-state');
 
 // ─── Open / close ─────────────────────────────────────────
 
@@ -50,7 +51,6 @@ export function showDiplomacyModal(targetFactionId = null) {
   const overlay = _overlay();
   if (!overlay) return;
 
-  // Find met factions to auto-select one
   const metFactions = _getMetFactions();
   if (targetFactionId && metFactions.includes(targetFactionId)) {
     _selectedFactionId = targetFactionId;
@@ -60,8 +60,10 @@ export function showDiplomacyModal(targetFactionId = null) {
 
   overlay.removeAttribute('hidden');
   _renderFlagsRow();
+  _renderSceneImage();
   _renderLeaderPanel();
   _renderActionsPanel();
+  if (_selectedFactionId) _triggerGreeting(_selectedFactionId);
 }
 
 export function hideDiplomacyModal() {
@@ -105,6 +107,94 @@ function _getDipStateName(dipState) {
   }
 }
 
+function _selectFaction(factionId) {
+  _selectedFactionId = factionId;
+  _renderFlagsRow();
+  _renderSceneImage();
+  _renderLeaderPanel();
+  _renderActionsPanel();
+  _triggerGreeting(factionId);
+}
+
+// ─── Flavor text ──────────────────────────────────────────
+
+function _typewriterPrint(text, speed = 22) {
+  if (_cancelTypewriter) { _cancelTypewriter(); _cancelTypewriter = null; }
+  const el = _flavorText();
+  if (!el) return;
+  el.textContent = '';
+  let i = 0;
+  let cancelled = false;
+  _cancelTypewriter = () => { cancelled = true; };
+  const tick = () => {
+    if (cancelled) return;
+    if (i >= text.length) { _cancelTypewriter = null; return; }
+    el.textContent += text[i++];
+    setTimeout(tick, speed);
+  };
+  setTimeout(tick, 0);
+}
+
+function _resolveFlavorText(template, playerId, targetId) {
+  const playerLeader  = LEADER_MAP[playerId];
+  const targetFaction = FACTION_MAP[targetId];
+  const playerFaction = FACTION_MAP[playerId];
+  return template
+    .replace(/\{leader_name\}/g,             playerLeader?.name  ?? 'Stranger')
+    .replace(/\{faction_short_name\}/g,       playerFaction?.shortName ?? playerFaction?.name ?? 'your people')
+    .replace(/\{self_faction_short_name\}/g,  targetFaction?.shortName ?? targetFaction?.name ?? 'our people')
+    .replace(/\{self_leader_name\}/g,         LEADER_MAP[targetId]?.name ?? 'I');
+}
+
+function _triggerFlavorLine(targetId, path) {
+  if (!targetId) return;
+  const player = state.playerFactionId;
+  const leader = LEADER_MAP[targetId];
+  if (!leader?.lines) return;
+
+  const parts = path.split('.');
+  let node = leader.lines;
+  for (const part of parts) {
+    node = node?.[part];
+    if (!node) return;
+  }
+
+  const arr = Array.isArray(node) ? node : [node];
+  if (arr.length === 0) return;
+  const template = arr[Math.floor(Math.random() * arr.length)];
+  const text = _resolveFlavorText(template, player, targetId);
+  _typewriterPrint(text);
+}
+
+function _triggerGreeting(targetId) {
+  if (!targetId) return;
+  const player   = state.playerFactionId;
+  const dipState = getDiplomaticState(player, targetId);
+  const rel      = getRelationship(player, targetId);
+
+  // If AI has an outgoing proposal waiting, use that line instead of greeting
+  if (rel?.pendingProposal && rel.pendingProposal.fromFactionId !== player) {
+    const key = rel.pendingProposal.type === 'propose_alliance'
+      ? 'incoming.alliance' : 'incoming.truce';
+    _triggerFlavorLine(targetId, key);
+    return;
+  }
+
+  const aiOpinion = getOpinion(targetId, player) ?? 0;
+  let key;
+  if      (dipState === DIPLOMATIC_STATES.WAR)         key = 'greeting.war';
+  else if (dipState === DIPLOMATIC_STATES.WAR_PENDING)  key = 'greeting.war_pending';
+  else if (dipState === DIPLOMATIC_STATES.TRUCE)        key = 'greeting.truce';
+  else if (dipState === DIPLOMATIC_STATES.ALLIANCE)     key = 'greeting.alliance';
+  else if (aiOpinion >= 40)                             key = 'greeting.high';
+  else if (aiOpinion >= 15)                             key = 'greeting.positive';
+  else if (aiOpinion >= -15)                            key = 'greeting.neutral';
+  else if (aiOpinion >= -40)                            key = 'greeting.negative';
+  else                                                  key = 'greeting.hostile';
+
+  _triggerFlavorLine(targetId, key);
+}
+
 // ─── Flags row ────────────────────────────────────────────
 
 function _renderFlagsRow() {
@@ -114,7 +204,7 @@ function _renderFlagsRow() {
 
   const player = state.playerFactionId;
 
-  for (const [factionId, fs] of state.factions.entries()) {
+  for (const [factionId] of state.factions.entries()) {
     if (factionId === player) continue;
 
     const slot = document.createElement('div');
@@ -122,24 +212,23 @@ function _renderFlagsRow() {
     slot.dataset.factionId = factionId;
 
     const isEliminated = state.eliminated.has(factionId);
-    const isMet = areMet(player, factionId);
-    const factionDef = FACTION_MAP[factionId];
+    const isMet        = areMet(player, factionId);
+    const factionDef   = FACTION_MAP[factionId];
 
-    if (isEliminated) {
-      slot.classList.add('eliminated');
-    } else if (!isMet) {
-      slot.classList.add('unmet');
-    }
+    if (isEliminated) slot.classList.add('eliminated');
+    else if (!isMet)  slot.classList.add('unmet');
+    if (_selectedFactionId === factionId) slot.classList.add('active');
 
-    if (_selectedFactionId === factionId) {
-      slot.classList.add('active');
-    }
-
-    // Flag image or emoji
-    if (factionDef?.flagImg) {
+    // Flag image — unknown for unmet, real flag otherwise
+    if (!isMet && !isEliminated) {
+      const img = document.createElement('img');
+      img.src = 'assets/flags/unknown_nation.png';
+      img.alt = '???';
+      slot.appendChild(img);
+    } else if (factionDef?.flagImg) {
       const img = document.createElement('img');
       img.src = factionDef.flagImg;
-      img.alt = factionDef.name;
+      img.alt = factionDef.name ?? '';
       slot.appendChild(img);
     } else {
       const emo = document.createElement('span');
@@ -148,7 +237,7 @@ function _renderFlagsRow() {
       slot.appendChild(emo);
     }
 
-    // Diplomatic state overlay icon
+    // State icon overlay
     const stateIcon = document.createElement('span');
     stateIcon.className = 'dmod-state-icon';
     if (isEliminated) {
@@ -156,40 +245,41 @@ function _renderFlagsRow() {
     } else if (!isMet) {
       stateIcon.textContent = '🌫️';
     } else {
-      const dipState = getDiplomaticState(player, factionId);
-      stateIcon.textContent = _getStateEmoji(dipState);
+      stateIcon.textContent = _getStateEmoji(getDiplomaticState(player, factionId));
     }
     slot.appendChild(stateIcon);
 
     if (!isEliminated && isMet) {
-      slot.addEventListener('click', () => {
-        _selectedFactionId = factionId;
-        _renderFlagsRow();
-        _renderLeaderPanel();
-        _renderActionsPanel();
-      });
+      slot.addEventListener('click', () => _selectFaction(factionId));
     }
 
     container.appendChild(slot);
   }
 }
 
+// ─── Scene image ──────────────────────────────────────────
+
+function _renderSceneImage() {
+  const img    = _leaderImg();
+  if (!img) return;
+  const leader = LEADER_MAP[_selectedFactionId];
+  img.src = leader?.leaderImg ?? '';
+  img.alt = '';
+}
+
 // ─── Leader panel ─────────────────────────────────────────
 
 function _renderLeaderPanel() {
-  const targetId = _selectedFactionId;
-  const player   = state.playerFactionId;
-
-  const leaderImg  = _leaderImg();
+  const targetId  = _selectedFactionId;
+  const player    = state.playerFactionId;
   const leaderName = _leaderName();
   const facName    = _factionName();
   const badge      = _dipBadge();
-  const opWrap     = _opinionWrap();
   const opFill     = _opinionFill();
   const opLabel    = _opinionLabel();
+  const opWrap     = _opinionWrap();
 
   if (!targetId) {
-    if (leaderImg)  { leaderImg.src = ''; leaderImg.alt = ''; }
     if (leaderName) leaderName.textContent = '';
     if (facName)    facName.textContent = '';
     if (badge)      badge.textContent = '';
@@ -201,14 +291,9 @@ function _renderLeaderPanel() {
   const dipState   = getDiplomaticState(player, targetId);
   const opinion    = getOpinion(player, targetId);
 
-  if (leaderImg) {
-    leaderImg.src = leader?.leaderImg ?? '';
-    leaderImg.alt = leader?.name ?? '';
-  }
   if (leaderName) leaderName.textContent = leader?.name ?? factionDef?.name ?? '';
-  if (facName)    facName.textContent = factionDef?.name ?? '';
+  if (facName)    facName.textContent    = factionDef?.name ?? '';
 
-  // Diplomatic state badge
   if (badge) {
     badge.textContent = _getDipStateName(dipState);
     badge.className = 'dmod-dipstate-badge';
@@ -219,19 +304,16 @@ function _renderLeaderPanel() {
     if (cls) badge.classList.add(cls);
   }
 
-  // Opinion bar: map -100..100 to 0..100% width
   if (opFill) {
-    const pct = (opinion + 100) / 2; // 0–100
-    opFill.style.width = pct + '%';
-    opFill.style.background =
-      opinion >= 15 ? 'var(--success)' :
-      opinion <= -15 ? 'var(--danger)' : '#c0a000';
+    const pct = (opinion + 100) / 2;
+    opFill.style.width      = pct + '%';
+    opFill.style.background = opinion >= 15 ? 'var(--success)' :
+                              opinion <= -15 ? 'var(--danger)' : '#c0a000';
   }
   if (opLabel) {
     opLabel.textContent = `${opinion >= 0 ? '+' : ''}${Math.round(opinion)} — ${getOpinionLabel(opinion)}`;
   }
 
-  // Opinion tooltip (show/hide on hover)
   if (opWrap) {
     opWrap.onmouseenter = () => _showMemoryTooltip(player, targetId);
     opWrap.onmouseleave = () => _hideMemoryTooltip();
@@ -241,19 +323,17 @@ function _renderLeaderPanel() {
 function _showMemoryTooltip(ownerFactionId, aboutFactionId) {
   const tooltip = _memTooltip();
   if (!tooltip) return;
-
   const memories = getMemories(ownerFactionId, aboutFactionId);
   if (memories.length === 0) {
     tooltip.innerHTML = '<span style="color:var(--text-muted)">No memories.</span>';
   } else {
     const sorted = [...memories].sort((a, b) => b.strength - a.strength);
     tooltip.innerHTML = sorted.map(m => {
-      const turns = m.turnsRemaining;
       const delta = m.opinionDelta;
       const cls   = delta >= 0 ? 'pos' : 'neg';
       const sign  = delta >= 0 ? '+' : '';
       return `<div class="dmod-memory-row">
-        <span>${m.label} <small style="color:var(--text-muted)">(${turns}t)</small></span>
+        <span>${m.label} <small style="color:var(--text-muted)">(${m.turnsRemaining}t)</small></span>
         <span class="dmod-mem-delta ${cls}">${sign}${Math.round(delta)}</span>
       </div>`;
     }).join('');
@@ -268,9 +348,8 @@ function _hideMemoryTooltip() {
 // ─── Actions panel ────────────────────────────────────────
 
 function _renderActionsPanel() {
-  const targetId = _selectedFactionId;
-  const player   = state.playerFactionId;
-
+  const targetId    = _selectedFactionId;
+  const player      = state.playerFactionId;
   const pendingBox  = _pendingBox();
   const pendingText = _pendingText();
   const actList     = _actionsList();
@@ -295,7 +374,7 @@ function _renderActionsPanel() {
     const p = rel.pendingProposal;
     const fromName = FACTION_MAP[p.fromFactionId]?.name ?? p.fromFactionId;
     let desc = '';
-    if (p.type === 'propose_truce')   desc = `${fromName} is proposing a Truce.`;
+    if (p.type === 'propose_truce')    desc = `${fromName} is proposing a Truce.`;
     if (p.type === 'propose_alliance') desc = `${fromName} is proposing an Alliance.`;
 
     if (p.fromFactionId !== player) {
@@ -308,14 +387,18 @@ function _renderActionsPanel() {
         accept.className = 'btn-primary';
         accept.textContent = 'Accept';
         accept.addEventListener('click', () => {
+          const isAlliance = p.type === 'propose_alliance';
           acceptProposal(p.fromFactionId, player);
+          _triggerFlavorLine(targetId, isAlliance ? 'response.player_alliance_accept' : 'response.player_truce_accept');
           _refresh();
         });
         const deny = document.createElement('button');
         deny.className = 'btn-secondary';
         deny.textContent = 'Decline';
         deny.addEventListener('click', () => {
+          const isAlliance = p.type === 'propose_alliance';
           denyProposal(p.fromFactionId, player);
+          _triggerFlavorLine(targetId, isAlliance ? 'response.player_alliance_deny' : 'response.player_truce_deny');
           _refresh();
         });
         btns.appendChild(accept);
@@ -323,19 +406,21 @@ function _renderActionsPanel() {
       }
       pendingBox.removeAttribute('hidden');
     } else {
-      // Player → AI: show awaiting response
-      pendingText.textContent = 'Awaiting response...';
+      // Player → AI: awaiting (will auto-resolve via _sendProposalWithDelay)
+      pendingText.textContent = _isWaiting ? 'Considering...' : 'Awaiting response...';
       const btns = _pendingBtns();
       if (btns) {
         btns.innerHTML = '';
-        const cancel = document.createElement('button');
-        cancel.className = 'btn-secondary';
-        cancel.textContent = 'Cancel';
-        cancel.addEventListener('click', () => {
-          if (rel) rel.pendingProposal = null;
-          _refresh();
-        });
-        btns.appendChild(cancel);
+        if (!_isWaiting) {
+          const cancel = document.createElement('button');
+          cancel.className = 'btn-secondary';
+          cancel.textContent = 'Cancel';
+          cancel.addEventListener('click', () => {
+            if (rel) rel.pendingProposal = null;
+            _refresh();
+          });
+          btns.appendChild(cancel);
+        }
       }
       pendingBox.removeAttribute('hidden');
     }
@@ -350,7 +435,7 @@ function _renderActionsPanel() {
     buttons.forEach(b => actList.appendChild(b));
   }
 
-  // ── Gift gold row (always show when at peace/truce/alliance) ──
+  // ── Gift gold row ──
   if (giftRow) {
     const canGift = [DIPLOMATIC_STATES.PEACE, DIPLOMATIC_STATES.TRUCE, DIPLOMATIC_STATES.ALLIANCE].includes(dipState);
     if (canGift) {
@@ -363,64 +448,56 @@ function _renderActionsPanel() {
 }
 
 function _buildActionButtons(player, targetId, dipState) {
-  const buttons = [];
+  const buttons    = [];
   const targetName = FACTION_MAP[targetId]?.name ?? targetId;
-  const rel = getRelationship(player, targetId);
+  const rel        = getRelationship(player, targetId);
   const noProposal = !rel?.pendingProposal;
 
-  if (dipState === DIPLOMATIC_STATES.PEACE) {
-    if (noProposal) {
-      buttons.push(_makeBtn(`📯 Declare War on ${targetName}`, 'danger', () => {
-        declareWar(player, targetId, { surprise: false });
-        _refresh();
-      }));
-      buttons.push(_makeBtn(`🤝 Propose Alliance to ${targetName}`, '', () => {
-        createProposal(player, targetId, 'propose_alliance');
-        _refresh();
-      }));
-    }
+  if (dipState === DIPLOMATIC_STATES.PEACE && noProposal) {
+    buttons.push(_makeBtn(`📯 Declare War on ${targetName}`, 'danger', () => {
+      declareWar(player, targetId, { surprise: false });
+      _triggerFlavorLine(targetId, 'response.war_declared');
+      _refresh();
+    }));
+    buttons.push(_makeBtn(`🤝 Propose Alliance to ${targetName}`, '', () => {
+      _sendProposalWithDelay(player, targetId, 'propose_alliance');
+    }));
   }
 
-  if (dipState === DIPLOMATIC_STATES.TRUCE) {
-    if (noProposal) {
-      buttons.push(_makeBtn(`🤝 Propose Alliance to ${targetName}`, '', () => {
-        createProposal(player, targetId, 'propose_alliance');
-        _refresh();
-      }));
-      const turnsLeft = rel?.truceTurnsRemaining ?? 0;
-      const info = document.createElement('p');
-      info.style.cssText = 'font-size:.78rem;color:var(--text-muted);margin:0';
-      info.textContent = `Truce expires in ${turnsLeft} turn${turnsLeft !== 1 ? 's' : ''}. Moving armies into their territory will trigger a surprise war.`;
-      buttons.push(info);
-    }
+  if (dipState === DIPLOMATIC_STATES.TRUCE && noProposal) {
+    buttons.push(_makeBtn(`🤝 Propose Alliance to ${targetName}`, '', () => {
+      _sendProposalWithDelay(player, targetId, 'propose_alliance');
+    }));
+    const turnsLeft = rel?.truceTurnsRemaining ?? 0;
+    const info = document.createElement('p');
+    info.style.cssText = 'font-size:.78rem;color:var(--text-muted);margin:0';
+    info.textContent = `Truce expires in ${turnsLeft} turn${turnsLeft !== 1 ? 's' : ''}. Moving armies into their territory will trigger a surprise war.`;
+    buttons.push(info);
   }
 
   if (dipState === DIPLOMATIC_STATES.ALLIANCE) {
     buttons.push(_makeBtn(`💔 Break Alliance with ${targetName}`, 'danger', () => {
       if (confirm(`Breaking the alliance with ${targetName} will cause a significant opinion penalty.`)) {
         breakAlliance(player, targetId);
+        _triggerFlavorLine(targetId, 'response.alliance_broken');
         _refresh();
       }
     }));
   }
 
-  if (dipState === DIPLOMATIC_STATES.WAR) {
-    if (noProposal) {
-      const cost = getTruceCost(player, targetId);
-      const myPay = cost[player] ?? 0;
-      const theirPay = cost[targetId] ?? 0;
-      const costDesc = myPay > 0 ? ` (you pay ${myPay} gold)` :
-                       theirPay > 0 ? ` (they pay ${theirPay} gold)` : '';
-      buttons.push(_makeBtn(`🕊️ Propose Truce${costDesc}`, '', () => {
-        createProposal(player, targetId, 'propose_truce', cost);
-        _refresh();
-      }));
-    }
+  if (dipState === DIPLOMATIC_STATES.WAR && noProposal) {
+    const cost = getTruceCost(player, targetId);
+    const myPay    = cost[player]   ?? 0;
+    const theirPay = cost[targetId] ?? 0;
+    const costDesc = myPay > 0    ? ` (you pay ${myPay} gold)` :
+                     theirPay > 0 ? ` (they pay ${theirPay} gold)` : '';
+    buttons.push(_makeBtn(`🕊️ Propose Truce${costDesc}`, '', () => {
+      _sendProposalWithDelay(player, targetId, 'propose_truce', cost);
+    }));
   }
 
   if (dipState === DIPLOMATIC_STATES.WAR_PENDING) {
-    const rel2 = getRelationship(player, targetId);
-    const turns = rel2?.warPendingTurns ?? 0;
+    const turns = rel?.warPendingTurns ?? 0;
     const info = document.createElement('p');
     info.style.cssText = 'font-size:.88rem;color:#f06000;margin:0';
     info.textContent = `⚠️ War begins in ${turns} turn${turns !== 1 ? 's' : ''}.`;
@@ -441,6 +518,7 @@ function _renderGiftRow(player, targetId, container) {
     if (myGold < amount) btn.style.opacity = '.4';
     btn.addEventListener('click', () => {
       giftGold(player, targetId, amount);
+      _triggerFlavorLine(targetId, 'response.gift_received');
       _refresh();
     });
     container.appendChild(btn);
@@ -455,8 +533,72 @@ function _makeBtn(label, extraClass, onClick) {
   return btn;
 }
 
+// ─── Proposal with AI response delay ──────────────────────
+
+function _sendProposalWithDelay(player, targetId, type, costData = null) {
+  if (_isWaiting) return;
+  _isWaiting = true;
+
+  createProposal(player, targetId, type, costData);
+
+  // Show "..." briefly in flavor text while AI "thinks"
+  if (_cancelTypewriter) { _cancelTypewriter(); _cancelTypewriter = null; }
+  const flavEl = _flavorText();
+  if (flavEl) flavEl.textContent = '...';
+
+  _renderActionsPanel();
+
+  const delay = 100 + Math.random() * 100;
+  setTimeout(() => {
+    _isWaiting = false;
+    const decision = _evaluateProposalDecision(targetId, player, type);
+
+    if (decision === 'accept') {
+      acceptProposal(player, targetId);
+      const key = type === 'propose_alliance' ? 'response.ai_alliance_accept' : 'response.ai_truce_accept';
+      _triggerFlavorLine(targetId, key);
+    } else {
+      denyProposal(player, targetId);
+      const key = type === 'propose_alliance' ? 'response.ai_alliance_deny' : 'response.ai_truce_deny';
+      _triggerFlavorLine(targetId, key);
+    }
+
+    _refresh();
+  }, delay);
+}
+
+function _evaluateProposalDecision(aiId, playerId, type) {
+  const leader  = LEADER_MAP[aiId];
+  const opinion = getOpinion(aiId, playerId) ?? 0;
+  const rel     = getRelationship(aiId, playerId);
+
+  if (type === 'propose_truce') {
+    const aiScore     = rel?.warScore?.[aiId]?.provincesGained ?? 0;
+    const playerScore = rel?.warScore?.[playerId]?.provincesGained ?? 0;
+    const isLosing    = aiScore < playerScore;
+    const threshold   = isLosing ? 0.7 : opinion > -20 ? 0.5 : 0.2;
+    return Math.random() < threshold ? 'accept' : 'deny';
+  }
+
+  if (type === 'propose_alliance') {
+    const threshold = leader?.allianceThreshold ?? 50;
+    if (opinion < threshold) return 'deny';
+    const hasWar = [...(state.diplomacy?.values() ?? [])].some(r => {
+      if (r.factionAId !== aiId && r.factionBId !== aiId) return false;
+      return r.state === DIPLOMATIC_STATES.WAR || r.state === DIPLOMATIC_STATES.WAR_PENDING;
+    });
+    if (hasWar) return 'deny';
+    return Math.random() < 0.7 ? 'accept' : 'deny';
+  }
+
+  return 'deny';
+}
+
+// ─── Internal refresh (no greeting re-trigger) ────────────
+
 function _refresh() {
   _renderFlagsRow();
+  _renderSceneImage();
   _renderLeaderPanel();
   _renderActionsPanel();
 }
@@ -469,10 +611,10 @@ function _updateBadge() {
   let badge = btn.querySelector('.dmod-badge');
 
   const player = state.playerFactionId;
-  const hasPending = player && [...(state.diplomacy?.values() ?? [])].some(rel => {
-    return rel.pendingProposal && rel.pendingProposal.fromFactionId !== player &&
-           (rel.factionAId === player || rel.factionBId === player);
-  });
+  const hasPending = player && [...(state.diplomacy?.values() ?? [])].some(rel =>
+    rel.pendingProposal && rel.pendingProposal.fromFactionId !== player &&
+    (rel.factionAId === player || rel.factionBId === player)
+  );
 
   if (hasPending) {
     if (!badge) {
@@ -499,13 +641,11 @@ export function initDiplomacyModal() {
 
   document.getElementById('diplomacy-btn')?.addEventListener('click', () => showDiplomacyModal());
 
-  // Listen for incoming proposals to update badge
   document.addEventListener('diplomatic-proposal-received', () => {
     _updateBadge();
     if (isDiplomacyModalOpen()) _renderActionsPanel();
   });
 
-  // Refresh the modal when an alliance breaks (state badge + actions change)
   document.addEventListener('alliance-broken', () => {
     if (isDiplomacyModalOpen()) _refresh();
   });
