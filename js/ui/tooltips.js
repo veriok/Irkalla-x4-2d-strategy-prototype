@@ -520,21 +520,18 @@ function _buildTechHtml(techDef) {
     effectParts.push(`⚔ ${subject}: +${eff.amount} ${eff.stat.charAt(0).toUpperCase() + eff.stat.slice(1)}`);
   }
 
-  if ((techDef.unlockBuildings ?? []).length > 0) {
+  {
     const pFactionId = state.playerFactionId ?? null;
     const pRaceId = pFactionId ? (FACTION_MAP[pFactionId]?.raceId ?? null) : null;
-    const names = techDef.unlockBuildings
-      .filter(id => {
-        const b = BUILDING_MAP[id];
-        if (!b) return true;
-        if (b.factionId && b.factionId !== pFactionId) return false;
-        if (b.raceId && b.raceId !== pRaceId) return false;
-        if (pFactionId && (b.disabledFactions ?? []).includes(pFactionId)) return false;
-        return true;
-      })
-      .map(id => { const b = BUILDING_MAP[id]; return b ? `${b.emoji} ${b.name}` : id; })
-      .join(', ');
-    if (names) effectParts.push(`🔓 Unlocks: ${names}`);
+    const buildings = Object.values(BUILDING_MAP).filter(b => {
+      if (b.techRequired !== techDef.id && b.techRequired !== techDef.replacesId) return false;
+      if (b.factionId && b.factionId !== pFactionId) return false;
+      if (b.raceId && b.raceId !== pRaceId) return false;
+      if (pFactionId && (b.disabledFactions ?? []).includes(pFactionId)) return false;
+      return true;
+    });
+    if (buildings.length > 0)
+      effectParts.push(`🔓 Unlocks: ${buildings.map(b => `${b.emoji} ${b.name}`).join(', ')}`);
   }
 
   for (const actionId of (techDef.unlockActions ?? [])) {
@@ -566,7 +563,7 @@ function _buildTechHtml(techDef) {
 
   // First unit unlocked by this tech for the player's faction (capped at 1 to avoid clutter)
   const unlockedUnits = UNITS.filter(u =>
-    u.techRequired === techDef.id &&
+    (u.techRequired === techDef.id || (techDef.replacesId && u.techRequired === techDef.replacesId)) &&
     !u.isMilitia &&
     u.factionId === state.playerFactionId
   ).slice(0, 1);
