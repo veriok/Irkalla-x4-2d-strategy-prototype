@@ -38,6 +38,7 @@
     </div>
     <div id="heroes-top-area"></div>
     <button id="minimap-btn" class="btn-secondary">🗺 Map</button>
+    <button id="province-list-btn" class="btn-secondary">☰ Provinces</button>
     <button id="research-btn" class="btn-secondary">📚 Research</button>
     <button id="diplomacy-btn" class="btn-secondary">🏛 Diplomacy</button>
     <button id="settings-btn" class="btn-secondary">⚙ Settings</button>
@@ -102,8 +103,10 @@
 
     <!-- RIGHT: province panel -->
     <aside id="province-panel" class="side-panel">
-      <!-- Minimap — sticky top, shown/hidden by button in header -->
+      <!-- Minimap — always at top, shown/hidden by button in header -->
       <div id="minimap-wrap" hidden><canvas id="minimap-canvas"></canvas></div>
+      <!-- Province list view (replaces panel content when active) -->
+      <div id="province-list-view" hidden></div>
       <div id="province-panel-empty">
         <p>Click a province to inspect it.</p>
       </div>

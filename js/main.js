@@ -16,7 +16,7 @@ import { updateFogOfWar } from './engine/fog-of-war.js';
 import { renderAllProvinces, renderArmyIcons, initMapEvents,
          registerMapCallbacks, initMapPan, setMinimapCallback } from './ui/map-view.js';
 import { renderResourceBar }   from './ui/resource-bar.js';
-import { renderArmyPanel, registerArmyPanelCallbacks } from './ui/army-panel.js';
+import { renderArmyPanel, registerArmyPanelCallbacks, setDetailProvince } from './ui/army-panel.js';
 import { showProvincePanel, hideProvincePanel } from './ui/province-panel.js';
 import { refreshProvinceModal } from './ui/province-modal.js';
 import { showResearchModal, hideResearchModal, refreshResearchModal } from './ui/research-modal.js';
@@ -363,6 +363,7 @@ async function init() {
   // 11. Map event callbacks
   registerMapCallbacks({
     onProvinceSelect: (provinceId) => {
+      setDetailProvince(provinceId);
       showProvincePanel(provinceId);
       renderArmyPanel();
     },
@@ -371,7 +372,8 @@ async function init() {
   initMapEvents();
 
   registerArmyPanelCallbacks({
-    onArmySelect: () => { renderArmyIcons(); },
+    onArmySelect:   () => { renderArmyIcons(); },
+    onShowProvince: (provinceId) => { showProvincePanel(provinceId); },
   });
 
   // 12. End Turn button

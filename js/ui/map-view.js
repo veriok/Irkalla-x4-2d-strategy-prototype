@@ -632,6 +632,11 @@ export function setCameraPosition(x, y) {
   if (_minimapCallback) _minimapCallback();
 }
 
+/** Center the camera on an SVG coordinate point (e.g. province centroid). */
+export function centerCameraOn(x, y) {
+  setCameraPosition(x - VIEWPORT_W / 2, y - VIEWPORT_H / 2);
+}
+
 function _applyCamera(x, y) {
   _camX = Math.max(0, Math.min(_mapW - VIEWPORT_W, x));
   _camY = Math.max(0, Math.min(_mapH - VIEWPORT_H, y));

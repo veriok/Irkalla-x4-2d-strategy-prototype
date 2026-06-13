@@ -2,18 +2,19 @@
  * army-panel.js
  *
  * Renders the left panel with the player's armies.
- * Handles army selection, movement, split.
+ * Top section: compact badge grid (2-3 per row) for at-a-glance overview.
+ * Bottom section: full per-unit detail for the selected province's armies.
  */
 
 import { state, getProvince, getArmiesByFaction, getArmiesInProvince, selectArmy,
-         startArmyMove, splitArmy, transferUnit,
+         selectProvince, startArmyMove, splitArmy, transferUnit,
          getArmySupplyCap, getFaction } from '../engine/game-state.js';
 import { FACTION_MAP } from '../data/factions-data.js';
 import { UNIT_MAP } from '../data/units-data.js';
 import { isArmyActionUnlocked } from '../engine/faction-actions.js';
 import { armySize, armyWoundedCount } from '../models/army.js';
 import { getEffectiveUnitStats, getEffectiveArmyAttack, getEffectiveArmyDefense } from '../engine/tech-effects.js';
-import { showReachableProvinces, renderArmyIcons, renderAllProvinces, cancelArmyMoveAndClear } from './map-view.js';
+import { showReachableProvinces, renderArmyIcons, renderAllProvinces, cancelArmyMoveAndClear, centerCameraOn } from './map-view.js';
 import { showModal, hideModal } from './modal.js';
 import { createCard } from './card-renderer.js';
 import { showUnitTooltip, hideUnitTooltip, showActionTooltip, hideActionTooltip, showHeroTooltip, hideHeroTooltip } from './tooltips.js';
@@ -29,14 +30,24 @@ import { SPELL_MAP, SPELLS } from '../data/hero-spells-data.js';
 
 const armyListEl = document.getElementById('army-list');
 
-let _onArmySelect = null;
+let _onArmySelect   = null;
+let _onShowProvince = null;
+
+// Province currently shown in the detail section (below the badge grid)
+let _detailProvinceId = null;
 
 // ── Drag-and-drop state (unit transfer between co-located armies) ─
 let _dragSourceArmyId = null;
 let _dragTypeId       = null;
 
-export function registerArmyPanelCallbacks({ onArmySelect }) {
-  _onArmySelect = onArmySelect;
+/** Called externally (e.g. map province click) to sync the detail view province. */
+export function setDetailProvince(provinceId) {
+  _detailProvinceId = provinceId ?? null;
+}
+
+export function registerArmyPanelCallbacks({ onArmySelect, onShowProvince }) {
+  _onArmySelect   = onArmySelect;
+  _onShowProvince = onShowProvince ?? null;
 }
 
 /**
@@ -59,188 +70,333 @@ export function renderArmyPanel() {
     return;
   }
 
-  for (const army of armies) {
-    const prov    = getProvince(army.provinceId);
-    const faction = FACTION_MAP[army.factionId];
-    const isSelected = state.selectedArmyId === army.id;
+  _renderBadgeSection(armies, armyListEl);
+  _renderDetailSection(armies, armyListEl);
+}
 
-    const card = document.createElement('div');
-    card.className = `army-card${isSelected ? ' selected' : ''}`;
+// ── Badge grid ────────────────────────────────────────────────
 
-    // Header
-    const header = document.createElement('div');
-    header.className = 'army-card-header';
-    header.innerHTML = `
-      <span class="army-faction-icon">${faction?.emoji ?? '⚔'}</span>
-      <span style="font-weight:600;font-size:13px;color:var(--text-bright)">Army</span>
-      <span class="army-location">${prov?.name ?? army.provinceId}</span>
-    `;
-    card.appendChild(header);
+function _renderBadgeSection(armies, container) {
+  const grid = document.createElement('div');
+  grid.className = 'army-badge-grid';
+  for (const army of armies) grid.appendChild(_renderBadge(army));
+  container.appendChild(grid);
+}
 
-    // Unit cards (healthy + wounded) in a 6-per-row card grid
-    const unitsEl = document.createElement('div');
-    unitsEl.className = 'army-units card-grid card-grid--6';
+function _renderBadge(army) {
+  const prov      = getProvince(army.provinceId);
+  const isSelected = state.selectedArmyId === army.id;
 
-    // Co-located armies — used to decide whether drag is valid
-    const siblingArmies = getArmiesInProvince(army.provinceId)
-      .filter(a => a.id !== army.id && a.factionId === army.factionId);
-    const hasSiblings = siblingArmies.length > 0;
+  const healthy    = armySize(army);
+  const wounded    = armyWoundedCount(army);
+  const cap        = getArmySupplyCap(army.factionId);
+  const atk        = Math.round(getEffectiveArmyAttack(army, army.factionId, UNIT_MAP));
+  const def        = Math.round(getEffectiveArmyDefense(army, army.factionId, UNIT_MAP));
+  const supplyUsed = healthy + wounded;
 
-    // ── Hero slot (first in unit grid, golden outline) ──
-    unitsEl.appendChild(_makeHeroSlot(army));
+  const badge = document.createElement('div');
+  badge.className = `army-badge${isSelected ? ' selected' : ''}`;
 
-    for (const { typeId, count } of army.units) {
-      const uDef = UNIT_MAP[typeId];
-      const hpArr = (army.hp?.active?.[typeId] ?? []).slice();
-      while (hpArr.length < count) hpArr.push(uDef?.maxHp ?? 10);
-      const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(typeId, army.factionId, UNIT_MAP, army);
-      for (let i = 0; i < count; i++) {
-        const currentHp = hpArr[i] ?? (uDef?.maxHp ?? 10);
-        const unitCard = _makeUnitCard(uDef, false, faction, currentHp, effAtk, effDef);
-        if (hasSiblings) {
-          // Draggable even if it would empty this army — empty army is removed on drop
-          unitCard.draggable = true;
-          unitCard.title = `Drag to move ${uDef?.name ?? typeId} to another army here`;
-          unitCard.addEventListener('dragstart', e => {
-            _dragSourceArmyId = army.id;
-            _dragTypeId       = typeId;
-            e.stopPropagation();
-          });
-          unitCard.addEventListener('dragend', () => {
-            _dragSourceArmyId = null;
-            _dragTypeId       = null;
-          });
-        }
-        unitsEl.appendChild(unitCard);
-      }
+  // Left icon (hero portrait or first unit card)
+  const iconWrap = document.createElement('div');
+  iconWrap.className = 'army-badge-icon';
+  iconWrap.appendChild(_makeBadgeIcon(army));
+  badge.appendChild(iconWrap);
+
+  // Right info rows
+  const info = document.createElement('div');
+  info.className = 'army-badge-info';
+
+  const supplyClass  = supplyUsed >= cap ? ' supply-full' : '';
+  const woundedStr   = wounded > 0 ? ` 🩸${wounded}` : '';
+
+  info.innerHTML =
+    `<div class="army-badge-province">${prov?.name ?? army.provinceId}</div>` +
+    `<div class="army-badge-stats">⚔ ${atk} &nbsp; 🛡 ${def}</div>` +
+    `<div class="army-badge-supply${supplyClass}">📦 ${supplyUsed}/${cap}${woundedStr}</div>`;
+
+  badge.appendChild(info);
+
+  badge.addEventListener('click', () => {
+    _detailProvinceId = army.provinceId;
+    selectProvince(army.provinceId);
+    selectArmy(army.id);
+    if (prov?.centroid) centerCameraOn(prov.centroid[0], prov.centroid[1]);
+    renderAllProvinces();
+    renderArmyPanel();
+    renderArmyIcons();
+    if (_onShowProvince) _onShowProvince(army.provinceId);
+  });
+
+  return badge;
+}
+
+function _makeBadgeIcon(army) {
+  const fs    = getFaction(army.factionId);
+  const hero  = fs?.heroes?.find(h => h.id === army.heroId) ?? null;
+  const fDef  = FACTION_MAP[army.factionId] ?? null;
+
+  if (hero) {
+    const classDef = HERO_CLASS_MAP[hero.classId];
+    const slot = document.createElement('div');
+    slot.className = 'army-badge-hero-icon';
+    if (fDef?.unitCardBgImg) {
+      const bg = document.createElement('img');
+      bg.className = 'hero-slot-bg-img';
+      bg.src = fDef.unitCardBgImg;
+      bg.alt = '';
+      bg.addEventListener('error', () => bg.remove());
+      slot.appendChild(bg);
     }
-    for (const { typeId, count } of (army.wounded ?? [])) {
-      const uDef = UNIT_MAP[typeId];
-      const hpArr = (army.hp?.wounded?.[typeId] ?? []).slice();
-      while (hpArr.length < count) hpArr.push(Math.max(1, Math.floor((uDef?.maxHp ?? 10) * 0.2)));
-      const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(typeId, army.factionId, UNIT_MAP, army);
-      for (let i = 0; i < count; i++) {
-        const currentHp = hpArr[i] ?? Math.max(1, Math.floor((uDef?.maxHp ?? 10) * 0.2));
-        unitsEl.appendChild(_makeUnitCard(uDef, true, faction, currentHp, effAtk, effDef));
-      }
-    }
-    card.appendChild(unitsEl);
-
-    // ── Army status chips ────────────────────────────────────
-    const activeStatuses = (army.statusEffects ?? [])
-      .filter(s => ARMY_STATUS_MAP[s.type]);
-    if (activeStatuses.length > 0) {
-      const chipRow = document.createElement('div');
-      chipRow.className = 'army-status-chips';
-      for (const s of activeStatuses) {
-        const def = ARMY_STATUS_MAP[s.type];
-        const chip = document.createElement('span');
-        chip.className = 'army-status-chip';
-        const turns = s.turnsRemaining != null ? `${s.turnsRemaining}t` : '∞';
-        chip.innerHTML = `<span>${def.icon ?? '●'}</span><span class="army-status-chip__turns">${turns}</span>`;
-        chip.title = `${def.label}: ${def.description}`;
-        chipRow.appendChild(chip);
-      }
-      card.appendChild(chipRow);
-    }
-
-    // Drop zone: accept dragged units from sibling armies in same province
-    card.addEventListener('dragover', e => {
-      if (_dragSourceArmyId && _dragSourceArmyId !== army.id) {
-        const src = state.armies.get(_dragSourceArmyId);
-        if (src && src.provinceId === army.provinceId) {
-          e.preventDefault();
-          card.classList.add('drag-over');
-        }
-      }
-    });
-    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
-    card.addEventListener('drop', e => {
-      e.preventDefault();
-      card.classList.remove('drag-over');
-      if (!_dragSourceArmyId || _dragSourceArmyId === army.id || !_dragTypeId) return;
-      const ok = transferUnit(_dragSourceArmyId, army.id, _dragTypeId, 1);
-      _dragSourceArmyId = null;
-      _dragTypeId       = null;
-      if (ok) {
-        renderArmyPanel();
-        renderArmyIcons();
-      }
-    });
-
-    // ── Stats row: ATK / DEF / Supply ───────────────────────
-    const healthy  = armySize(army);
-    const wounded  = armyWoundedCount(army);
-    const cap      = getArmySupplyCap(army.factionId);
-    const atk      = Math.round(getEffectiveArmyAttack(army, army.factionId, UNIT_MAP));
-    const def      = Math.round(getEffectiveArmyDefense(army, army.factionId, UNIT_MAP));
-    const supplyUsed = healthy + wounded;
-
-    const statsRow = document.createElement('div');
-    statsRow.className = 'army-stats-row';
-    statsRow.innerHTML =
-      `<span title="Attack strength">⚔ ${atk}</span>` +
-      `<span title="Defense strength">🛡 ${def}</span>` +
-      `<span title="Supply: units / cap" class="${supplyUsed >= cap ? 'supply-full' : ''}">📦 ${supplyUsed}/${cap}</span>`;
-    card.appendChild(statsRow);
-
-    // ── Move button ──────────────────────────────────────────
-    if (army.movesLeft > 0) {
-      const moveBtn = document.createElement('button');
-      moveBtn.className = 'btn-secondary army-move-btn';
-      moveBtn.textContent = state.movingArmyId === army.id
-        ? '✕ Cancel Move'
-        : `Move (${army.movesLeft} move left)`;
-
-      moveBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        if (state.movingArmyId === army.id) {
-          cancelArmyMoveAndClear();
-          renderArmyPanel();
-        } else {
-          selectArmy(army.id);
-          startArmyMove(army.id);
-          renderArmyPanel();
-          showReachableProvinces(army.id);
-          renderAllProvinces();
-        }
-      });
-      card.appendChild(moveBtn);
+    if (classDef?.cardImg) {
+      const fg = document.createElement('img');
+      fg.className = 'hero-slot-fg-img';
+      fg.src = classDef.cardImg;
+      fg.alt = '';
+      fg.addEventListener('error', () => fg.remove());
+      slot.appendChild(fg);
     } else {
-      const exhaustedEl = document.createElement('p');
-      exhaustedEl.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:4px;font-style:italic';
-      exhaustedEl.textContent = 'No moves remaining.';
-      card.appendChild(exhaustedEl);
+      const fallback = document.createElement('span');
+      fallback.className = 'army-badge-hero-fallback';
+      fallback.textContent = classDef?.isSpellcaster ? '🧙' : '⚔';
+      slot.appendChild(fallback);
     }
+    return slot;
+  }
 
-    // ── Split button ─────────────────────────────────────────
-    const canSplit = army.units.length >= 2 ||
-                     (army.units.length === 1 && army.units[0].count >= 2);
-    if (canSplit) {
-      const splitBtn = document.createElement('button');
-      splitBtn.className = 'btn-secondary army-move-btn';
-      splitBtn.style.marginTop = '4px';
-      splitBtn.textContent = '✂ Split Army';
-      splitBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        showSplitModal(army);
-      });
-      card.appendChild(splitBtn);
+  // First unit type card
+  if (army.units.length > 0) {
+    const { typeId } = army.units[0];
+    const uDef = UNIT_MAP[typeId];
+    return _makeUnitCard(uDef, false, fDef, null, null, null);
+  }
+
+  const fallback = document.createElement('div');
+  fallback.className = 'army-badge-hero-icon';
+  fallback.textContent = '⚔';
+  return fallback;
+}
+
+// ── Detail section ────────────────────────────────────────────
+
+function _renderDetailSection(armies, container) {
+  const section = document.createElement('div');
+  section.className = 'army-detail-section';
+
+  if (!_detailProvinceId) {
+    const hint = document.createElement('p');
+    hint.className = 'army-detail-hint';
+    hint.textContent = 'Select an army above to see details.';
+    section.appendChild(hint);
+    container.appendChild(section);
+    return;
+  }
+
+  const provArmies = armies.filter(a => a.provinceId === _detailProvinceId);
+  if (provArmies.length === 0) {
+    _detailProvinceId = null;
+    const hint = document.createElement('p');
+    hint.className = 'army-detail-hint';
+    hint.textContent = 'Select an army above to see details.';
+    section.appendChild(hint);
+    container.appendChild(section);
+    return;
+  }
+
+  const prov = getProvince(_detailProvinceId);
+  const divider = document.createElement('div');
+  divider.className = 'army-detail-divider';
+  divider.textContent = prov?.name ?? _detailProvinceId;
+  section.appendChild(divider);
+
+  for (const army of provArmies) {
+    _renderFullArmyCard(army, section);
+  }
+
+  container.appendChild(section);
+}
+
+function _renderFullArmyCard(army, container) {
+  const prov    = getProvince(army.provinceId);
+  const faction = FACTION_MAP[army.factionId];
+  const isSelected = state.selectedArmyId === army.id;
+
+  const card = document.createElement('div');
+  card.className = `army-card${isSelected ? ' selected' : ''}`;
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'army-card-header';
+  header.innerHTML = `
+    <span class="army-faction-icon">${faction?.emoji ?? '⚔'}</span>
+    <span style="font-weight:600;font-size:13px;color:var(--text-bright)">Army</span>
+    <span class="army-location">${prov?.name ?? army.provinceId}</span>
+  `;
+  card.appendChild(header);
+
+  // Unit cards (healthy + wounded) in a 6-per-row card grid
+  const unitsEl = document.createElement('div');
+  unitsEl.className = 'army-units card-grid card-grid--6';
+
+  // Co-located armies — used to decide whether drag is valid
+  const siblingArmies = getArmiesInProvince(army.provinceId)
+    .filter(a => a.id !== army.id && a.factionId === army.factionId);
+  const hasSiblings = siblingArmies.length > 0;
+
+  // ── Hero slot (first in unit grid, golden outline) ──
+  unitsEl.appendChild(_makeHeroSlot(army));
+
+  for (const { typeId, count } of army.units) {
+    const uDef = UNIT_MAP[typeId];
+    const hpArr = (army.hp?.active?.[typeId] ?? []).slice();
+    while (hpArr.length < count) hpArr.push(uDef?.maxHp ?? 10);
+    const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(typeId, army.factionId, UNIT_MAP, army);
+    for (let i = 0; i < count; i++) {
+      const currentHp = hpArr[i] ?? (uDef?.maxHp ?? 10);
+      const unitCard = _makeUnitCard(uDef, false, faction, currentHp, effAtk, effDef);
+      if (hasSiblings) {
+        // Draggable even if it would empty this army — empty army is removed on drop
+        unitCard.draggable = true;
+        unitCard.title = `Drag to move ${uDef?.name ?? typeId} to another army here`;
+        unitCard.addEventListener('dragstart', e => {
+          _dragSourceArmyId = army.id;
+          _dragTypeId       = typeId;
+          e.stopPropagation();
+        });
+        unitCard.addEventListener('dragend', () => {
+          _dragSourceArmyId = null;
+          _dragTypeId       = null;
+        });
+      }
+      unitsEl.appendChild(unitCard);
     }
+  }
+  for (const { typeId, count } of (army.wounded ?? [])) {
+    const uDef = UNIT_MAP[typeId];
+    const hpArr = (army.hp?.wounded?.[typeId] ?? []).slice();
+    while (hpArr.length < count) hpArr.push(Math.max(1, Math.floor((uDef?.maxHp ?? 10) * 0.2)));
+    const { attack: effAtk, defense: effDef } = getEffectiveUnitStats(typeId, army.factionId, UNIT_MAP, army);
+    for (let i = 0; i < count; i++) {
+      const currentHp = hpArr[i] ?? Math.max(1, Math.floor((uDef?.maxHp ?? 10) * 0.2));
+      unitsEl.appendChild(_makeUnitCard(uDef, true, faction, currentHp, effAtk, effDef));
+    }
+  }
+  card.appendChild(unitsEl);
 
-    // ── Army Action Bar ───────────────────────────────────────
-    _renderArmyActionBar(army, card);
+  // ── Army status chips ────────────────────────────────────
+  const activeStatuses = (army.statusEffects ?? [])
+    .filter(s => ARMY_STATUS_MAP[s.type]);
+  if (activeStatuses.length > 0) {
+    const chipRow = document.createElement('div');
+    chipRow.className = 'army-status-chips';
+    for (const s of activeStatuses) {
+      const def = ARMY_STATUS_MAP[s.type];
+      const chip = document.createElement('span');
+      chip.className = 'army-status-chip';
+      const turns = s.turnsRemaining != null ? `${s.turnsRemaining}t` : '∞';
+      chip.innerHTML = `<span>${def.icon ?? '●'}</span><span class="army-status-chip__turns">${turns}</span>`;
+      chip.title = `${def.label}: ${def.description}`;
+      chipRow.appendChild(chip);
+    }
+    card.appendChild(chipRow);
+  }
 
-    // Click card to select
-    card.addEventListener('click', () => {
-      selectArmy(army.id);
+  // Drop zone: accept dragged units from sibling armies in same province
+  card.addEventListener('dragover', e => {
+    if (_dragSourceArmyId && _dragSourceArmyId !== army.id) {
+      const src = state.armies.get(_dragSourceArmyId);
+      if (src && src.provinceId === army.provinceId) {
+        e.preventDefault();
+        card.classList.add('drag-over');
+      }
+    }
+  });
+  card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+  card.addEventListener('drop', e => {
+    e.preventDefault();
+    card.classList.remove('drag-over');
+    if (!_dragSourceArmyId || _dragSourceArmyId === army.id || !_dragTypeId) return;
+    const ok = transferUnit(_dragSourceArmyId, army.id, _dragTypeId, 1);
+    _dragSourceArmyId = null;
+    _dragTypeId       = null;
+    if (ok) {
       renderArmyPanel();
       renderArmyIcons();
-      if (_onArmySelect) _onArmySelect(army.id);
-    });
+    }
+  });
 
-    armyListEl.appendChild(card);
+  // ── Stats row: ATK / DEF / Supply ───────────────────────
+  const healthy    = armySize(army);
+  const wounded    = armyWoundedCount(army);
+  const cap        = getArmySupplyCap(army.factionId);
+  const atk        = Math.round(getEffectiveArmyAttack(army, army.factionId, UNIT_MAP));
+  const def        = Math.round(getEffectiveArmyDefense(army, army.factionId, UNIT_MAP));
+  const supplyUsed = healthy + wounded;
+
+  const statsRow = document.createElement('div');
+  statsRow.className = 'army-stats-row';
+  statsRow.innerHTML =
+    `<span title="Attack strength">⚔ ${atk}</span>` +
+    `<span title="Defense strength">🛡 ${def}</span>` +
+    `<span title="Supply: units / cap" class="${supplyUsed >= cap ? 'supply-full' : ''}">📦 ${supplyUsed}/${cap}</span>`;
+  card.appendChild(statsRow);
+
+  // ── Move button ──────────────────────────────────────────
+  if (army.movesLeft > 0) {
+    const moveBtn = document.createElement('button');
+    moveBtn.className = 'btn-secondary army-move-btn';
+    moveBtn.textContent = state.movingArmyId === army.id
+      ? '✕ Cancel Move'
+      : `Move (${army.movesLeft} move left)`;
+
+    moveBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (state.movingArmyId === army.id) {
+        cancelArmyMoveAndClear();
+        renderArmyPanel();
+      } else {
+        selectArmy(army.id);
+        startArmyMove(army.id);
+        renderArmyPanel();
+        showReachableProvinces(army.id);
+        renderAllProvinces();
+      }
+    });
+    card.appendChild(moveBtn);
+  } else {
+    const exhaustedEl = document.createElement('p');
+    exhaustedEl.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:4px;font-style:italic';
+    exhaustedEl.textContent = 'No moves remaining.';
+    card.appendChild(exhaustedEl);
   }
+
+  // ── Split button ─────────────────────────────────────────
+  const canSplit = army.units.length >= 2 ||
+                   (army.units.length === 1 && army.units[0].count >= 2);
+  if (canSplit) {
+    const splitBtn = document.createElement('button');
+    splitBtn.className = 'btn-secondary army-move-btn';
+    splitBtn.style.marginTop = '4px';
+    splitBtn.textContent = '✂ Split Army';
+    splitBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      showSplitModal(army);
+    });
+    card.appendChild(splitBtn);
+  }
+
+  // ── Army Action Bar ───────────────────────────────────────
+  _renderArmyActionBar(army, card);
+
+  // Click card to select
+  card.addEventListener('click', () => {
+    selectArmy(army.id);
+    renderArmyPanel();
+    renderArmyIcons();
+    if (_onArmySelect) _onArmySelect(army.id);
+  });
+
+  container.appendChild(card);
 }
 
 // ── Army Action Bar ───────────────────────────────────────────

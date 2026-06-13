@@ -13,6 +13,7 @@ import {
   state,
   getProvince,
   getFaction,
+  selectProvince,
   addResources,
   computeMilitiaMax,
 } from '../engine/game-state.js';
@@ -21,9 +22,13 @@ import { FACTION_MAP, NEUTRAL } from '../data/factions-data.js';
 import { getBiome } from '../data/biomes-data.js';
 import {
   LOCATION_TYPES,
+  LOCATION_CLEAR_COSTS,
+  LOCATION_CLEAR_TECH_REQ,
+  getInstalledBuildingIds,
+  getAvailableBuildingSlots,
 } from '../models/location.js';
 import { dequeueProduction } from '../models/province.js';
-import { BUILDING_MAP } from '../data/buildings-data.js';
+import { BUILDING_MAP, getBuildingsForLocation } from '../data/buildings-data.js';
 import { UNIT_MAP, getMilitiaUnitIdForFaction } from '../data/units-data.js';
 import { getEffectiveUnitStats } from '../engine/tech-effects.js';
 import { PROVINCE_STATUS_MAP } from '../data/province-status-data.js';
@@ -38,6 +43,7 @@ import { HERO_CLASS_MAP } from '../data/hero-classes-data.js';
 import { heroGenderEmoji } from '../models/hero.js';
 import { createCard } from './card-renderer.js';
 import { showProvinceModal, renderProvinceActionBar } from './province-modal.js';
+import { renderAllProvinces } from './map-view.js';
 
 const emptyEl         = document.getElementById('province-panel-empty');
 const contentEl       = document.getElementById('province-panel-content');
@@ -55,8 +61,45 @@ const militiaInfoEl        = document.getElementById('province-militia-info');
 const coreInfoEl           = document.getElementById('province-core-info');
 const coreRowEl            = document.getElementById('province-core-row');
 const statusEffectsEl      = document.getElementById('province-status-effects');
+const provinceListViewEl   = document.getElementById('province-list-view');
+const provinceListBtnEl    = document.getElementById('province-list-btn');
+
+let _showingList = false;
+
+provinceListBtnEl?.addEventListener('click', () => {
+  if (_showingList) hideProvinceList();
+  else showProvinceList();
+});
+
+export function showProvinceList() {
+  _showingList = true;
+  emptyEl.hidden   = true;
+  contentEl.hidden = true;
+  _removeManageBtn();
+  provinceListViewEl.classList.add('province-list-open');
+  if (provinceListBtnEl) provinceListBtnEl.textContent = '✕ Close List';
+  renderProvinceList();
+}
+
+export function hideProvinceList() {
+  _showingList = false;
+  provinceListViewEl.classList.remove('province-list-open');
+  if (provinceListBtnEl) provinceListBtnEl.textContent = '☰ Provinces';
+  if (state.selectedProvinceId) {
+    showProvincePanel(state.selectedProvinceId);
+  } else {
+    emptyEl.hidden   = false;
+    contentEl.hidden = true;
+  }
+}
 
 export function showProvincePanel(provinceId) {
+  // Exit list mode if active
+  if (_showingList) {
+    _showingList = false;
+    provinceListViewEl.classList.remove('province-list-open');
+    if (provinceListBtnEl) provinceListBtnEl.textContent = '☰ Provinces';
+  }
   const prov = getProvince(provinceId);
   if (!prov || prov.visibility === 'unexplored') {
     hideProvincePanel();
@@ -445,4 +488,158 @@ function _removeManageBtn() {
   if (_manageBtnEl?.parentNode) {
     _manageBtnEl.parentNode.removeChild(_manageBtnEl);
   }
+}
+
+// ─── Province List ────────────────────────────────────────
+function renderProvinceList() {
+  provinceListViewEl.innerHTML = '';
+
+  const playerFactionId = state.playerFactionId;
+  const playerFaction   = FACTION_MAP[playerFactionId];
+  if (!playerFaction) return;
+
+  // Ordered resource column definitions: gold, research, then up to 2 advanced
+  const resCols = [
+    playerFaction.resources.gold,
+    playerFaction.resources.research,
+    ...(playerFaction.resources.advanced ?? []).slice(0, 2),
+  ];
+
+  const provinces = [...state.provinces.values()]
+    .filter(p => p.ownerId === playerFactionId && !p.isOcean)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const heading = document.createElement('h3');
+  heading.className = 'prov-list-heading';
+  heading.textContent = 'Province List';
+  provinceListViewEl.appendChild(heading);
+
+  if (provinces.length === 0) {
+    const msg = document.createElement('p');
+    msg.style.cssText = 'color:var(--text-muted);font-size:12px;font-style:italic;padding:4px 0';
+    msg.textContent = 'No provinces.';
+    provinceListViewEl.appendChild(msg);
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'province-list-table';
+
+  // Header row
+  const thead = document.createElement('thead');
+  const hRow  = document.createElement('tr');
+  hRow.innerHTML = `<th></th>`; // province name column
+  for (const r of resCols) hRow.innerHTML += `<th title="${r.name}">${r.emoji}</th>`;
+  hRow.innerHTML += `<th title="Militia">⚔</th><th></th>`; // militia + indicators
+  thead.appendChild(hRow);
+  table.appendChild(thead);
+
+  // Data rows
+  const tbody = document.createElement('tbody');
+  for (const prov of provinces) {
+    const breakdown = computeProvinceIncomeBreakdown(prov, playerFactionId);
+    const tr = document.createElement('tr');
+
+    // Province name
+    const nameTd = document.createElement('td');
+    nameTd.className = 'prov-list-name';
+    nameTd.textContent = prov.name;
+    nameTd.addEventListener('click', () => {
+      selectProvince(prov.id);
+      renderAllProvinces();
+      showProvinceModal(prov.id);
+    });
+    tr.appendChild(nameTd);
+
+    // Income cells — one per resource column
+    for (const r of resCols) {
+      const td  = document.createElement('td');
+      td.className = 'prov-list-res';
+      const val = breakdown[r.id]?.total ?? 0;
+      td.textContent = val > 0 ? `+${parseFloat(val.toFixed(1))}` : '';
+      tr.appendChild(td);
+    }
+
+    // Militia
+    const milMax = computeMilitiaMax(prov);
+    const milTd  = document.createElement('td');
+    milTd.className = 'prov-list-militia';
+    milTd.textContent = `${prov.militia?.current ?? 0}/${milMax}`;
+    tr.appendChild(milTd);
+
+    // Indicators
+    const indicators = _getProvinceIndicators(prov, playerFactionId);
+    const indTd = document.createElement('td');
+    indTd.className = 'prov-list-indicators';
+    for (const { icon, tooltip } of indicators) {
+      const span = document.createElement('span');
+      span.className = 'prov-list-indicator';
+      span.textContent = icon;
+      span.title = tooltip;
+      indTd.appendChild(span);
+    }
+    tr.appendChild(indTd);
+
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  provinceListViewEl.appendChild(table);
+}
+
+function _getProvinceIndicators(prov, playerFactionId) {
+  const indicators = [];
+  const fs         = getFaction(playerFactionId);
+  const gold       = fs?.resources?.gold ?? 0;
+  const queue      = prov.productionQueue ?? [];
+
+  // 1. Can build new location
+  if (!queue.some(i => i.type === 'build_location')) {
+    if (gold >= 400 && prov.locations.some(l => l.type === 'empty')) {
+      indicators.push({ icon: '🏗', tooltip: 'Can build new location!' });
+    }
+  }
+
+  // 2. Can clear obstacles
+  const clearableTypes = Object.keys(LOCATION_CLEAR_COSTS);
+  const unqueuedClearable = prov.locations.filter(l =>
+    clearableTypes.includes(l.type) &&
+    !queue.some(i => i.type === 'clear_location' && i.locationId === l.id)
+  );
+  if (unqueuedClearable.length > 0 && gold >= 200) {
+    const unlockedTechs = fs?.unlockedTechs ?? [];
+    const hasClearable = unqueuedClearable.some(l => {
+      const techReq = LOCATION_CLEAR_TECH_REQ[l.type];
+      return !techReq || unlockedTechs.includes(techReq);
+    });
+    if (hasClearable) indicators.push({ icon: '🧹', tooltip: 'Can clear obstacles!' });
+  }
+
+  // 3. Can build new buildings
+  const unlockedTechs  = fs?.unlockedTechs ?? [];
+  const provInstalled  = prov.locations.flatMap(l => getInstalledBuildingIds(l));
+  let canBuildBuilding = false;
+  for (const loc of prov.locations) {
+    if (canBuildBuilding) break;
+    if (!LOCATION_TYPES[loc.type]?.isControllable) continue;
+    // Queue check first
+    const queuedNew = queue.filter(
+      i => i.type === 'building' && i.locationId === loc.id && !BUILDING_MAP[i.id]?.upgradeFromId
+    ).length;
+    const installed  = getInstalledBuildingIds(loc);
+    const emptySlots = getAvailableBuildingSlots(loc, BUILDING_MAP) - installed.length;
+    if (emptySlots <= 0 || queuedNew >= emptySlots) continue;
+    // Building availability check
+    const available = getBuildingsForLocation(playerFactionId, loc.type, installed, prov.isCoastal, provInstalled, prov.biomeId)
+      .filter(b => b.upgradeFromId === null && (!b.techRequired || unlockedTechs.includes(b.techRequired)));
+    if (available.length > 0) canBuildBuilding = true;
+  }
+  if (canBuildBuilding) indicators.push({ icon: '🔨', tooltip: 'Can build new buildings!' });
+
+  // 4. Governor level-up
+  if (prov.governorId) {
+    const governor = fs?.heroes?.find(h => h.id === prov.governorId);
+    if (governor?.pendingLevelUp) indicators.push({ icon: '⬆', tooltip: 'Governor leveled up!' });
+  }
+
+  return indicators;
 }

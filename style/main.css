@@ -241,6 +241,71 @@ body {
   font-style: italic;
 }
 
+/* ── Province list view ──────────────────────────────── */
+#province-list-view {
+  display: none;
+  flex-direction: column;
+  overflow-y: auto;
+}
+#province-list-view.province-list-open { display: flex; }
+.prov-list-heading {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.province-list-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+.province-list-table thead th {
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 0 3px 4px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.province-list-table thead th:first-child { text-align: left; }
+.province-list-table tbody tr:hover { background: var(--bg-panel-alt); }
+.province-list-table td {
+  padding: 3px 3px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.prov-list-name {
+  font-weight: 600;
+  color: var(--text-bright);
+  cursor: pointer;
+  padding-right: 6px !important;
+}
+.prov-list-name:hover { color: var(--accent); text-decoration: underline; }
+.prov-list-res {
+  text-align: center;
+  color: var(--success, #4aaa77);
+  min-width: 28px;
+}
+.prov-list-militia {
+  text-align: center;
+  color: var(--text-muted);
+  min-width: 30px;
+}
+.prov-list-indicators {
+  display: flex;
+  gap: 2px;
+  padding-left: 4px !important;
+}
+.prov-list-indicator {
+  font-size: 0.85rem;
+  cursor: help;
+  opacity: 0.85;
+}
+.prov-list-indicator:hover { opacity: 1; }
+
 #province-header {
   display: flex;
   flex-direction: column;
@@ -388,6 +453,106 @@ body {
   padding: 2px 6px;
 }
 .army-move-btn { margin-top: 6px; width: 100%; }
+
+/* ── Army badge grid ─────────────────────────────── */
+.army-badge-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+.army-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 6px 4px 4px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  /* fixed width — does not stretch to fill remaining space */
+  flex: 0 0 calc(50% - 3px);
+  min-width: 0;
+  box-sizing: border-box;
+}
+.army-badge:hover, .army-badge.selected { border-color: var(--accent); }
+.army-badge-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 51px;
+  overflow: hidden;
+  border-radius: 3px;
+}
+/* hero portrait inside badge */
+.army-badge-hero-icon {
+  position: relative;
+  width: 34px;
+  height: 51px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--bg-dark);
+  border: 1px solid var(--accent-dim, #6a5020);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.army-badge-hero-icon .hero-slot-bg-img,
+.army-badge-hero-icon .hero-slot-fg-img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+}
+.army-badge-hero-icon .hero-slot-fg-img { z-index: 1; }
+.army-badge-hero-fallback {
+  font-size: 1.1rem;
+  z-index: 2;
+}
+.army-badge-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+.army-badge-province {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.army-badge-stats {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.army-badge-supply {
+  font-size: 0.70rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.army-badge-supply.supply-full { color: var(--danger); }
+
+/* ── Army detail section ─────────────────────────── */
+.army-detail-section { margin-top: 4px; }
+.army-detail-divider {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 2px 4px;
+  border-top: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+.army-detail-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  margin-top: 8px;
+}
 
 /* ═══════════════════════════════════════════════════
    EVENT LOG
