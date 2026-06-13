@@ -477,6 +477,7 @@ body {
   box-sizing: border-box;
 }
 .army-badge:hover, .army-badge.selected { border-color: var(--accent); }
+.army-badge--exhausted { opacity: 0.45; filter: grayscale(0.6); }
 .army-badge-icon {
   flex-shrink: 0;
   width: 34px;

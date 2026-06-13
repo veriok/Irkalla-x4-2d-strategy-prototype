@@ -95,7 +95,7 @@ function _renderBadge(army) {
   const supplyUsed = healthy + wounded;
 
   const badge = document.createElement('div');
-  badge.className = `army-badge${isSelected ? ' selected' : ''}`;
+  badge.className = `army-badge${isSelected ? ' selected' : ''}${army.movesLeft <= 0 ? ' army-badge--exhausted' : ''}`;
 
   // Left icon (hero portrait or first unit card)
   const iconWrap = document.createElement('div');
