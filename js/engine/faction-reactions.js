@@ -23,12 +23,13 @@
  *     Read-only — tech effects are applied by unlockTech() before this event fires.
  */
 
-import { FACTION_IDS, RACE_IDS, GAME_EVENTS, FACTION_REACTION_IDS, DIPLOMATIC_STATES } from '../data/enums.js';
-import { FACTIONS } from '../data/factions-data.js';
+import { FACTION_IDS, RACE_IDS, GAME_EVENTS, FACTION_REACTION_IDS, DIPLOMATIC_STATES, NOTIFICATION_TYPES } from '../data/enums.js';
+import { FACTIONS, FACTION_MAP } from '../data/factions-data.js';
 import { on } from './game-events.js';
 import { logMessage } from '../ui/event-log.js';
 import { recordProvinceCapture, getDiplomaticState } from './diplomacy.js';
 import { state, getProvince, getArmiesByFaction, teleportArmy } from './game-state.js';
+import { queueNotification } from './notifications.js';
 
 function _isPlayer(factionId) {
   return factionId === document.body.dataset.playerFactionId;
@@ -216,10 +217,66 @@ export function registerFactionReactions() {
   });
 
   // ── War score tracking ────────────────────────────────────
-  on(GAME_EVENTS.PROVINCE_CAPTURED, ({ factionId, previousOwnerId }) => {
+  on(GAME_EVENTS.PROVINCE_CAPTURED, ({ factionId, previousOwnerId, province }) => {
     if (!previousOwnerId || previousOwnerId === 'neutral' || previousOwnerId === 'ocean' || previousOwnerId === factionId) return;
     if (getDiplomaticState(factionId, previousOwnerId) !== DIPLOMATIC_STATES.WAR) return;
     recordProvinceCapture(factionId, previousOwnerId);
+
+    // Notify player if they lost a province
+    if (previousOwnerId === state.playerFactionId) {
+      const attackerName = FACTION_MAP[factionId]?.name ?? factionId;
+      queueNotification(NOTIFICATION_TYPES.PROVINCE_LOST, {
+        title: 'Province Lost',
+        body: `${province?.name ?? 'A province'} was seized by ${attackerName}.`,
+        payload: { provinceId: province?.id },
+      });
+    }
+  });
+
+  // ── Player notifications ──────────────────────────────────
+
+  on(GAME_EVENTS.WAR_DECLARED, ({ declaringFactionId, targetFactionId, isSurprise, isPending }) => {
+    if (targetFactionId !== state.playerFactionId) return;
+    const declarer = FACTION_MAP[declaringFactionId]?.name ?? declaringFactionId;
+    if (isSurprise) {
+      queueNotification(NOTIFICATION_TYPES.SURPRISE_WAR, {
+        title: 'Surprise Attack!',
+        body: `${declarer} launched a surprise war on you!`,
+        payload: { factionId: declaringFactionId },
+      });
+    } else {
+      const warType = isPending ? 'War Declared' : 'War Begins';
+      const bodyText = isPending
+        ? `${declarer} has declared war — armies march in 3 turns.`
+        : `${declarer}'s armies are now at war with you.`;
+      queueNotification(NOTIFICATION_TYPES.WAR_DECLARED, {
+        title: warType,
+        body: bodyText,
+        payload: { factionId: declaringFactionId },
+      });
+    }
+  });
+
+  on(GAME_EVENTS.DIPLOMATIC_PROPOSAL_RECEIVED, ({ fromFactionId, type }) => {
+    const from = FACTION_MAP[fromFactionId]?.name ?? fromFactionId;
+    const proposalLabel = type === 'propose_alliance' ? 'Alliance Proposal' : 'Truce Proposal';
+    const proposalBody  = type === 'propose_alliance'
+      ? `${from} proposes a formal alliance.`
+      : `${from} proposes a truce.`;
+    queueNotification(NOTIFICATION_TYPES.PROPOSAL_RECEIVED, {
+      title: proposalLabel,
+      body: proposalBody,
+      payload: { factionId: fromFactionId },
+    });
+  });
+
+  on(GAME_EVENTS.HERO_CAN_LEVEL, ({ factionId, heroId, heroName }) => {
+    if (factionId !== state.playerFactionId) return;
+    queueNotification(NOTIFICATION_TYPES.HERO_CAN_LEVEL, {
+      title: 'Hero Leveled Up',
+      body: `${heroName ?? 'A hero'} is ready to learn new skills.`,
+      payload: { heroId },
+    });
   });
 
   // ── Alliance evacuation: teleport stranded armies when alliance breaks ──

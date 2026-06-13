@@ -147,6 +147,9 @@ function _resolveFlavorText(template, playerId, targetId) {
     .replace(/\{self_leader_name\}/g,         LEADER_MAP[targetId]?.name ?? 'I');
 }
 
+/** Exported for use by external UI modules (e.g. notification toasts) that need to trigger leader speech. */
+export function triggerFlavorLine(targetId, path) { _triggerFlavorLine(targetId, path); }
+
 function _triggerFlavorLine(targetId, path) {
   if (!targetId) return;
   const player = state.playerFactionId;

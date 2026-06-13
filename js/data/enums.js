@@ -128,15 +128,24 @@ export const DIPLOMATIC_STATES = Object.freeze({
 });
 
 export const MEMORY_TYPES = Object.freeze({
-  WAR_DECLARED_BY_US:  'war_declared_by_us',
-  WAR_DECLARED_ON_US:  'war_declared_on_us',
-  SURPRISE_WAR_BY_US:  'surprise_war_by_us',
-  SURPRISE_WAR_ON_US:  'surprise_war_on_us',
-  TRUCE_BETRAYAL:      'truce_betrayal',
-  ALLIANCE_FORMED:     'alliance_formed',
-  ALLIANCE_BROKEN:     'alliance_broken',
-  GOLD_GIFT:           'gold_gift',
-  PEACE_SIGNED:        'peace_signed',
+  WAR_DECLARED_BY_US:    'war_declared_by_us',
+  WAR_DECLARED_ON_US:    'war_declared_on_us',
+  SURPRISE_WAR_BY_US:    'surprise_war_by_us',
+  SURPRISE_WAR_ON_US:    'surprise_war_on_us',
+  TRUCE_BETRAYAL:        'truce_betrayal',
+  ALLIANCE_FORMED:       'alliance_formed',
+  ALLIANCE_BROKEN:       'alliance_broken',
+  GOLD_GIFT:             'gold_gift',
+  PEACE_SIGNED:          'peace_signed',
+  WITNESSED_SURPRISE_WAR: 'witnessed_surprise_war',
+});
+
+export const NOTIFICATION_TYPES = Object.freeze({
+  WAR_DECLARED:      'war_declared',
+  SURPRISE_WAR:      'surprise_war',
+  PROVINCE_LOST:     'province_lost',
+  HERO_CAN_LEVEL:    'hero_can_level',
+  PROPOSAL_RECEIVED: 'proposal_received',
 });
 
 export const FACTION_REACTION_IDS = Object.freeze({

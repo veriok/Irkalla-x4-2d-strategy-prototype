@@ -11,6 +11,7 @@ import { renderAllProvinces, renderArmyIcons } from './map-view.js';
 import { renderResourceBar } from './resource-bar.js';
 import { showModal } from './modal.js';
 import { FACTION_MAP } from '../data/factions-data.js';
+import { clearNotifications } from '../engine/notifications.js';
 
 const btn     = document.getElementById('end-turn-btn');
 const topBar  = document.getElementById('top-bar');
@@ -22,6 +23,9 @@ export function initEndTurnButton() {
 export async function handleEndTurn() {
   if (state.phase !== 'player') return;
   state.phase = 'ai';
+
+  // Clear any remaining notifications from the previous turn
+  clearNotifications();
 
   // Disable button + show spinner
   btn.disabled     = true;

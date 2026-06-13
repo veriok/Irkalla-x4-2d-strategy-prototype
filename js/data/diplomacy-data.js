@@ -13,6 +13,8 @@
  *   player_truce_accept / player_truce_deny — player responded to AI's truce proposal
  *   player_alliance_accept / player_alliance_deny — player responded to AI's alliance proposal
  *   war_declared / alliance_broken / gift_received
+ * lines.speech.*   — shown when AI proactively declares war on player
+ *   war_declared (formal, shown on notification click) / surprise_war (shown on notification click)
  *
  * Template variables in line strings (AI is speaking):
  *   {leader_name}            — player's leader name
@@ -70,6 +72,10 @@ const LEADER_DATA = [
         alliance_broken:        ['Betrayal. The dead remember. Every. Single. Slight.', 'You have made an enemy of one who does not forget.'],
         gift_received:          ['Gold. The currency of the living. It... softens my disposition slightly.', 'Unexpected. {self_faction_short_name} is not ungrateful.'],
       },
+      speech: {
+        war_declared:  ['Consider this your death notice, {leader_name}. War comes in three turns — enjoy the time you have left.', 'The armies of {self_faction_short_name} will be at your borders shortly. Three turns, {leader_name}. Then we begin the harvest.'],
+        surprise_war:  ['No warnings. The dead do not announce themselves.', 'Your borders fell before your messengers could reach us. How efficient.'],
+      },
     },
   },
   {
@@ -118,6 +124,10 @@ const LEADER_DATA = [
         alliance_broken:        ['That\'s a black mark on ye, {leader_name}. The dwarves remember.', 'Betrayal. Don\'t expect us to forget this quickly.'],
         gift_received:          ['Gold\'s always useful. I won\'t pretend otherwise. Appreciated.', 'Aye, that\'s fair coin. The Freeholds takes note.'],
       },
+      speech: {
+        war_declared:  ['Yer time\'s up, {leader_name}. The Freeholds is marching — three turns before we\'re at your gates.', 'The hammers are forging the blades already. Three turns before this gets official.'],
+        surprise_war:  ['No point announcing it. The Freeholds strikes when the iron is hot.', 'We decided talking was over. Yer border guards probably noticed.'],
+      },
     },
   },
   {
@@ -127,15 +137,20 @@ const LEADER_DATA = [
     militaryBias: 0.65,
     expansionBias: 0.55,
     prefersSupriseWar: false,
+    neverSurpriseWar: true,
     aggressionThreshold: -45,
     allianceThreshold: 60,
     warDeclarationChance: 0.2,
     memoryDuration: 1.0,
     goldGiftEffectiveness: 0.4,
     betrayalSensitivity: 2.2,
-    memoryDurationByType: {},
+    memoryDurationByType: {
+      [MEMORY_TYPES.SURPRISE_WAR_ON_US]:    3.0, // dragons hold grudges for war without warning
+      [MEMORY_TYPES.WITNESSED_SURPRISE_WAR]: 2.0, // also long memory for witnessed betrayal
+    },
     memoryOpinionMultiplierByType: {
-      [MEMORY_TYPES.WAR_DECLARED_ON_US]: 0.5,
+      [MEMORY_TYPES.WAR_DECLARED_ON_US]:     0.5,  // formal war is honourable — softer reaction
+      [MEMORY_TYPES.WITNESSED_SURPRISE_WAR]: 1.5,  // extra multiplier on top of betrayalSensitivity (2.2×1.5 = 3.3×)
     },
     racialDrift: {},
     factionDrift: {},
@@ -167,6 +182,10 @@ const LEADER_DATA = [
         war_declared:           ['You dare declare war on {self_faction_short_name}? Then face the fire.', 'The dragons wake. You have made a grave error, {leader_name}.'],
         alliance_broken:        ['Betrayal. Of all the dishonour... this will not be forgotten. Nor forgiven.', 'You have shattered an oath. The price for that is higher than you know.'],
         gift_received:          ['Gold does not purchase the respect of dragons. But the gesture is acknowledged.', 'Your coin is noted, though our regard is not so easily bought.'],
+      },
+      speech: {
+        war_declared:  ['By the honour of the Dragon Throne, {self_faction_short_name} hereby declares war. You have three turns to prepare yourself, {leader_name}.', 'War has been declared. Three turns remain. We grant you this — not from weakness, but from honour.'],
+        surprise_war:  ['...This was not how we wished to fight.', 'Let the record show: this was not our way.'],
       },
     },
   },
@@ -219,6 +238,10 @@ const LEADER_DATA = [
         alliance_broken:        ['You break our alliance? That is a transaction with severe penalties.', 'A betrayal of trust. The Empire has a long memory for bad debts.'],
         gift_received:          ['Gold! Now we are speaking a language the Empire understands perfectly.', 'Most generous. Your standing at court improves considerably.'],
       },
+      speech: {
+        war_declared:  ['The Empire has determined the cost of peace with {faction_short_name} exceeds the cost of war. You have three turns, {leader_name}.', 'After considerable deliberation, {self_faction_short_name} declares war. Three turns remain. Spend them wisely.'],
+        surprise_war:  ['Efficiency above ceremony, {leader_name}. The Empire strikes when the opportunity presents itself.', 'A calculated opening move. The economics of war favour the bold.'],
+      },
     },
   },
   {
@@ -266,6 +289,10 @@ const LEADER_DATA = [
         war_declared:           ['You raise war against the Poleis? The ocean will remember this.', 'Your challenge is accepted. {self_faction_short_name} answers it in kind.'],
         alliance_broken:        ['You cut the mooring lines. Do not expect us to forgive this tide.', 'Our alliance, cast adrift. The consequences will follow you like a storm.'],
         gift_received:          ['A generous offering. The currents shift in your favour.', 'Your gift is received with gratitude. Goodwill is a worthy investment.'],
+      },
+      speech: {
+        war_declared:  ['The tides have turned against you, {leader_name}. {self_faction_short_name} declares war — the storm arrives in three turns.', 'The currents demand conflict. Three turns before the fleet reaches your shores, {leader_name}.'],
+        surprise_war:  ['The sea does not announce the storm. Neither do we.', 'Your harbours will feel the tide before your scouts return.'],
       },
     },
   },
@@ -315,6 +342,10 @@ const LEADER_DATA = [
         alliance_broken:        ['Treachery. {self_faction_short_name} will remember this when the time comes.', 'You broke the pact. The consequences will be proportionate.'],
         gift_received:          ['Resources are always useful. The Archonate takes note.', 'A goodwill gesture. It will be factored into our assessment of you.'],
       },
+      speech: {
+        war_declared:  ['{self_faction_short_name} has declared war, {leader_name}. Three turns. Use them.', 'The war declaration has been made. The Archonate does not send warnings twice.'],
+        surprise_war:  ['Speed is the Archonate\'s doctrine. There are no second chances in war.', 'The first move belongs to us. Adjust your strategy accordingly.'],
+      },
     },
   },
   {
@@ -363,6 +394,10 @@ const LEADER_DATA = [
         alliance_broken:        ['You sever the divine pact. The sun shall not look kindly on this.', 'Betrayal of the eternal. Your name shall be carved in the Hall of the Faithless.'],
         gift_received:          ['An offering to the Eternal Court. We acknowledge it with favour.', 'Gold, freely given. The sun smiles upon the generous.'],
       },
+      speech: {
+        war_declared:  ['By divine decree, {self_faction_short_name} has marked {faction_short_name} for conquest. You have three turns before the eternal armies descend, {leader_name}.', 'The God-Pharaoh has spoken. War is declared. Three turns until the sun\'s judgment falls upon you.'],
+        surprise_war:  ['The eternal sun does not wait for permission. Neither do its armies.', 'The gods moved. You were simply... in the way.'],
+      },
     },
   },
   {
@@ -410,6 +445,10 @@ const LEADER_DATA = [
         war_declared:           ['FINALLY. Skrath was hoping you\'d do something stupid.', 'Oh, we\'ve been waiting for this.'],
         alliance_broken:        ['Traitor. The Clans remember betrayal in blood.', 'You broke it. Skrath will break you.'],
         gift_received:          ['Heh. Gold. Skrath accepts. Don\'t think it buys too much.', 'Taking it. Appreciate the gesture. Maybe.'],
+      },
+      speech: {
+        war_declared:  ['Fine, FINE. Skrath will do this the proper way. Three turns, {leader_name}. Then the Clans come.', 'You get three turns. Skrath is being generous. Don\'t expect that twice.'],
+        surprise_war:  ['SKRATH IS HERE. Surprise.', 'No letters, no waiting. Just the Clans. Right now.'],
       },
     },
   },

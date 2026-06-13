@@ -85,6 +85,13 @@ const MEMORY_DEFS = {
     gainMultiplier: 0.8,
     totalTurns: 15,
   },
+  [MEMORY_TYPES.WITNESSED_SURPRISE_WAR]: {
+    label: 'We witnessed an unprovoked surprise attack',
+    opinionDelta: -15,
+    driftModifier: -6,
+    gainMultiplier: 0.65,
+    totalTurns: 20,
+  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -210,7 +217,8 @@ export function addMemory(ownerFactionId, aboutFactionId, memoryType) {
   if (memoryType === MEMORY_TYPES.GOLD_GIFT) {
     opinionDelta *= (leader?.goldGiftEffectiveness ?? 1.0);
   }
-  if ([MEMORY_TYPES.SURPRISE_WAR_ON_US, MEMORY_TYPES.TRUCE_BETRAYAL, MEMORY_TYPES.ALLIANCE_BROKEN].includes(memoryType)) {
+  if ([MEMORY_TYPES.SURPRISE_WAR_ON_US, MEMORY_TYPES.TRUCE_BETRAYAL, MEMORY_TYPES.ALLIANCE_BROKEN,
+       MEMORY_TYPES.WITNESSED_SURPRISE_WAR].includes(memoryType)) {
     opinionDelta *= (leader?.betrayalSensitivity ?? 1.0);
   }
   if (leader?.memoryOpinionMultiplierByType?.[memoryType]) {
@@ -391,17 +399,30 @@ export function declareWar(declaringId, targetId, { surprise = false } = {}) {
     rel.warScore[targetId]    = { provincesGained: 0, unitLossesInflicted: 0 };
     rel.pendingProposal = null;
 
+    emit(GAME_EVENTS.WAR_DECLARED, { declaringFactionId: declaringId, targetFactionId: targetId, isSurprise: false, isPending: true });
+
     addMemory(declaringId, targetId, MEMORY_TYPES.WAR_DECLARED_BY_US);
     addMemory(targetId, declaringId, MEMORY_TYPES.WAR_DECLARED_ON_US);
   }
 }
 
 function _spreadSurpriseWarOpinion(attackerId, victimId) {
-  for (const [factionId, fs] of state.factions.entries()) {
+  for (const [factionId] of state.factions.entries()) {
     if (factionId === attackerId || factionId === victimId) continue;
-    if (!areMet(factionId, attackerId)) continue;
-    // Small opinion hit: witness to surprise aggression think less of the attacker
-    _nudgeOpinion(factionId, attackerId, -8);
+    const metVictim   = areMet(factionId, victimId);
+    const metAttacker = areMet(factionId, attackerId);
+    if (!metVictim && !metAttacker) continue;
+
+    const atWarWithVictim = getDiplomaticState(factionId, victimId) === DIPLOMATIC_STATES.WAR;
+    const isDraigGoch = factionId === FACTION_IDS.DRAIG_GOCH;
+
+    if (metVictim && (!atWarWithVictim || isDraigGoch)) {
+      // Factions that know the victim and aren't fighting them (or are Y Draig Goch) gain a real memory
+      addMemory(factionId, attackerId, MEMORY_TYPES.WITNESSED_SURPRISE_WAR);
+    } else if (metAttacker) {
+      // Fallback: factions that only know the attacker get a smaller nudge
+      _nudgeOpinion(factionId, attackerId, -8);
+    }
   }
 }
 

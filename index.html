@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="style/research-modal.css" />
   <link rel="stylesheet" href="style/hero-panel.css" />
   <link rel="stylesheet" href="style/diplomacy-modal.css" />
+  <link rel="stylesheet" href="style/notifications.css" />
 
   <!-- ES module import map: d3-delaunay from CDN -->
   <script type="importmap">
@@ -58,6 +59,9 @@
 
     <!-- CENTER: map -->
     <section id="map-section">
+      <!-- Notification toasts — absolute inside map-section -->
+      <div id="notification-area"></div>
+
       <svg id="map" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet"
            xmlns="http://www.w3.org/2000/svg">
 

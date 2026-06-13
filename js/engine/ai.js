@@ -72,8 +72,11 @@ function findNextStep(fromProvId, toProvId, factionId) {
         return step;
       }
 
-      // Only traverse through own provinces (not destination)
-      if (adj.ownerId === factionId) queue.push(adjId);
+      // Traverse own provinces and allied provinces (not destination)
+      if (adj.ownerId === factionId ||
+          (adj.ownerId !== 'neutral' && getDiplomaticState(factionId, adj.ownerId) === DIPLOMATIC_STATES.ALLIANCE)) {
+        queue.push(adjId);
+      }
     }
   }
   return null;
@@ -153,8 +156,8 @@ export async function runAI(factionId) {
       .filter(Boolean)
       .filter(p => p.ownerId !== factionId)
       .filter(p => !p.isOcean)
-      // Only attack non-neutral provinces if at WAR with that faction
-      .filter(p => p.ownerId === 'neutral' || isAtWar(factionId, p.ownerId));
+      // Only attack non-neutral provinces during active WAR (not WAR_PENDING — that's the warning period)
+      .filter(p => p.ownerId === 'neutral' || getDiplomaticState(factionId, p.ownerId) === DIPLOMATIC_STATES.WAR);
 
     candidates.sort((a, b) => {
       const aNeutral = a.ownerId === 'neutral' ? 0 : 1;
@@ -277,6 +280,10 @@ export async function runAI(factionId) {
                 logCapture(FACTION_MAP[factionId]?.name ?? factionId, nextStepProv.name);
                 army.targetProvinceId = null;
                 acted = true;
+              } else if (nextStepProv.ownerId !== 'neutral' &&
+                         getDiplomaticState(factionId, nextStepProv.ownerId) !== DIPLOMATIC_STATES.WAR) {
+                // Not at war with this owner — abandon target, don't attack
+                army.targetProvinceId = null;
               } else {
                 const atkStr  = armyAttackStrength(army, UNIT_MAP);
                 const defArmy = stepArmies.find(a => a.factionId !== factionId) ?? null;
@@ -318,11 +325,14 @@ export async function runAI(factionId) {
             const adj = getProvince(adjId);
             if (!adj || adj.isOcean) continue;
 
-            if (adj.ownerId === 'neutral' || (adj.ownerId !== factionId && adj.ownerId !== 'neutral')) {
+            if (adj.ownerId === 'neutral') {
               bestTarget = adjId;
               break;
             }
-            if (ownProvinceIds.has(adjId)) queue.push(adjId);
+            if (ownProvinceIds.has(adjId) ||
+                (adj.ownerId !== 'neutral' && getDiplomaticState(factionId, adj.ownerId) === DIPLOMATIC_STATES.ALLIANCE)) {
+              queue.push(adjId);
+            }
           }
         }
 
@@ -344,6 +354,9 @@ export async function runAI(factionId) {
                 logCapture(FACTION_MAP[factionId]?.name ?? factionId, nextStepProv.name);
                 army.targetProvinceId = null;
                 acted = true;
+              } else if (nextStepProv.ownerId !== 'neutral' &&
+                         getDiplomaticState(factionId, nextStepProv.ownerId) !== DIPLOMATIC_STATES.WAR) {
+                army.targetProvinceId = null;
               } else {
                 const atkStr  = armyAttackStrength(army, UNIT_MAP);
                 const defArmy = stepArmies.find(a => a.factionId !== factionId) ?? null;
@@ -505,7 +518,11 @@ export async function runAIDiplomacy(factionId) {
     const opinion  = getOpinion(factionId, targetId);
 
     // ── War declaration ──
-    if (dipState === DIPLOMATIC_STATES.PEACE || dipState === DIPLOMATIC_STATES.TRUCE) {
+    // Non-Clans (prefersSupriseWar) may not attempt war from TRUCE; Clans can.
+    const canAttemptWar = dipState === DIPLOMATIC_STATES.PEACE ||
+      (dipState === DIPLOMATIC_STATES.TRUCE && leader.prefersSupriseWar);
+
+    if (canAttemptWar) {
       const allOthersMet = allFactionIds.filter(id => !state.eliminated.has(id) && areMet(factionId, id));
       const allAtWar = allOthersMet.length > 0 && allOthersMet.every(id => isAtWar(factionId, id));
 
@@ -521,14 +538,19 @@ export async function runAIDiplomacy(factionId) {
       const opinionBelowThreshold = opinion < effectiveThreshold;
 
       if (opinionBelowThreshold || allAtWar) {
-        // Surprise war: if prefersSupriseWar OR allAtWar OR during TRUCE (formal war blocked)
-        const goSurprise = leader.prefersSupriseWar || allAtWar ||
-          (dipState === DIPLOMATIC_STATES.TRUCE);
+        const neverSurprise = !!leader.neverSurpriseWar;
+        // "Very hated": opinion is 25+ pts below the already-low aggressionThreshold — surprise worth the rep hit
+        const veryHated = opinion < effectiveThreshold - 25;
+        const goSurprise = !neverSurprise &&
+          (leader.prefersSupriseWar || veryHated) &&
+          (dipState === DIPLOMATIC_STATES.PEACE || leader.prefersSupriseWar);
+
         if (goSurprise && Math.random() < effectiveWarChance) {
           declareWar(factionId, targetId, { surprise: true });
           continue;
-        } else if (!goSurprise && dipState === DIPLOMATIC_STATES.PEACE &&
-                   Math.random() < effectiveWarChance) {
+        }
+        if (!goSurprise && dipState === DIPLOMATIC_STATES.PEACE &&
+            Math.random() < effectiveWarChance) {
           declareWar(factionId, targetId, { surprise: false });
           continue;
         }
